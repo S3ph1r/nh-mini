@@ -1,5 +1,7 @@
 # NH_mini - Minimal Homelab Framework
 
+⚠️ **SECURITY NOTICE**: Questo repository è in fase di sviluppo attivo. Leggi `SECURITY_POLICY.md` prima di contribuire.
+
 Framework minimalista per gestire infrastrutture homelab su Proxmox/LXC con approccio "bootstrap first".
 
 ## Filosofia
@@ -9,6 +11,7 @@ NH_mini segue principi di minimalismo e organic growth:
 - **Documentazione prima del codice** - I contracts definiscono il "cosa" prima del "come"
 - **Bootstrap autonomo** - Installabile su LXC vuoto senza prerequisiti
 - **Agent-friendly** - Progettato per operazioni autonome via AI assistant
+- **Open by default** - Repository pubblico, sicurezza tramite design (non oscurità)
 
 ## Installazione Rapida
 
@@ -76,6 +79,15 @@ ssh -i ~/.ssh/id_ed25519 root@proxmox "pct exec 100 -- comando"
 - **SOPS+Age** - Tutti i secrets cifrati
 - **Principio minimo** - Solo accessi necessari
 - **Backup obbligatorio** - Chiavi critiche salvate off-host
+
+## Per Agent Futuri
+
+### Workflow GitHub Push
+Vedi `knowledge/development/github-push-workflow.mdc` per il processo completo di push su GitHub.
+
+### Repository Visibilità
+NH-mini è pubblico per filosofia: trasparenza, collaborazione, sicurezza tramite design.
+Le tue configurazioni specifiche rimangono locali e private. Vedi `knowledge/architecture/repository-visibility-decision.mdc`
 
 ## Sviluppo
 

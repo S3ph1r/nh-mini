@@ -6,7 +6,9 @@ Initialization
 1. Load core/host-reality.mdc
 2. Load core/description-contracts.mdc
 3. Load state/inventory.json
-4. Read this file
+4. Load workspace/active_config.json
+5. Set workspace path to workspace/current_project/
+6. Read this file
 
 Core Principle
 DO NOT INVENT NEW DESCRIPTION FORMATS.
@@ -21,8 +23,11 @@ YOU CAN:
 - Run discovery (python3 core/discovery.py)
 - Search knowledge/
 - Append to state/deployments.log
+- Switch projects (python3 scripts/nh-switch.py <project>)
+- Parse natural language commands (python3 core/intent_parser.py)
 
 YOU MUST ASK:
 - Create/destroy containers
 - Modify this file
 - Create new knowledge/ entries
+- Switch workspace projects (unless user explicitly asks)

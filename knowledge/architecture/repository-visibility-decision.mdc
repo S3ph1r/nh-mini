@@ -1,0 +1,66 @@
+# Repository Visibility Decision - NH Framework
+
+type: architectural_decision
+status: accepted
+date: 2026-02-16
+decision_makers: ["S3ph1r", "NH-Agent"]
+
+## Decisione [AGGIORNATO: 2026-02-16]
+Repository NH-mini è **PRIVATO** durante fase di sviluppo
+**FUTURO**: Potrà diventare pubblico solo dopo review completa e rimozione dati sensibili
+
+## Motivazioni
+
+### 1. Filosofia NH Framework
+NH Framework promuove:
+- **Trasparenza**: configurazioni e codice documentati
+- **Collaborazione**: altri possono contribuire e migliorare
+- **Educazione**: esempio pratico di homelab automation
+- **Standard aperti**: evita vendor lock-in
+
+### 2. Sicurezza tramite Design (non tramite oscurità)
+- Nessun dato sensibile hardcoded
+- Secrets gestiti via SOPS+Age
+- Configurazioni specifiche rimangono locali
+- Repository contiene solo framework generico
+
+### 3. Benefici Pratici
+- **Backup distribuito**: codice disponibile ovunque
+- **Community feedback**: possibili contributi esterni
+- **Documentazione pubblica**: README accessibile
+- **CI/CD gratuito**: GitHub Actions per testing
+
+### 4. Pattern NH Standard
+```
+public_repo/
+├── core/                    # Framework pubblico
+├── knowledge/               # Documentazione pubblica
+├── scripts/                 # Tool generici
+└── secrets/                 # Solo template (vuoti)
+    └── *.enc.yaml          # Solo files cifrati
+
+local_repo/
+├── state/                   # Dati specifici (locali)
+├── secrets/                 # Secrets decifrati (locali)
+└── config/                  # Configurazioni specifiche (locali)
+```
+
+## Cosa Rimane Privato
+- `state/inventory.json` (dati infrastruttura)
+- Secrets decifrati in `secrets/`
+- Configurazioni specifiche del tuo homelab
+- Chiavi SSH private (`~/.ssh/id_nh`)
+
+## Trade-offs Accettati
+✅ **Vantaggi:**
+- Framework migliore grazie a feedback community
+- Documentazione sempre aggiornata
+- Esempio pratico per altri homelabbers
+
+⚠️ **Considerazioni:**
+- Codice visibile a tutti
+- Richiede disciplina nel non committare secrets
+- Necessita di review prima di push
+
+## Conclusione
+La scelta pubblica riflette la filosofia NH: **trasparenza, collaborazione, sicurezza tramite design**. Il framework è un tool generico - le tue configurazioni specifiche rimangono al sicuro localmente.

@@ -1,0 +1,12 @@
+#!/bin/bash
+# NH Switch Alias - Comodo shortcut per cambio progetto
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NH_SWITCH="$SCRIPT_DIR/nh-switch.py"
+
+if [ ! -f "$NH_SWITCH" ]; then
+    echo "❌ nh-switch.py non trovato in $SCRIPT_DIR"
+    exit 1
+fi
+
+python3 "$NH_SWITCH" "$@"

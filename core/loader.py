@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 
 def load_context():
-    ctx = {"loaded_at": datetime.now().isoformat(), "host_reality": {}, "contracts": {}, "state": {}, "knowledge_index": []}
+    ctx = {"loaded_at": datetime.now().isoformat(), "host_reality": {}, "contracts": {}, "state": {}, "workspace": {}, "knowledge_index": []}
     hr = Path("core/host-reality.mdc")
     if hr.exists():
         ctx["host_reality"] = {"file": str(hr), "summary": "Proxmox/LXC/vmbr0"}
@@ -23,6 +23,27 @@ def load_context():
         lines = cr.read_text().split("\n")
         knowledge = [l.strip()[2:] for l in lines if l.strip().startswith('- "')]
         ctx["knowledge_index"] = knowledge[:10]
+    
+    # Carica workspace info
+    ws_config = Path("workspace/active_config.json")
+    if ws_config.exists():
+        try:
+            ws_data = json.loads(ws_config.read_text())
+            current_link = Path("workspace/current_project")
+            if current_link.is_symlink():
+                target = current_link.readlink()
+                ctx["workspace"] = {
+                    "active_project": ws_data.get("active", "unknown"),
+                    "target_path": str(target),
+                    "last_switch": ws_data.get("last_switch", "unknown")
+                }
+            else:
+                ctx["workspace"] = {"status": "no_symlink"}
+        except Exception as e:
+            ctx["workspace"] = {"error": str(e)}
+    else:
+        ctx["workspace"] = {"status": "no_config"}
+    
     return ctx
 
 if __name__ == "__main__":

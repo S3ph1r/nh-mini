@@ -1,0 +1,212 @@
+# NH Workspace Manager - Sistema Multi-Progetto
+
+## 🎯 Concetto Base
+
+**"L'agent lavora sempre in `/workspace/current_project/` - il symlink cambia, il path resta fisso"**
+
+Questo sistema permette di lavorare su progetti NH diversi senza cambiare IDE workspace, mantenendo coerenza e isolamento.
+
+---
+
+## 📁 Struttura
+
+```
+/home/Projects/NH-Mini/
+├── .cursorrules                    # Punta a workspace/current_project/
+├── core/
+│   ├── workspace_manager.py       # Core gestione workspace
+│   ├── intent_parser.py           # Riconoscimento linguaggio naturale
+│   └── agent_workspace_handler.py # Integrazione agent
+├── scripts/
+│   └── nh-switch.py              # CLI principale
+├── workspace/
+│   ├── current_project/ → ../sviluppi/progetto2  # Symlink dinamico
+│   ├── active_config.json        # {"active": "progetto2"}
+│   └── shared/                   # Knowledge condivisa
+└── sviluppi/
+    ├── progetto1/                  # Progetto isolato
+    ├── progetto2/                  # Target corrente
+    └── progetto3/                  # Prossimo progetto
+```
+
+---
+
+## 🚀 Comandi Principali
+
+### Switch Diretto
+```bash
+python3 scripts/nh-switch.py progetto4
+# o
+nh-switch progetto4
+```
+
+### Linguaggio Naturale
+```bash
+python3 scripts/nh-switch.py "passa a progetto4"
+python3 scripts/nh-switch.py "voglio lavorare sul frontend del progetto2"
+```
+
+### Info e Lista
+```bash
+nh-switch --status    # Stato workspace corrente
+nh-switch --list      # Lista progetti disponibili
+```
+
+---
+
+## 🧠 Linguaggio Naturale Supportato
+
+### Italiano
+- "passa a progetto4"
+- "voglio lavorare sul frontend del progetto2"
+- "iniziamo a lavorare sul backend del progetto3"
+- "cambia progetto a progetto1"
+- "portami al progetto4"
+
+### Inglese
+- "switch to progetto4"
+- "work on progetto2"
+- "go to progetto3"
+- "change to progetto1"
+
+---
+
+## 🤖 Integrazione Agent
+
+### Auto-riconoscimento
+L'agent rileva automaticamente quando l'utente vuole cambiare progetto:
+
+```
+Utente: "ok passiamo al frontend del progetto4"
+Agent: "🔄 Vuoi switchare da 'progetto2' a 'progetto4'?"
+Agent: "Scrivi 'sì' per confermare o 'nh-switch progetto4' per procedere."
+```
+
+### Info all'avvio
+All'inizio di ogni sessione:
+```
+Agent: "👋 Ciao! Stai lavorando sul progetto 'progetto2' in sviluppi/progetto2"
+```
+
+---
+
+## 📋 Flusso Operativo
+
+### 1. Setup Iniziale
+```bash
+# Crea primo progetto
+python3 core/workspace_manager.py
+# Genera strutture base
+```
+
+### 2. Creare Nuovo Progetto
+```python
+from core.workspace_manager import get_workspace_manager
+wm = get_workspace_manager()
+wm.create_project("progetto5", "Nuovo progetto frontend")
+```
+
+### 3. Switch Progetto
+```bash
+# Metodo 1: Diretto
+nh-switch progetto5
+
+# Metodo 2: Naturale
+nh-switch "passa a progetto5"
+
+# Metodo 3: Conferma
+# L'agent chiede conferma se rileva intent naturale
+```
+
+### 4. Verifica
+```bash
+ls -la workspace/current_project/  # Mostra target symlink
+cat workspace/active_config.json    # Mostra config attivo
+```
+
+---
+
+## 🔧 Componenti Interni
+
+### WorkspaceManager
+- Gestisce symlink e configurazioni
+- Mantiene traccia progetti e attività
+- Fornisce API per switch/create/list
+
+### IntentParser
+- Riconosce 20+ pattern linguaggio naturale
+- Supporta italiano e inglese
+- Estrae contesto (frontend/backend)
+
+### AgentWorkspaceHandler
+- Integra riconoscimento in conversazioni
+- Fornisce suggerimenti context-aware
+- Gestisce conferme e fallback
+
+---
+
+## 🛡️ Sicurezza e Isolamento
+
+- **Isolamento progetti**: Ogni progetto ha propria `knowledge/`, `state/`, `secrets/`
+- **No interferenze**: Switch pulito, nessuna contaminazione
+- **Backup implicito**: Configurazioni salvate in ogni progetto
+- **Tracciamento**: Timestamp attività per audit
+
+---
+
+## 🚨 Troubleshooting
+
+### Symlink rotto
+```bash
+rm workspace/current_project
+nh-switch progetto_attivo
+```
+
+### Config mancante
+```bash
+# Ricrea da symlink
+ln -s ../sviluppi/progettoX workspace/current_project
+echo '{"active": "progettoX"}' > workspace/active_config.json
+```
+
+### Progetto non trovato
+```bash
+nh-switch --list    # Verifica progetti disponibili
+ls sviluppi/        # Controlla directory
+```
+
+---
+
+## 🎯 Best Practices
+
+1. **Sempre in workspace/current_project/**: L'agent lavora qui
+2. **Check prima di switch**: Usa `--status` per verificare
+3. **Nomi progetto**: Usa nomi corti, minuscoli, no spazi
+4. **Documentazione**: Ogni progetto ha propria knowledge/
+5. **Backup**: I project_info.json contengono metadata
+
+---
+
+## 🔄 Flusso Completo Esempio
+
+```bash
+# 1. Avvio TRAE
+# Agent: "👋 Ciao! Stai lavorando sul progetto 'progetto2'"
+
+# 2. Utente chiede switch
+# Utente: "ok passiamo al frontend del progetto4"
+# Agent: "🔄 Vuoi switchare da 'progetto2' a 'progetto4'?"
+
+# 3. Conferma
+# Utente: "sì"
+# System: ✅ Switch completato! Ora lavoro in sviluppi/progetto4/
+
+# 4. Verifica
+# nh-switch --status
+# 📍 Progetto attivo: progetto4
+# 📂 Path: sviluppi/progetto4
+```
+
+---
+
+**🎉 Risultato**: Zero cambi IDE, switch istantaneo, linguaggio naturale, coerenza NH mantenuta!
