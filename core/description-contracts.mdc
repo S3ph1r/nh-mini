@@ -1,0 +1,54 @@
+resource_declaration:
+  purpose: "Descrivere una risorsa infrastrutturale"
+  required_fields:
+    - type
+    - engine
+    - location
+    - purpose
+    - isolation_model
+  examples:
+    - type: database
+      engine: postgresql-15
+      location: ct101
+      purpose: shared
+      isolation_model: schema_per_project
+    - type: cache
+      engine: redis-7
+      location: ct102
+      purpose: shared
+      isolation_model: db_namespace
+
+secrets_handling:
+  purpose: "Descrivere gestione secrets per un progetto"
+  required_fields:
+    - encryption_method
+    - storage_path
+    - access_method
+  examples:
+    - encryption_method: sops+age
+      storage_path: secrets/{project}.enc.yaml
+      access_method: mounted_file
+
+deployment_workflow:
+  purpose: "Descrivere deploy completo di un progetto"
+  required_fields:
+    - container_allocation
+    - code_source
+    - service_setup
+    - health_check
+  examples:
+    - container_allocation: ct{next}
+      code_source: git@github.com:user/project.git
+      service_setup: systemd
+      health_check: "/health → 200"
+
+network_exposure:
+  purpose: "Descrivere esposizione di un servizio alla rete"
+  required_fields:
+    - public_endpoint
+    - auth_method
+    - rate_limiting
+  examples:
+    - public_endpoint: /api/{project}
+      auth_method: api_key
+      rate_limiting: "100req/min via nginx"

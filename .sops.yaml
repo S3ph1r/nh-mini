@@ -1,0 +1,4 @@
+creation_rules:
+  - path_regex: secrets/.*\.enc\.yaml$
+    encrypted_regex: '^(password|token_value|api_key)$'
+    age: []

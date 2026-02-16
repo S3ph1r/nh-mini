@@ -1,0 +1,14 @@
+host_environment:
+  type: proxmox
+  container_runtime: lxc
+  network:
+    bridge: vmbr0
+    subnet: 10.0.0.0/24
+    allocation: static
+  storage:
+    root: /var/lib/vz
+    available_gb: 950
+constraints:
+  - "Container hostname pattern: ct{vmid}-{purpose}"
+  - "Mai esporre porte direttamente da app containers"
+  - "Secrets mai in chiaro in git"

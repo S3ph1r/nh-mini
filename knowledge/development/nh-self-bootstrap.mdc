@@ -1,0 +1,81 @@
+type: deployment_workflow
+container_allocation: ct190 (development container)
+code_source: local_creation (non da Git, sviluppato qui)
+service_setup: none (è framework, non servizio)
+health_check: "bootstrap.sh eseguibile && discovery.py funzionante"
+
+context: |
+  Sviluppo iniziale di NH framework.
+  Container 190 è ambiente sviluppo.
+  Agent Trae assiste creazione repository.
+  
+  Repository target: Installabile su LXC vuoto
+  
+steps:
+  1. Creata struttura base (core/, state/, knowledge/, secrets/)
+  2. Implementato discovery.py (scan Proxmox)
+  3. Implementato bootstrap.sh (installer interattivo)
+  4. Definiti contracts (4 tipi: resource, secrets, deployment, network)
+  5. Configurato .gitignore (esclude chiavi private)
+  6. Creato README.md (guida installazione)
+
+testing:
+  - Fase 1: Sviluppo su CT190 con Trae
+  - Fase 2: Test install su CT191 (LXC pulito)
+  - Fase 3: Validazione accessi agent
+  - Fase 4: Push su GitHub
+
+notes: |
+  Questo è meta-bootstrapping: NH si auto-documenta mentre nasce.
+  Dopo push GitHub, CT190 diventa "obsoleto" - NH vero sarà su nuovi LXC.
+  CT190 può diventare dev environment per future modifiche NH.
+
+---
+
+# NH Self-Bootstrap: Meta-documentazione
+
+Questo documento dimostra la filosofia NH: **documentare DURANTE lo sviluppo, non dopo**.
+
+## Il Processo Meta
+
+Stiamo letteralmente usando NH per documentare la nascita di NH stesso:
+
+1. **Container 190** → Il nostro "womb" dove NH sta nascendo
+2. **Agent Trae** → L'assistente che ci guida nella creazione
+3. **Documentazione incrementale** → Ogni passo viene documentato mentre avviene
+4. **Bootstrap.sh** → Il "parto" che porterà NH fuori dal container 190
+
+## Timeline del Meta-Bootstrap
+
+```
+CT190 (womb)               →  CT191+ (world)
+├─ discovery.py nasce      →  ├─ bootstrap.sh installa
+├─ contracts definiscono  →  ├─ NH framework vivo
+├─ bootstrap.sh completo   →  ├─ nuovi container creati
+└─ AGENT_ACCESS.md guide  →  └─ agent opera autonomamente
+```
+
+## Paradosso Auto-Referenziale
+
+Questo documento è:
+- **Oggetto**: Descrive il workflow di deployment
+- **Soggetto**: È parte del deployment stesso
+- **Meta**: Documenta il processo di auto-documentazione
+
+## Lezioni per il Futuro
+
+1. **Documenta mentre costruisci** - Non rimandare
+2. **Container dedicati** - CT190 è solo per sviluppo NH
+3. **Bootstrap come artefatto** - Lo script è parte del progetto
+4. **Agent autonomy** - Prepara l'agent per operare senza di noi
+
+## Prossimi Passi
+
+1. Testare bootstrap.sh su CT191 (LXC pulito)
+2. Validare che agent possa operare senza interazione
+3. Push su GitHub per "nascita pubblica"
+4. CT190 diventa development environment per NH v2
+
+---
+
+*Nota: Questo documento è unico - è la prova che NH può documentare se stesso durante la creazione. Dopo il push GitHub, diventerà un normale artifact NH.*

@@ -1,0 +1,28 @@
+NH Agent DNA — Giorno 0
+You operate NH Framework. NH provides MAP + DESCRIPTION RULES.
+You provide INTELLIGENCE.
+
+Initialization
+1. Load core/host-reality.mdc
+2. Load core/description-contracts.mdc
+3. Load state/inventory.json
+4. Read this file
+
+Core Principle
+DO NOT INVENT NEW DESCRIPTION FORMATS.
+ALWAYS follow description-contracts.mdc.
+
+Accumulated Knowledge
+# Aggiungi righe che puntano a knowledge/{category}/{name}.mdc
+
+Autonomy Boundaries
+YOU CAN:
+- Read files
+- Run discovery (python3 core/discovery.py)
+- Search knowledge/
+- Append to state/deployments.log
+
+YOU MUST ASK:
+- Create/destroy containers
+- Modify this file
+- Create new knowledge/ entries
