@@ -1,4 +1,4 @@
-NH Agent DNA — Giorno 0
+NH Agent DNA — Giorno 1 (LXC 190)
 You operate NH Framework. NH provides MAP + DESCRIPTION RULES.
 You provide INTELLIGENCE.
 
@@ -15,7 +15,8 @@ DO NOT INVENT NEW DESCRIPTION FORMATS.
 ALWAYS follow description-contracts.mdc.
 
 Accumulated Knowledge
-# Aggiungi righe che puntano a knowledge/{category}/{name}.mdc
+- knowledge/security/sops-age-system.mdc
+- knowledge/deployment/lxc-management.mdc
 
 Autonomy Boundaries
 YOU CAN:
@@ -25,9 +26,57 @@ YOU CAN:
 - Append to state/deployments.log
 - Switch projects (python3 scripts/nh-switch.py <project>)
 - Parse natural language commands (python3 core/intent_parser.py)
+- Use SOPS+Age credential system (core/secure_credential_manager.py)
+- Deploy/undeploy LXC containers (scripts/deploy_lxc.py, scripts/undeploy_lxc.py)
+- Access cached credentials (core/credential_cache.py)
 
 YOU MUST ASK:
 - Create/destroy containers
 - Modify this file
 - Create new knowledge/ entries
 - Switch workspace projects (unless user explicitly asks)
+
+SOPS+Age Credential System
+- Use get_service_credential(service, key) to retrieve credentials
+- Use store_service_credential(service, key, data) to save credentials
+- Credentials are encrypted with Age and stored in secrets/*.enc.yaml
+- Age key is in ~/.age.key (private) and .sops.yaml (public)
+- For new chats, user provides Age password to unlock credentials
+- Fallback to config files only if SOPS unavailable
+
+LXC Management
+- Deploy: python3 scripts/deploy_lxc.py --vmid <id> --name <name> --template <template>
+- Undeploy: python3 scripts/undeploy_lxc.py <vmid> (requires confirmation)
+- SSH keys use format: nh-ct{vmid}@proxmox
+- Inventory tracked in state/inventory.json
+
+Development History System
+- Track all significant changes in knowledge/development/development-history.mdc
+- Use scripts/history_manager.py to add/search entries
+- Categories: ARCHITECTURE, SECURITY, FEATURE, DEPRECATION, BUGFIX, REFACTOR
+- Always append-only, never modify existing entries
+- Log reasons for architectural decisions and changes
+- This creates institutional memory for future agents
+
+Historical Agent Behavior
+When making significant changes:
+1. Read development history to understand context
+2. Log your changes with reasons and impact assessment
+3. Reference previous decisions when relevant
+4. Explain why old approaches were abandoned
+5. Document lessons learned for future agents
+
+Unified Credential System
+- ALL credentials go to SOPS+Age via scripts/credential_manager.py
+- Services: github.main, proxmox.main, db.app1, api.service-name
+- Deduplication prevents duplicate storage
+- Interactive setup for missing credentials
+- Cache (15min) for performance, SOPS for persistence
+- Use: get_credential(service, key) from credential_manager
+- Store: store_credential(service, key, data) to SOPS
+
+GitHub Token Management
+- Token requested interactively via push_safe.py
+- Stored in SOPS as github.main (persistent, not temporary)
+- Retrieved from SOPS first, fallback to interactive input
+- Deduplication prevents multiple token storage

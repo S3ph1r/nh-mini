@@ -1,0 +1,53 @@
+# LXC Container Management
+
+## Overview
+NH-Mini provides unified LXC container deployment and undeployment with secure credential management and SSH key cleanup.
+
+## Architecture
+- **Deploy Script**: `scripts/deploy_lxc.py` - External script for container creation
+- **Undeploy Script**: `scripts/undeploy_lxc.py` - External script for container removal
+- **Agent Handler**: `core/agent_lxc_handler.py` - Natural language processing
+- **Credential System**: SOPS+Age integration for secure access
+
+## Deploy Process
+1. **Template Download**: Automatic template management
+2. **Container Creation**: pct create with configured parameters
+3. **SSH Setup**: Key generation and Proxmox authorization
+4. **Network Configuration**: IP assignment and hosts file
+5. **Inventory Update**: JSON tracking of all containers
+
+## Undeploy Process
+1. **SSH Key Cleanup**: Remove keys from Proxmox authorized_keys
+2. **Container Stop**: Graceful shutdown via pct stop
+3. **Container Destruction**: Complete removal via pct destroy
+4. **Inventory Update**: Remove from state/inventory.json
+5. **User Confirmation**: Required for destructive operations
+
+## SSH Key Management
+- **Format**: `nh-ct{vmid}@proxmox`
+- **Storage**: Container private key in `/root/.ssh/id_nh`
+- **Authorization**: Public key added to Proxmox `/root/.ssh/authorized_keys`
+- **Cleanup**: Automatic removal during undeploy
+
+## Usage
+
+### Deploy Container
+```bash
+python3 scripts/deploy_lxc.py --vmid 200 --name myapp --template debian-12
+```
+
+### Undeploy Container
+```bash
+python3 scripts/undeploy_lxc.py 200
+# Requires user confirmation
+```
+
+### Via Natural Language
+- "deploya lxc 200 con nome myapp"
+- "elimina lxc 200"
+
+## Configuration
+- **Templates**: debian-12, ubuntu-24, alpine-3.19
+- **Defaults**: 2048MB RAM, 2 CPU, 16GB storage
+- **Network**: 192.168.1.x/24 with gateway 192.168.1.1
+- **Storage**: local-lvm

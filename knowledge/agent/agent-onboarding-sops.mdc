@@ -1,0 +1,79 @@
+# NH-Mini Agent Onboarding - SOPS+Age System
+
+## Per il Prossimo Agent: Come Accedere al Sistema
+
+### 🔐 **PRIMO ACCESSO - Richiedi all'Utente:**
+
+Quando apri una nuova chat e NH-Mini ha bisogno di credenziali:
+
+1. **Chiedi la password Age:**
+   ```
+   🔐 Benvenuto! Per accedere alle credenziali cifrate, ho bisogno della password Age.
+   
+   Se non l'hai mai usata:
+   - È una password che solo tu conosci
+   - Serve per decifrare i secrets di NH-Mini
+   - Una volta fornita, posso accedere a tutte le credenziali
+   
+   Password Age: [attendi input]
+   ```
+
+2. **Se l'utente non sa di cosa parli:**
+   ```
+   ⚠️  Sembra che tu non abbia mai configurato Age per NH-Mini.
+   
+   Per procedere, abbiamo bisogno di:
+   1. Creare una chiave Age (se non esiste)
+   2. Impostare la password
+   3. Configurare il sistema
+   
+   Vuoi che ti guidi nella configurazione? (s/N)
+   ```
+
+### 🎯 **Quando Serve la Password:**
+
+**Sempre necessario:**
+- Deploy LXC (`python3 scripts/deploy_lxc.py`)
+- Undeploy LXC (`python3 scripts/undeploy_lxc.py`)
+- Accesso a credenziali Proxmox
+- Qualsiasi operazione SSH su container
+
+**Non necessario:**
+- Lettura file di configurazione generici
+- Operazioni locali senza credenziali
+- Documentazione
+
+### 🔍 **Verifica Stato Sistema:**
+
+```bash
+# Controlla se Age è configurato
+ls -la ~/.age.key
+
+# Controlla se SOPS funziona
+sops --version
+
+# Prova a decifrare (chiederà password se necessario)
+python3 -c "from core.secure_credential_manager import get_service_credential; print('Test:', get_service_credential('proxmox', 'main') is not None)"
+```
+
+### 📋 **Checklist per Nuovo Agent:**
+
+- [ ] Verifica `.cursorrules` per contesto corrente
+- [ ] Chiedi password Age all'utente
+- [ ] Testa accesso credenziali
+- [ ] Documenta eventuali problemi
+- [ ] Procedi con operazioni richieste
+
+### ⚠️ **Errori Comuni:**
+
+1. **"Age key not found"** → Crea nuova chiave con `age-keygen -o ~/.age.key`
+2. **"Invalid password"** → Password Age errata, richiedila di nuovo
+3. **"SOPS not found"** → Installa SOPS: vedi knowledge/security/sops-age-system.mdc
+4. **"No credentials found"** → Le credenziali non sono mai state salvate, usa `scripts/save_proxmox_creds.py`
+
+### 🔒 **Sicurezza:**
+
+- **Mai** hardcoded credenziali
+- **Mai** committare `.age.key` o files decifrati
+- **Sempre** usare SOPS per nuove credenziali
+- **Sempre** verificare prima di procedere

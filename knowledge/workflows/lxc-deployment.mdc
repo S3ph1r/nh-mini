@@ -1,0 +1,129 @@
+---
+type: deployment_workflow
+container_allocation: dynamic
+resource_type: lxc_container
+deployment_target: proxmox_host
+workflow_id: nh-lxc-deploy-001
+---
+
+# NH LXC Deployment Workflow
+
+## Overview
+Workflow automatizzato per deploy container LXC su Proxmox seguendo filosofia NH (minimalista, sicuro, documentato).
+
+## Trigger Conditions
+L'agent deve attivare questo workflow quando:
+1. Utente richiede: "ho bisogno di un nuovo container", "deploy LXC", "crea CT###"
+2. VMID specificato non esiste in state/inventory.json
+3. Pattern riconosciuti: `/deploy.*lxc/i`, `/nuovo.*container/i`, `/ct\d{3}/`
+
+## Pre-Deployment Checklist
+- [ ] Verifica VMID disponibile (101-999)
+- [ ] Controlla template richiesto su Proxmox
+- [ ] Verifica spazio storage local-lvm
+- [ ] Conferma risorse disponibili (RAM/CPU)
+
+## Deployment Steps
+
+### Step 1: Discovery & Planning
+```bash
+# Verifica ambiente corrente
+python3 core/discovery.py
+# Mostra container esistenti
+echo "Container attuali:"
+cat state/inventory.json | jq '.containers[] | {vmid, name, status}'
+```
+
+### Step 2: Richiesta Parametri
+Agent deve chiedere:
+- **VMID target** (se non specificato, usa prossimo disponibile)
+- **Nome container** (default: nh-ct###)
+- **Template OS** (default: debian-12-standard)
+- **Risorse:** RAM (default: 2GB), CPU (default: 2), Storage (default: 16GB)
+- **IP/Network** (default: DHCP o 192.168.1.###/24)
+
+### Step 3: Template Management
+```bash
+# Verifica template disponibili
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pveam list local"
+
+# Se manca, scarica template richiesto
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pveam download local debian-12-standard_12.12-1_amd64.tar.zst"
+```
+
+### Step 4: Container Creation
+```bash
+# Deploy container con specifiche NH
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct create $VMID local:vztmpl/$TEMPLATE \
+  --storage local-lvm --memory $MEMORY --cores $CPU --swap $SWAP \
+  --hostname $HOSTNAME --net0 'name=eth0,bridge=vmbr0,ip=$IP,gw=192.168.1.1' \
+  --nameserver '1.1.1.1 8.8.8.8' --rootfs local-lvm:$STORAGE \
+  --description 'NH Framework Container' --unprivileged 1 --features 'nesting=1,keyctl=1'"
+```
+
+### Step 5: SSH Key Setup (Bidirezionale)
+```bash
+# Genera chiave SSH nel container
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- ssh-keygen -t ed25519 -f /root/.ssh/id_nh -N '' -C 'nh-ct$VMID@proxmox'"
+
+# Preleva chiave pubblica
+PUB_KEY=$(sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- cat /root/.ssh/id_nh.pub")
+
+# Autorizza su Proxmox
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "echo '$PUB_KEY' >> /root/.ssh/authorized_keys"
+
+# Setup hostname e hosts
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- hostnamectl set-hostname $HOSTNAME"
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- bash -c 'echo 192.168.1.2 proxmox >> /etc/hosts'"
+```
+
+### Step 6: Verification
+```bash
+# Avvia container
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct start $VMID"
+
+# Test SSH bidirezionale
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- ssh -i /root/.ssh/id_nh -o StrictHostKeyChecking=no root@192.168.1.2 'echo SSH bidirezionale OK && hostname'"
+```
+
+### Step 7: Documentation
+- Aggiorna `state/inventory.json` con nuovo container
+- Crea record in `state/deployments.log`
+- Documenta in `knowledge/containers/ct###.mdc`
+
+## Post-Deployment Actions
+1. **Bootstrap NH Framework** (opzionale)
+2. **Setup Workspace** se richiesto
+3. **Configura Monitoring** base
+
+## Error Handling
+- **Template mancante:** Scarica automaticamente
+- **VMID occupato:** Suggerisci alternativa
+- **Storage insufficiente:** Riduci dimensioni o pulisci
+- **SSH fallito:** Verifica keys, retry con debug
+
+## Security Notes
+- Usa sempre container unprivileged
+- Mantieni SSH keys separate per container
+- Documenta ogni container creato
+- Verifica accessi prima di procedere
+
+## Example Usage
+```bash
+# Deploy base container
+nh-deploy-lxc --vmid 192 --name nh-dev-test
+
+# Deploy con specifiche custom
+nh-deploy-lxc --vmid 201 --template ubuntu-24.04 --memory 4096 --cpu 4
+
+# Deploy da linguaggio naturale
+"Agent, ho bisogno di un container per testare la nuova app"
+→ Trigger: riconosce pattern, propone CT193, esegue workflow
+```
+
+## Integration with NH Framework
+Questo workflow segue principi NH:
+- **Minimalista:** Solo essenziale, niente bloat
+- **Documentato:** Ogni step loggato e tracciato
+- **Sicuro:** SSH keys, unprivileged containers
+- **Coerente:** Stesse convenzioni di naming/structure

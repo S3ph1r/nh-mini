@@ -1,0 +1,90 @@
+# 📜 Storico Sviluppo NH-Mini
+
+## 🎯 Scopo
+Registro append-only di tutte le modifiche significative al sistema NH-Mini. 
+Ogni modifica è tracciata con timestamp, motivazione e contesto storico.
+
+## 📋 Formato Registro
+```json
+{
+  "timestamp": "ISO8601",
+  "category": "ARCHITECTURE|SECURITY|FEATURE|DEPRECATION|BUGFIX|REFACTOR",
+  "component": "file/cartella coinvolta",
+  "change": "descrizione cambiamento",
+  "reason": "perché è stato fatto",
+  "author": "agent|user|system",
+  "git_commit": "hash_opzionale",
+  "impact": "high|medium|low"
+}
+```
+
+## 🏷️ Categorie
+- **ARCHITECTURE**: Cambi strutturali del sistema
+- **SECURITY**: Modifiche relative alla sicurezza
+- **FEATURE**: Nuove funzionalità aggiunte
+- **DEPRECATION**: Feature rimosse o sostituite
+- **BUGFIX**: Correzioni di bug
+- **REFACTOR**: Miglioramenti codice senza cambi funzionali
+
+## 📚 Storico Completo
+
+### 2026-02-16 - Migrazione SOPS+Age
+```json
+{"timestamp": "2026-02-16T14:00:00Z", "category": "SECURITY", "component": "global", "change": "Implementazione sistema SOPS+Age per gestione credenziali", "reason": "Eliminare ogni traccia di credenziali hardcoded nel codebase", "author": "agent", "impact": "high"}
+```
+
+### 2026-02-16 - Rimozione Handler Obsoleto
+```json
+{"timestamp": "2026-02-16T14:30:00Z", "category": "DEPRECATION", "component": "agent_lxc_undeploy_handler.py", "change": "Eliminato handler obsoleto per undeploy LXC", "reason": "Sostituito da script esterni più sicuri e coerenti", "author": "agent", "impact": "medium"}
+```
+
+### 2026-02-16 - Unificazione Deploy/Undeploy
+```json
+{"timestamp": "2026-02-16T13:00:00Z", "category": "ARCHITECTURE", "component": "deploy/undeploy system", "change": "Unificazione sistema deploy/undeploy in script esterni", "reason": "Coerenza architetturale e sicurezza migliorata", "author": "agent", "impact": "high"}
+```
+
+## 🔍 Come Usare lo Storico
+
+### Per Agent Futuri:
+1. Leggi sempre lo storico prima di modifiche significative
+2. Aggiungi sempre nuova entry per cambi importanti
+3. Mantieni formato consistente
+4. Spiega sempre il "perché" oltre al "cosa"
+
+### Per Debug:
+- Cerca per componente per vedere evoluzione
+- Cerca per categoria per tipo di cambiamento
+- Cerca per data per timeline specifica
+
+## 📝 Linee Guida Aggiunta Entry
+
+1. **Sempre Append-Only**: Mai modificare entry esistenti
+2. **Timestamp Preciso**: Usare ISO8601 con timezone
+3. **Descrizione Chiara**: Spiegare cosa e perché
+4. **Impact Assessment**: Valutare impatto sul sistema
+5. **Context Preservation**: Mantenere contesto decisionale
+
+## 🔧 Tools per Gestione
+
+```bash
+# Aggiungi nuova entry (usa script)
+python3 scripts/add_history_entry.py --category SECURITY --component "deploy_lxc.py" --change "Migliorata gestione errori" --reason "Prevenire crash su network failure"
+
+# Cerca nello storico
+python3 scripts/search_history.py --component "SOPS" --category SECURITY
+
+# Visualizza timeline
+tail -n 20 knowledge/development/development-history.mdc
+```
+### 2026-02-16 - Implementato sistema registro storico sviluppo
+```json
+{
+  "timestamp": "2026-02-16T21:14:21.228508Z",
+  "category": "FEATURE",
+  "component": "history_system",
+  "change": "Implementato sistema registro storico sviluppo",
+  "reason": "Tracciare evoluzione sistema e decisioni architetturali per agent futuri",
+  "author": "agent",
+  "impact": "high"
+}
+```

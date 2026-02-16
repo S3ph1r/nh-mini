@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GitHub Push Script - Sicuro con Credential Cache
+GitHub Push Script - Sicuro con SOPS+Age Credential System
 Non hardcodare mai credenziali!
 """
 
@@ -9,9 +9,12 @@ import sys
 import subprocess
 from pathlib import Path
 
-# Aggiungi core al path
+# Aggiungi core e scripts al path
 sys.path.insert(0, str(Path(__file__).parent.parent / "core"))
-from credential_cache import get_credential, clear_credential
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+
+from credential_cache import clear_credential
+from credential_manager import UnifiedCredentialManager
 
 def check_git_repo():
     """Verifica se siamo in un repository git"""
@@ -63,23 +66,30 @@ def commit_changes():
         return False
 
 def get_github_token():
-    """Ottieni token GitHub in modo sicuro"""
+    """Ottieni token GitHub in modo sicuro usando SOPS+Age"""
+    manager = UnifiedCredentialManager()
+    
+    # Prova a recuperare da SOPS/cache
+    creds = manager.get_credential("github", "main", interactive=False)
+    
+    if creds and 'token' in creds:
+        print("✅ Token GitHub trovato in SOPS")
+        return creds['token']
+    
+    # Se non trovato, chiedi interattivo
     print("🔐 Per pushare su GitHub ho bisogno del tuo token.")
     print("   Puoi crearlo su: https://github.com/settings/tokens")
     print("   (richiede almeno i permessi: repo, write:packages)")
     print()
     
-    token = get_credential("github_token", "GitHub Token (o 'annulla'): ", secret=True)
+    # Richiedi credenziali interattive
+    creds = manager.get_credential("github", "main", interactive=True)
     
-    if not token:
-        print("❌ Token richiesto per push")
+    if creds and 'token' in creds:
+        return creds['token']
+    else:
+        print("❌ Token GitHub richiesto per push")
         return None
-        
-    if token.lower() == 'annulla':
-        print("❌ Push annullato")
-        return None
-        
-    return token
 
 def push_to_github(token):
     """Push con autenticazione sicura"""
