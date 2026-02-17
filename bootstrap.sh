@@ -2,7 +2,7 @@
 # NH_mini - Bootstrap Script
 # Installazione framework NH su LXC Proxmox vuoto
 
-set -euo pipefail
+set -eo pipefail
 
 # Gestione parametri
 SKIP_PROXMOX_CHECK=false
@@ -115,6 +115,9 @@ step1_prerequisiti() {
 step2_detect_proxmox() {
     info "STEP 2: Rilevamento Proxmox Host"
     
+    # Inizializza variabile
+    PROXMOX_HOST=""
+    
     # Modalità LXC: usa IP fornito o auto-rileva
     if [[ "$LXC_MODE" == "true" ]]; then
         if [[ -n "$PROXMOX_IP" ]]; then
@@ -159,7 +162,7 @@ step2_detect_proxmox() {
         fi
         
         # Verifica pct su host remoto
-        if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@"$PROXMOX_HOST" "which pct" >/dev/null 2>&1; then
+        if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i "$SSH_KEY" root@"$PROXMOX_HOST" "which pct || which /usr/sbin/pct" >/dev/null 2>&1; then
             success "Comando pct disponibile su host remoto"
         else
             error "pct non trovato su $PROXMOX_HOST - assicurati sia un host Proxmox"
@@ -492,7 +495,7 @@ show_help() {
 }
 
 # Gestione help
-if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
     show_help
 fi
 
