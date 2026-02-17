@@ -1,0 +1,211 @@
+# GitHub Operations Guide - NH-Mini Framework
+
+type: development_workflow
+description: Guida completa per tutte le operazioni GitHub nell'ecosistema NH-Mini
+date: 2026-02-16
+
+## 🎯 **PANORAMICA**
+
+Questo file unifica **TUTTE** le operazioni GitHub per NH-Mini:
+- Token management e sicurezza
+- Push workflow e best practices  
+- Gestione repository e branch
+- Error handling e troubleshooting
+
+## 🔐 **TOKEN MANAGEMENT**
+
+### **Recupero Token Sicuro**
+```python
+# Usa SEMPRE il credential manager unificato
+from scripts.credential_manager import UnifiedCredentialManager
+
+manager = UnifiedCredentialManager()
+token = manager.get_credential("github", "main", interactive=True)
+```
+
+### **Storage Token**
+```python
+# Se ricevi nuovo token dall'utente
+manager.store_credential("github", "main", {"token": "ghp_xxx"})
+```
+
+### **Verifica Token Validità**
+```bash
+# Testa token prima di usarlo
+curl -H "Authorization: token $GITHUB_TOKEN" \
+     -H "Accept: application/vnd.github.v3+json" \
+     https://api.github.com/user
+```
+
+## 📤 **PUSH WORKFLOW COMPLETO**
+
+### **1. Pre-push Setup**
+```bash
+# Verifica Git installato
+which git || apt install -y git
+
+# Configura identità Git (se necessario)
+git config user.name "S3ph1r" || git config --global user.name "S3ph1r"
+git config user.email "s3ph1r@users.noreply.github.com" || git config --global user.email "s3ph1r@users.noreply.github.com"
+```
+
+### **2. Preparazione Codice**
+```bash
+# Stato attuale
+git status
+
+# Aggiungi tutti i cambiamenti
+git add .
+
+# Commit con messaggio descrittivo
+git commit -m "feat: descrizione cambiamento"
+# Pattern: feat: | fix: | docs: | refactor: | test: | chore:
+```
+
+### **3. Gestione Repository Remoto**
+```bash
+# Verifica se repository esiste
+REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: token $GITHUB_TOKEN" \
+  https://api.github.com/repos/S3ph1r/nh-mini)
+
+# Se non esiste (404), crealo
+if [ "$REPO_CHECK" = "404" ]; then
+  curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+       -H "Accept: application/vnd.github.v3+json" \
+       https://api.github.com/user/repos \
+       -d '{"name":"nh-mini","private":true,"description":"NH-Mini Development Environment"}'
+fi
+```
+
+### **4. Push con Token Sicuro**
+```bash
+# Usa il wrapper sicuro (raccomandato)
+python3 scripts/push_safe.py
+
+# Oppure push manuale con token inline
+git remote set-url origin https://${GITHUB_TOKEN}@github.com/S3ph1r/nh-mini.git
+git push origin main
+```
+
+## 🔄 **WORKFLOW STANDARD GITHUB**
+
+### **Branch Management**
+```bash
+# Crea nuovo branch per feature
+git checkout -b feature/nome-feature
+
+# Push branch remoto
+git push -u origin feature/nome-feature
+
+# Ritorna a main
+git checkout main
+git pull origin main
+```
+
+### **Pull e Sync**
+```bash
+# Aggiorna repository locale
+git fetch origin
+git pull origin main
+
+# Se hai conflitti
+git status
+git add .
+git commit -m "resolve: merge conflicts"
+```
+
+## ⚠️ **SICUREZZA CRITICA**
+
+### **Regole Assolute**
+- ❌ **MAI** hardcodare token nei file
+- ❌ **MAI** pushare credenziali reali
+- ✅ **SEMPRE** usare `scripts/push_safe.py`
+- ✅ **SEMPRE** verificare `.gitignore` include `secrets/`
+- ✅ **SEMPRE** usare credential manager per token
+
+### **Se Trovi Credenziali Esposte**
+```bash
+# FERMATI IMMEDIATAMENTE
+echo "⚠️ TROVATE CREDENZIALI ESPoste - GitHub token revocato necessario"
+echo "1. Revoca token su GitHub.com"
+echo "2. Genera nuovo token"
+echo "3. Aggiorna con credential_manager"
+echo "4. Considera repository compromesso"
+```
+
+## 🛠️ **TROUBLESHOOTING COMPLETO**
+
+### **Errori Comuni**
+```bash
+# "fatal: authentication failed"
+# → Token scaduto o invalido
+# → Soluzione: Richiama get_credential() per nuovo token
+
+# "remote: Repository not found"
+# → Repository privato o non esiste
+# → Soluzione: Crea via API o verifica permessi
+
+# "fatal: refusing to merge unrelated histories"
+# → Repository diverso o corrotto
+# → Soluzione: git pull origin main --allow-unrelated-histories
+
+# "Your branch is behind 'origin/main' by X commits"
+# → Repository remoto ha cambiamenti
+# → Soluzione: git pull prima di push
+```
+
+### **Script Push Safe Integration**
+```python
+# In scripts/push_safe.py
+def main():
+    # Recupera token sicuro
+    manager = UnifiedCredentialManager()
+    token = manager.get_credential("github", "main", interactive=False)
+    
+    if not token:
+        print("❌ Token GitHub non trovato")
+        token = manager.get_credential("github", "main", interactive=True)
+    
+    # Configura Git con token sicuro
+    os.system(f"git remote set-url origin https://{token}@github.com/S3ph1r/nh-mini.git")
+    
+    # Push con retry logic
+    for attempt in range(3):
+        result = os.system("git push origin main")
+        if result == 0:
+            print("✅ Push completato con successo")
+            break
+        else:
+            print(f"⚠️ Push tentativo {attempt+1} fallito")
+            time.sleep(2)
+```
+
+## 📋 **CHECKLIST PRE-PUSH**
+
+- [ ] Token GitHub valido e recuperato via credential_manager
+- [ ] Nessun file sensibile nella staging area
+- [ ] .gitignore include cartelle sensibili (secrets/, .env, etc.)
+- [ ] Commit message segue pattern convenzionale
+- [ ] Repository remoto configurato correttamente
+- [ ] Branch corrente è aggiornato con remoto
+- [ ] Test locali passano (se applicabile)
+
+## 🚀 **COMANDI RAPIDI**
+
+```bash
+# Setup completo da zero
+python3 scripts/credential_manager.py  # Per token
+git config user.name "S3ph1r"
+git config user.email "s3ph1r@users.noreply.github.com"
+
+# Push sicuro standard
+python3 scripts/push_safe.py
+
+# Verifica stato repository
+curl -H "Authorization: token $(python3 -c 'from scripts.credential_manager import UnifiedCredentialManager; print(UnifiedCredentialManager().get_credential("github", "main", interactive=False)["token"])')" https://api.github.com/repos/S3ph1r/nh-mini
+```
+
+---
+
+**Questa guida sostituisce tutti i precedenti file GitHub-specifici e fornisce un reference unico per qualsiasi operazione GitHub nell'ecosistema NH-Mini.**

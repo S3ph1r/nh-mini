@@ -1,0 +1,146 @@
+# Agent Behavior Guidelines - NH-Mini Framework
+
+type: agent_behavior
+description: Linee guida complete per comportamento agent NH-Mini
+date: 2026-02-16
+
+## 🎯 **PRINCIPI FONDAMENTALI**
+
+### **1. Credenziali = Requisito Assoluto**
+**SE MANCA UNA CREDENZIALE → L'AGENT SI FERMA E CHIEDE**
+
+```
+Utente: "Pusha le modifiche su GitHub"
+        ↓
+Agent: "Controllo repository Git..."
+        ↓
+Agent: "Trovo modifiche da committare"
+        ↓
+Agent: "Chiedo token GitHub all'utente"
+        ↓
+┌─────────────────────────────────────┐
+│   SE UTENTE NON FORNISCE TOKEN      │
+│         ↓                           │
+│   Agent: "❌ Token richiesto"      │
+│   Agent: "Fermo qui, non posso"     │
+│   Agent: "procedere senza token"    │
+│         ↓                           │
+└─────────────────────────────────────┘
+```
+
+### **2. Primo Accesso - Age System**
+
+Quando apri una nuova chat e NH-Mini ha bisogno di credenziali:
+
+**Fase 1: Richiedi Password Age**
+```
+🔐 Benvenuto! Per accedere alle credenziali cifrate, ho bisogno della password Age.
+
+Se non l'hai mai usata:
+- È una password che solo tu conosci
+- Serve per decifrare i secrets di NH-Mini
+- Una volta fornita, posso accedere a tutte le credenziali
+
+Password Age: [attendi input]
+```
+
+**Fase 2: Se Utente Non Sa**
+```
+⚠️  Sembra che tu non abbia mai configurato Age per NH-Mini.
+
+Per procedere, abbiamo bisogno di:
+1. Creare una chiave Age (se non esiste)
+2. Impostare la password
+3. Configurare il sistema
+
+Vuoi che ti guidi nella configurazione? (s/N)
+```
+
+## 🔍 **FLUSSO DECISIONALE STANDARD**
+
+### **Per Task Tecnici:**
+1. **Analisi Contesto**: Cosa deve fare l'utente?
+2. **Verifica Requisiti**: Quali credenziali/tools servono?
+3. **Ricerca Storico**: C'è precedente in development-history?
+4. **Esecuzione**: Applica principi framework
+5. **Documentazione**: Logga cambiamenti significativi
+
+### **Per Task di Modifica:**
+```
+Utente: "Modifica sistema X"
+        ↓
+Agent: "Cerco precedenti in knowledge/..."
+        ↓
+Agent: "Verifico impact level..."
+        ↓
+Agent: "Procedo con modifica documentata"
+```
+
+## 📋 **REGOLE AUTONOMIA**
+
+### **✅ PUOI FARE DA SOLO:**
+- Leggere file e analizzare codice
+- Cercare in knowledge/ con SearchCodebase
+- Usare credential_manager per credenziali
+- Deploy/undeploy LXC containers
+- Parse comandi natural language
+- Appendere a deployments.log
+
+### **❌ DEVI CHIEDERE:**
+- Creare/distruggere containers
+- Modificare .cursorrules
+- Creare nuove entries knowledge/
+- Switchare progetti workspace (a meno che utente non chieda esplicitamente)
+
+## 📝 **DOCUMENTAZIONE CAMBIAMENTI**
+
+### **Quando Loggare:**
+- **SEMPRE**: Architettura, sicurezza, nuove funzionalità
+- **SPESSO**: Bugfix complessi, refactor grandi
+- **MAI**: Fix typo, commenti, cambi minori UI
+
+### **Come Loggare:**
+```bash
+python3 scripts/history_manager.py add \
+  --category ARCHITECTURE \
+  --component "credential_system" \
+  --change "Implementato sistema unificato" \
+  --reason "Eliminare frammentazione" \
+  --impact high
+```
+
+## 🔎 **KNOWLEDGE DISCOVERY**
+
+### **Priorità Ricerca:**
+1. **security/** - Per credenziali, encryption
+2. **deployment/** - Per LXC, containers  
+3. **workflows/** - Per processi standard
+4. **agent/** - Per comportamenti specifici
+5. **development/** - Per storia e decisioni
+
+### **Esempio Ricerca:**
+```
+Task: "Deploy LXC con credenziali sicure"
+↓
+Search: "knowledge/" + "LXC security credential"
+↓  
+Trova: knowledge/deployment/lxc-management.mdc
+Trova: knowledge/security/unified-credential-system.mdc
+↓
+Applica pattern trovati
+```
+
+## ⚠️ **ANTI-PATTERN COMUNI**
+
+### **❌ NON FARE:**
+- Procedere senza credenziali valide
+- Ignorare development history su cambi complessi
+- Creare nuovi formati descrizione
+- Modificare .cursorrules autonomamente
+- Dimenticare di loggare cambi significativi
+
+### **✅ FAI SEMPRE:**
+- Chiedi quando in dubbio
+- Documenta il perché delle decisioni
+- Rispetta i principi del framework
+- Mantieni coerenza con sistema esistente

@@ -88,3 +88,30 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-02-16 - Implementato sistema unificato SOPS+Age per tutte ...
+```json
+{
+  "timestamp": "2026-02-16T21:30:40.150587Z",
+  "category": "SECURITY",
+  "component": "credential_system",
+  "change": "Implementato sistema unificato SOPS+Age per tutte le credenziali",
+  "reason": "Centralizzare gestione credenziali, eliminare frammentazione cache/SOPS, deduplicazione automatica"
+}
+```
+
+### 2026-02-17 - Pulizia Container Proxmox
+```json
+{
+  "timestamp": "2026-02-17T14:45:00.000000Z",
+  "category": "DEPRECATION",
+  "component": "proxmox_containers",
+  "change": "Eliminati container test ct181, ct198-ct204 (9 container totali)",
+  "reason": "Pulizia sistema da container di test numerici, mantenere solo container con nomi descrittivi funzionali",
+  "author": "agent",
+  "impact": "medium"
+}
+  "author": "agent",
+  "impact": "high"
+}
+```
