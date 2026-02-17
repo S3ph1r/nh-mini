@@ -1,0 +1,124 @@
+# Infrastructure Map — Container Proxmox
+
+type: resource_declaration
+last_updated: 2026-02-17
+auto_source: state/inventory.json + port scan
+
+## Panoramica
+
+Proxmox host `homelab` (PVE 9.1.1) — 10 container LXC su subnet 192.168.1.0/24
+
+## Container Attivi
+
+### CT101 — chromadb-lxc
+- **type**: database
+- **engine**: chromadb
+- **location**: ct101 (192.168.1.101)
+- **purpose**: Vector database per embeddings AI
+- **isolation_model**: instance
+- **ports**: 8000 (ChromaDB API)
+- **resources**: 2048MB RAM, 2 CPU, 10GB storage
+
+### CT103 — observability
+- **type**: monitoring
+- **engine**: grafana + prometheus
+- **location**: ct103 (192.168.1.103)
+- **purpose**: Monitoring e metriche infrastruttura
+- **isolation_model**: instance
+- **ports**: 3000 (Grafana), 9090 (Prometheus), 9121 (Redis exporter)
+- **resources**: 2048MB RAM, 2 CPU, 10GB storage
+
+### CT104 — minio-lxc
+- **type**: storage
+- **engine**: minio
+- **location**: ct104 (192.168.1.104)
+- **purpose**: Object storage S3-compatibile
+- **isolation_model**: instance
+- **ports**: 9000 (MinIO API), 9001 (MinIO Console)
+- **resources**: 2048MB RAM, 1 CPU, 10GB storage
+
+### CT105 — postgres-lxc
+- **type**: database
+- **engine**: postgresql
+- **location**: ct105 (192.168.1.105)
+- **purpose**: Database relazionale condiviso
+- **isolation_model**: schema_per_project
+- **ports**: 5432 (PostgreSQL)
+- **resources**: 4096MB RAM, 2 CPU, 10GB storage
+
+### CT106 — WarRoom (🔴 stopped)
+- **type**: applicazione
+- **engine**: da verificare
+- **location**: ct106 (192.168.1.106)
+- **purpose**: Da verificare (attualmente spento)
+- **isolation_model**: instance
+- **resources**: 2048MB RAM, 2 CPU, 10GB storage
+
+### CT107 — nhi-embeddings
+- **type**: servizio AI
+- **engine**: embedding service
+- **location**: ct107 (192.168.1.107)
+- **purpose**: Generazione embeddings per NHI
+- **isolation_model**: instance
+- **ports**: nessuno esposto (servizio interno)
+- **resources**: 1024MB RAM, 2 CPU, 15GB storage
+
+### CT160 — NHI-CORE-v1.1
+- **type**: applicazione
+- **engine**: NHI core service
+- **location**: ct160 (192.168.1.160)
+- **purpose**: Core di NHI (Natural Homelab Intelligence) v1.1
+- **isolation_model**: instance
+- **ports**: 8000 (NHI API), 111 (RPC)
+- **resources**: 4096MB RAM, CPU default, 8GB storage
+
+### CT170 — nhi-backup (🔴 stopped)
+- **type**: infrastruttura
+- **engine**: backup service
+- **location**: ct170 (192.168.1.170)
+- **purpose**: Backup per sistema NHI
+- **isolation_model**: instance
+- **resources**: 2048MB RAM, 2 CPU, 4GB storage
+
+### CT190 — NH-Mini ⭐
+- **type**: framework
+- **engine**: NH-Mini agent framework
+- **location**: ct190 (192.168.1.190)
+- **purpose**: Container principale NH-Mini — agent AI opera da qui
+- **isolation_model**: instance
+- **ports**: interni solo (agent IDE)
+- **resources**: 4096MB RAM, 2 CPU, 8GB storage
+- **nota**: Questo è il container da cui l'agent opera
+
+### CT200 — ct200
+- **type**: sviluppo
+- **engine**: base Debian 12
+- **location**: ct200 (192.168.1.200)
+- **purpose**: Container sviluppo/test
+- **isolation_model**: instance
+- **ports**: solo SSH
+- **resources**: 2048MB RAM, 2 CPU, 16GB storage
+
+## Mappa Dipendenze
+
+```
+NHI Stack:
+  CT160 (NHI-CORE) → CT101 (ChromaDB) per vector search
+  CT160 (NHI-CORE) → CT105 (PostgreSQL) per dati strutturati
+  CT160 (NHI-CORE) → CT107 (Embeddings) per generazione vettori
+  CT160 (NHI-CORE) → CT104 (MinIO) per object storage
+  CT170 (nhi-backup) → backup di NHI stack
+
+Monitoring:
+  CT103 (Observability) → monitora tutti i container
+
+NH-Mini:
+  CT190 (NH-Mini) → gestisce infrastruttura via SSH a Proxmox
+  CT200 (ct200) → container test/sviluppo
+```
+
+## Note
+- Tutti i container sono unprivileged con nesting=1
+- Bridge: vmbr0, gateway 192.168.1.1
+- DNS: varia per container (1.1.1.1, 8.8.8.8)
+- Aggiornare questo file quando si creano/rimuovono container

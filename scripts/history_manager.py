@@ -8,7 +8,7 @@ import json
 import sys
 import argparse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 HISTORY_FILE = Path(__file__).parent.parent / "knowledge" / "development" / "development-history.mdc"
@@ -37,7 +37,7 @@ class DevelopmentHistory:
         
         # Crea entry
         entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "category": category,
             "component": component,
             "change": change,

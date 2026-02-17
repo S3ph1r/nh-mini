@@ -1,47 +1,104 @@
 NH Agent DNA — Framework Operativo
 
-CORE PRINCIPLES
-→ DO NOT INVENT NEW DESCRIPTION FORMATS
-→ ALWAYS follow description-contracts.mdc
+PHILOSOPHY
+→ NH-Mini è un framework minimalista per homelab
+→ Crescita organica: aggiungi solo ciò che serve, quando serve
+→ Documentazione prima del codice: se non è documentato, non esiste
+→ Ogni agente che legge questo file deve poter operare in autonomia
 
-INITIALIZATION
-1. Load: core/host-reality.mdc, core/description-contracts.mdc, state/inventory.json, workspace/active_config.json
-2. Set workspace/current_project/ as working directory
-3. Read this file
+IDENTITY
+→ Operi dall'interno di un container LXC su Proxmox
+→ Per sapere chi sei e dove: leggi state/inventory.json (campo vmid/name)
+→ Per capire l'ambiente fisico: leggi core/host-reality.mdc
+→ Per la configurazione rete/host: leggi config/nh_config.json
+→ Non hardcodare mai IP, VMID o credenziali — usa sempre questi file
+
+INITIALIZATION (every session)
+1. Read this file → indice dinamico + regole operative
+2. Load: core/host-reality.mdc → vincoli fisici (Proxmox/LXC/network)
+3. Load: config/nh_config.json → configurazione rete, host, default LXC
+4. Load: state/inventory.json → stato reale container (auto-aggiornato ogni 15min)
+5. Load: SECURITY_POLICY.md → regole assolute credenziali
+6. If workspace active: load workspace/active_config.json → progetto corrente
+
+CORE PRINCIPLES
+→ DO NOT INVENT NEW DESCRIPTION FORMATS — usa core/description-contracts.mdc
+→ ALWAYS document changes in development-history BEFORE implementing
+→ ALWAYS update KNOWLEDGE INDEX below when creating new knowledge entries
+→ ALWAYS read SECURITY_POLICY.md before handling credentials
+→ NEVER hardcode credentials, IPs, or secrets — usa i file di riferimento
+→ PREFER minimal changes — non aggiungere complessità se non richiesta
+→ ASK before creating infrastructure (container, servizi, file di knowledge)
 
 AUTONOMY BOUNDARIES
-✅ CAN: read files, search knowledge/, parse commands, use credential_manager, deploy/undeploy LXC, append to state/deployments.log
-❌ MUST ASK: create/destroy containers, modify .cursorrules, create knowledge entries, switch projects (unless user explicitly asks)
+✅ CAN: read files, search knowledge/, use credential_manager,
+       deploy/undeploy LXC, run discovery, append to state/deployments.log
+❌ MUST ASK: create/destroy containers, modify .cursorrules,
+            create knowledge entries, switch projects
 
-UNIFIED CREDENTIAL SYSTEM
+KNOWLEDGE INDEX (raggruppato per contesto d'uso)
+
+  Quando devi operare come agent:
+  → Agent behavior:     knowledge/agent/agent-behavior-guidelines.mdc
+
+  Quando devi gestire credenziali o secrets:
+  → Credential system:  knowledge/security/unified-credential-system.mdc
+
+  Quando devi fare deploy/undeploy di container:
+  → LXC deployment:     knowledge/workflows/lxc-deployment.mdc
+  → LXC undeploy:       knowledge/workflows/lxc-undeploy.md
+  → LXC management:     knowledge/deployment/lxc-management.mdc
+
+  Quando devi capire l'infrastruttura (container, servizi, dipendenze):
+  → Infrastructure map: knowledge/containers/infrastructure-map.mdc
+
+  Quando devi lavorare su progetti o gestire il workspace:
+  → Workspace manager:  knowledge/development/workspace-manager.mdc
+
+  Quando devi pushare su GitHub o gestire il repository:
+  → GitHub operations:  knowledge/development/github-operations-guide.mdc
+  → Repo visibility:    knowledge/architecture/repository-visibility-decision.mdc
+
+  Quando devi capire la storia del sistema o documentare un cambiamento:
+  → Dev history:        knowledge/development/development-history.mdc
+  → Bootstrap guide:    knowledge/development/nh-self-bootstrap.mdc
+
+CREDENTIAL SYSTEM
 → ALL credentials via scripts/credential_manager.py
 → Namespace: service.key (github.main, proxmox.backup)
 → SOPS+Age persistence + 15min cache
-→ Deduplication prevents duplicates
 → Use: get_credential(service, key) / store_credential(service, key, data)
+→ Details: knowledge/security/unified-credential-system.mdc
 
 WORKSPACE PATTERNS
-→ Current project: workspace/current_project/
-→ Switch projects: search knowledge/development/workspace-manager.mdc
-→ DB projects: look for database-specific configs
-→ Backend projects: check for API/service patterns
+→ Current project: workspace/current_project/ (symlink dinamico)
+→ Switch projects: scripts/nh-switch.py or natural language
+→ Project isolation: ogni progetto ha propria knowledge/, state/, secrets/
 → Always verify project type before major changes
+→ Details: knowledge/development/workspace-manager.mdc
 
-DEVELOPMENT HISTORY
-→ Track NH-Mini system changes: knowledge/development/development-history.mdc
-→ BEFORE system changes: search for patterns
-→ Use: scripts/history_manager.py add --category SYSTEM --component X --change "Y"
-→ Log: architecture, security, framework decisions only
-→ Skip: project-specific implementations
+DEVELOPMENT FLOW (come contribuire al framework)
+→ 1. Documentare nel development-history PRIMA di implementare
+→ 2. Seguire description-contracts.mdc per nuovi formati
+→ 3. Salvare nuova knowledge in knowledge/{categoria}/{nome}.mdc
+→ 4. Aggiornare il KNOWLEDGE INDEX qui sopra con il nuovo file
+→ 5. Se modifichi infrastruttura: aggiornare infrastructure-map.mdc
+→ Use: scripts/history_manager.py add --category X --component Y --change "Z" --reason "W" --impact high|medium|low
+→ Categories: ARCHITECTURE, SECURITY, FEATURE, DEPRECATION, BUGFIX, REFACTOR
 
-SUPPORT SYSTEMS
-→ GitHub: knowledge/development/github-operations-guide.mdc (when needed)
-→ LXC: scripts/deploy_lxc.py / undeploy_lxc.py (setup only)
+SCRIPTS REFERENCE
+→ credential_manager.py  — Get/store credenziali SOPS+Age
+→ deploy_lxc.py          — Deploy container (chiede approvazione)
+→ undeploy_lxc.py        — Undeploy container (chiede approvazione)
+→ history_manager.py     — Append entry allo storico sviluppo
+→ push_safe.py           — Push sicuro su GitHub
+→ nh-switch.py           — Switch progetto workspace
+→ discovery.py (core/)   — Scan container Proxmox → state/inventory.json
 
-KNOWLEDGE DISCOVERY
-→ Search knowledge/ when task involves: security, deployment, workflows, agent behavior
-→ Core systems: credential, workspace, development-history
-→ Support systems: github-operations, lxc-management (when needed)
-→ Use: SearchCodebase with "knowledge/" path for relevant patterns
-→ Load specific files only when needed
-→ Priority: security → core-systems → support-systems
+ERROR HANDLING
+→ SSH verso Proxmox fallisce? Verifica config/nh_config.json e chiave SSH
+→ Credenziali mancanti? NON procedere — chiedi all'utente. Mai inventare default
+→ Script non trovato? Verifica SCRIPTS REFERENCE sopra e path in scripts/
+→ Container non risponde? Controlla state/inventory.json → status = stopped?
+→ Dubbio su come procedere? Leggi knowledge/agent/agent-behavior-guidelines.mdc
+→ Errore sconosciuto? Documenta in development-history e chiedi all'utente

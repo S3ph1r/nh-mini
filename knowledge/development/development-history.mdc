@@ -68,10 +68,10 @@ Ogni modifica è tracciata con timestamp, motivazione e contesto storico.
 
 ```bash
 # Aggiungi nuova entry (usa script)
-python3 scripts/add_history_entry.py --category SECURITY --component "deploy_lxc.py" --change "Migliorata gestione errori" --reason "Prevenire crash su network failure"
+python3 scripts/history_manager.py add --category SECURITY --component "deploy_lxc.py" --change "Migliorata gestione errori" --reason "Prevenire crash su network failure" --impact high
 
 # Cerca nello storico
-python3 scripts/search_history.py --component "SOPS" --category SECURITY
+python3 scripts/history_manager.py search --component "SOPS" --category SECURITY
 
 # Visualizza timeline
 tail -n 20 knowledge/development/development-history.mdc
@@ -111,6 +111,81 @@ tail -n 20 knowledge/development/development-history.mdc
   "author": "agent",
   "impact": "medium"
 }
+```
+
+### 2026-02-17 - Riscrittura completa: aggiunto knowledge index (10...
+```json
+{
+  "timestamp": "2026-02-17T21:00:20.274406Z",
+  "category": "ARCHITECTURE",
+  "component": ".cursorrules",
+  "change": "Riscrittura completa: aggiunto knowledge index (10 entries), rimosso dati hardcoded, aggiunto INITIALIZATION checklist con file dinamici, linkato SECURITY_POLICY.md, mantenuto workspace per futuro",
+  "reason": "Cursorrules disallineato dalla realtà: mancava indice knowledge, referenziava file inesistenti, nessuna topologia",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-02-17 - Riscritto discovery.py v2.0: SSH mode via nh_confi...
+```json
+{
+  "timestamp": "2026-02-17T21:05:45.696344Z",
+  "category": "ARCHITECTURE",
+  "component": "discovery_system",
+  "change": "Riscritto discovery.py v2.0: SSH mode via nh_config.json, fallback locale, parsing completo container (memory/CPU/storage/network/features), UTC timestamps, summary counts. Aggiunto systemd timer nh-discovery.timer ogni 15min",
+  "reason": "discovery.py cercava pct localmente ma NH-Mini gira in LXC 190 senza pct. inventory.json aveva solo 1 container su 10",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-02-17 - Fixato JSON malformato: frammento orfano author/im...
+```json
+{
+  "timestamp": "2026-02-17T21:05:48.051047Z",
+  "category": "BUGFIX",
+  "component": "development-history.mdc",
+  "change": "Fixato JSON malformato: frammento orfano author/impact fuori dal blocco JSON nella entry Pulizia Container Proxmox",
+  "reason": "Il JSON rotto impediva parsing corretto dello storico",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-02-17 - Creato infrastructure-map.mdc: documentazione comp...
+```json
+{
+  "timestamp": "2026-02-17T21:33:12.468773Z",
+  "category": "FEATURE",
+  "component": "knowledge/containers",
+  "change": "Creato infrastructure-map.mdc: documentazione completa 10 container con servizi, porte, risorse e mappa dipendenze NHI stack",
+  "reason": "knowledge/containers/ era vuoto nonostante 10 container attivi su Proxmox",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-02-17 - Corretti riferimenti script: add_history_entry.py ...
+```json
+{
+  "timestamp": "2026-02-17T21:53:34.704758Z",
+  "category": "BUGFIX",
+  "component": "development-history.mdc",
+  "change": "Corretti riferimenti script: add_history_entry.py e search_history.py sostituiti con history_manager.py add/search",
+  "reason": "Script referenziati nella documentazione non esistevano",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-02-17 - Cursorrules v3: aggiunte sezioni PHILOSOPHY, IDENT...
+```json
+{
+  "timestamp": "2026-02-17T22:04:17.285078+00:00",
+  "category": "ARCHITECTURE",
+  "component": ".cursorrules",
+  "change": "Cursorrules v3: aggiunte sezioni PHILOSOPHY, IDENTITY, ERROR HANDLING, DEVELOPMENT FLOW. Knowledge index raggruppato per contesto. Rimossa sezione SUPPORT SYSTEMS ridondante",
+  "reason": "L'agent deve poter orientarsi autonomamente senza conoscenza pregressa",
   "author": "agent",
   "impact": "high"
 }

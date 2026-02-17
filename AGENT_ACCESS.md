@@ -84,11 +84,12 @@ echo "new_api_key_123" | sops -e > secrets/new_service.enc.yaml
 
 ## 5. DISCOVERY INFRASTRUTTURA
 
-**Metodo**: Script Python discovery  
+**Metodo**: Script Python discovery via SSH  
 **Comando**: `python3 core/discovery.py`  
-**Accesso**: Via SSH al Proxmox host (vedi punto 1)  
+**Accesso**: Via SSH al Proxmox host (config da `config/nh_config.json`)  
 **Output**: `state/inventory.json`  
-**Frequenza**: Ogni 15 minuti automatico o on-demand
+**Automazione**: Systemd timer `nh-discovery.timer` — ogni 15 minuti  
+**Versione**: 2.0 (SSH mode da LXC container)
 
 Esempi:
 ```bash
@@ -97,19 +98,33 @@ python3 core/discovery.py
 
 # Discovery con output verbose
 python3 core/discovery.py --verbose
+
+# Verifica timer automatico
+systemctl status nh-discovery.timer
 ```
 
 **Output discovery**:
 ```json
 {
-  "containers": {
-    "100": {
-      "hostname": "ct100-reverse-proxy",
-      "ip": "10.0.0.100",
+  "meta": {
+    "discovered_at": "2026-02-17T21:03:29Z",
+    "discovery_version": "2.0",
+    "discovery_mode": "SSH"
+  },
+  "node": {
+    "hostname": "homelab",
+    "proxmox_version": "pve-manager/9.1.1/..."
+  },
+  "containers": [
+    {
+      "vmid": 190,
+      "name": "NH-Mini",
       "status": "running",
-      "purpose": "reverse-proxy"
+      "ip_address": "192.168.1.190",
+      "resources": {"memory_mb": "4096", "cpu_cores": "2", "storage_gb": "8"}
     }
-  }
+  ],
+  "summary": {"total": 10, "running": 8, "stopped": 2}
 }
 ```
 
