@@ -8,6 +8,8 @@ set -eo pipefail
 SKIP_PROXMOX_CHECK=false
 LXC_MODE=false
 PROXMOX_IP=""
+PROXMOX_PASS=""
+SOPS_PASS=""
 
 # Parsing argomenti
 while [[ $# -gt 0 ]]; do
@@ -30,6 +32,29 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Modalità interattiva per LXC
+if [[ "$LXC_MODE" == true ]]; then
+    echo -e "${YELLOW}[INTERATTIVO] Modalità LXC rilevata${NC}"
+    
+    # Richiedi IP Proxmox se non fornito
+    if [[ -z "$PROXMOX_IP" ]]; then
+        echo -n "[?] IP Proxmox (es: 192.168.1.2): "
+        read -r PROXMOX_IP
+    fi
+    
+    # Richiedi password Proxmox
+    echo -n "[?] Password root Proxmox: "
+    read -rs PROXMOX_PASS
+    echo
+    
+    # Richiedi password SOPS
+    echo -n "[?] Password SOPS/credenziali (da ricordare): "
+    read -rs SOPS_PASS
+    echo
+    
+    echo -e "${GREEN}[✓] Credenziali raccolte${NC}"
+fi
 
 # Colori output
 RED='\033[0;31m'
