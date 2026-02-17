@@ -4,6 +4,13 @@
 
 set -euo pipefail
 
+# Gestione parametri
+SKIP_PROXMOX_CHECK=false
+if [[ "$1" == "--skip-proxmox-check" ]]; then
+    SKIP_PROXMOX_CHECK=true
+    shift
+fi
+
 # Colori output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -102,20 +109,25 @@ step2_detect_proxmox() {
         read -r PROXMOX_HOST
     fi
     
-    # Verifica connessione
-    if ping -c 1 -W 2 "$PROXMOX_HOST" >/dev/null 2>&1; then
-        success "Proxmox host raggiungibile: $PROXMOX_HOST"
+    # Verifica connessione (solo se non skippata)
+    if [[ "$SKIP_PROXMOX_CHECK" == "false" ]]; then
+        if ping -c 1 -W 2 "$PROXMOX_HOST" >/dev/null 2>&1; then
+            success "Proxmox host raggiungibile: $PROXMOX_HOST"
+        else
+            error "Proxmox host non raggiungibile: $PROXMOX_HOST"
+            exit 1
+        fi
+        
+        # Verifica pct su host remoto
+        if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@"$PROXMOX_HOST" "which pct" >/dev/null 2>&1; then
+            success "Comando pct disponibile su host remoto"
+        else
+            error "pct non trovato su $PROXMOX_HOST - assicurati sia un host Proxmox"
+            exit 1
+        fi
     else
-        error "Proxmox host non raggiungibile: $PROXMOX_HOST"
-        exit 1
-    fi
-    
-    # Verifica pct su host remoto
-    if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@"$PROXMOX_HOST" "which pct" >/dev/null 2>&1; then
-        success "Comando pct disponibile su host remoto"
-    else
-        error "pct non trovato su $PROXMOX_HOST - assicurati sia un host Proxmox"
-        exit 1
+        warning "Verifica Proxmox skippata (--skip-proxmox-check attivo)"
+        success "Assumo ambiente LXC con SSH keys già configurate"
     fi
     
     echo

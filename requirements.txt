@@ -1,0 +1,14 @@
+# NH-Mini Framework Dependencies
+# Generated based on actual imports in codebase
+
+# Core dependencies
+PyYAML>=6.0.1          # yaml parsing (secure_credential_manager.py, test files)
+
+# Optional dependencies (based on usage patterns)
+# requests>=2.31.0       # HTTP requests (not currently used but likely needed)
+# cryptography>=41.0.0   # Encryption operations (future SOPS enhancements)
+# paramiko>=3.3.1       # SSH operations (future remote management)
+
+# Development dependencies
+# pytest>=7.4.0         # Testing framework (future)
+# black>=23.0.0         # Code formatting (future)
