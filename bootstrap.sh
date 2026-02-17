@@ -6,10 +6,30 @@ set -euo pipefail
 
 # Gestione parametri
 SKIP_PROXMOX_CHECK=false
-if [[ "$1" == "--skip-proxmox-check" ]]; then
-    SKIP_PROXMOX_CHECK=true
-    shift
-fi
+LXC_MODE=false
+PROXMOX_IP=""
+
+# Parsing argomenti
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --skip-proxmox-check)
+            SKIP_PROXMOX_CHECK=true
+            shift
+            ;;
+        --lxc-mode)
+            LXC_MODE=true
+            shift
+            ;;
+        --proxmox-ip)
+            PROXMOX_IP="$2"
+            shift 2
+            ;;
+        *)
+            # Argomento non riconosciuto, ignora
+            shift
+            ;;
+    esac
+done
 
 # Colori output
 RED='\033[0;31m'
@@ -95,18 +115,38 @@ step1_prerequisiti() {
 step2_detect_proxmox() {
     info "STEP 2: Rilevamento Proxmox Host"
     
-    # Auto-rileva gateway
-    local gateway
-    gateway=$(ip route | awk '/default/ {print $3}' | head -n1)
-    
-    if [[ -n "$gateway" ]]; then
-        info "Gateway rilevato: $gateway"
-        prompt "IP Proxmox host [${gateway}]"
-        read -r PROXMOX_HOST
-        PROXMOX_HOST=${PROXMOX_HOST:-$gateway}
+    # Modalità LXC: usa IP fornito o auto-rileva
+    if [[ "$LXC_MODE" == "true" ]]; then
+        if [[ -n "$PROXMOX_IP" ]]; then
+            PROXMOX_HOST="$PROXMOX_IP"
+            info "Modalità LXC: uso IP Proxmox fornito: $PROXMOX_HOST"
+        else
+            # Auto-rileva gateway come fallback
+            local gateway
+            gateway=$(ip route | awk '/default/ {print $3}' | head -n1)
+            if [[ -n "$gateway" ]]; then
+                PROXMOX_HOST="$gateway"
+                info "Modalità LXC: uso gateway rilevato: $PROXMOX_HOST"
+            else
+                error "Modalità LXC: IP Proxmox non fornito e gateway non rilevato"
+                exit 1
+            fi
+        fi
     else
-        prompt "IP Proxmox host"
-        read -r PROXMOX_HOST
+        # Modalità normale: chiedi all'utente
+        # Auto-rileva gateway
+        local gateway
+        gateway=$(ip route | awk '/default/ {print $3}' | head -n1)
+        
+        if [[ -n "$gateway" ]]; then
+            info "Gateway rilevato: $gateway"
+            prompt "IP Proxmox host [${gateway}]"
+            read -r PROXMOX_HOST
+            PROXMOX_HOST=${PROXMOX_HOST:-$gateway}
+        else
+            prompt "IP Proxmox host"
+            read -r PROXMOX_HOST
+        fi
     fi
     
     # Verifica connessione (solo se non skippata)
@@ -136,6 +176,27 @@ step2_detect_proxmox() {
 # STEP 3: Setup SSH
 step3_setup_ssh() {
     info "STEP 3: Setup SSH (Critico)"
+    
+    # Modalità LXC: SSH già configurato da nh-setup-lxc.sh
+    if [[ "$LXC_MODE" == "true" ]]; then
+        info "Modalità LXC: SSH già configurato, skip setup manuale"
+        
+        # Verifica che SSH funzioni
+        if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "echo 'SSH test OK'" >/dev/null 2>&1; then
+            success "SSH connection verificata in modalità LXC"
+        else
+            warning "SSH connection test fallito in modalità LXC"
+            info "Assicurati che nh-setup-lxc.sh abbia configurato SSH correttamente"
+        fi
+        
+        # Verifica pct access
+        local container_count
+        container_count=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "pct list | tail -n +2 | wc -l" 2>/dev/null || echo "0")
+        success "Accesso pct confermato - $container_count container rilevati"
+        
+        echo
+        return
+    fi
     
     info "Serve password Proxmox per autorizzare chiave SSH (uso temporaneo)"
     
@@ -197,6 +258,28 @@ step3_setup_ssh() {
 # STEP 4: SOPS+Age Setup
 step4_sops_age() {
     info "STEP 4: Setup SOPS+Age (Cifratura secrets)"
+    
+    # Modalità LXC: SOPS già configurato da nh-setup-lxc.sh
+    if [[ "$LXC_MODE" == "true" ]]; then
+        info "Modalità LXC: SOPS già configurato, verifico setup..."
+        
+        # Verifica che SOPS sia configurato
+        if [[ -f "$HOME/.nh-mini/age.key" ]] && [[ -f "$NH_DIR/.sops.yaml" ]]; then
+            success "Setup SOPS già completo in modalità LXC"
+            
+            # Carica ambiente SOPS
+            if [[ -f "$HOME/.nh-mini/env" ]]; then
+                source "$HOME/.nh-mini/env"
+                success "Ambiente SOPS caricato"
+            fi
+        else
+            warning "Setup SOPS incompleto in modalità LXC"
+            info "Esegui: python3 scripts/setup_sops_local.py"
+        fi
+        
+        echo
+        return
+    fi
     
     info "Master password protegge tutti i secrets futuri"
     
@@ -387,6 +470,31 @@ main() {
     step6_git_init
     step7_summary
 }
+
+# Help function
+show_help() {
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "NH-Mini Bootstrap Installer"
+    echo ""
+    echo "Options:"
+    echo "  --skip-proxmox-check    Skip Proxmox connectivity verification"
+    echo "  --lxc-mode             Run in LXC mode (pre-configured environment)"
+    echo "  --proxmox-ip IP        Specify Proxmox host IP (for LXC mode)"
+    echo "  --help                 Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                    # Modalità interattiva normale"
+    echo "  $0 --skip-proxmox-check              # Salta verifica Proxmox"
+    echo "  $0 --lxc-mode --proxmox-ip 192.168.1.2  # Modalità LXC"
+    echo ""
+    exit 0
+}
+
+# Gestione help
+if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+    show_help
+fi
 
 # Esegui se non source-ato
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
