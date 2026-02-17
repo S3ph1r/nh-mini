@@ -33,8 +33,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Modalità interattiva per LXC
+# Controllo prerequisiti per modalità LXC
 if [[ "$LXC_MODE" == true ]]; then
+    # Verifica che sshpass sia installato per modalità LXC
+    if ! command -v sshpass >/dev/null 2>&1; then
+        echo -e "${YELLOW}[INTERATTIVO] Installazione sshpass richiesta per modalità LXC${NC}"
+        apt update && apt install -y sshpass
+    fi
+    
     echo -e "${YELLOW}[INTERATTIVO] Modalità LXC rilevata${NC}"
     
     # Richiedi IP Proxmox se non fornito
@@ -187,11 +193,22 @@ step2_detect_proxmox() {
         fi
         
         # Verifica pct su host remoto
-        if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i "$SSH_KEY" root@"$PROXMOX_HOST" "which pct || which /usr/sbin/pct" >/dev/null 2>&1; then
-            success "Comando pct disponibile su host remoto"
+        if [[ "$LXC_MODE" == "true" && -n "$PROXMOX_PASS" ]]; then
+            # Modalità LXC: usa sshpass con password raccolta
+            if sshpass -p "$PROXMOX_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@"$PROXMOX_HOST" "which pct || which /usr/sbin/pct" >/dev/null 2>&1; then
+                success "Comando pct disponibile su host remoto"
+            else
+                error "pct non trovato su $PROXMOX_HOST - assicurati sia un host Proxmox"
+                exit 1
+            fi
         else
-            error "pct non trovato su $PROXMOX_HOST - assicurati sia un host Proxmox"
-            exit 1
+            # Modalità normale: usa chiave SSH
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i "$SSH_KEY" root@"$PROXMOX_HOST" "which pct || which /usr/sbin/pct" >/dev/null 2>&1; then
+                success "Comando pct disponibile su host remoto"
+            else
+                error "pct non trovato su $PROXMOX_HOST - assicurati sia un host Proxmox"
+                exit 1
+            fi
         fi
     else
         warning "Verifica Proxmox skippata (--skip-proxmox-check attivo)"
@@ -210,17 +227,33 @@ step3_setup_ssh() {
         info "Modalità LXC: SSH già configurato, skip setup manuale"
         
         # Verifica che SSH funzioni
-        if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "echo 'SSH test OK'" >/dev/null 2>&1; then
-            success "SSH connection verificata in modalità LXC"
+        if [[ "$LXC_MODE" == "true" && -n "$PROXMOX_PASS" ]]; then
+            # Modalità LXC: usa sshpass
+            if sshpass -p "$PROXMOX_PASS" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "echo 'SSH test OK'" >/dev/null 2>&1; then
+                success "SSH connection verificata in modalità LXC"
+            else
+                warning "SSH connection test fallito in modalità LXC"
+                info "Assicurati che nh-setup-lxc.sh abbia configurato SSH correttamente"
+            fi
+            
+            # Verifica pct access con sshpass
+            local container_count
+            container_count=$(sshpass -p "$PROXMOX_PASS" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "pct list | tail -n +2 | wc -l" 2>/dev/null || echo "0")
+            success "Accesso pct confermato - $container_count container rilevati"
         else
-            warning "SSH connection test fallito in modalità LXC"
-            info "Assicurati che nh-setup-lxc.sh abbia configurato SSH correttamente"
+            # Modalità normale: usa chiave SSH
+            if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "echo 'SSH test OK'" >/dev/null 2>&1; then
+                success "SSH connection verificata in modalità LXC"
+            else
+                warning "SSH connection test fallito in modalità LXC"
+                info "Assicurati che nh-setup-lxc.sh abbia configurato SSH correttamente"
+            fi
+            
+            # Verifica pct access con chiave SSH
+            local container_count
+            container_count=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "pct list | tail -n +2 | wc -l" 2>/dev/null || echo "0")
+            success "Accesso pct confermato - $container_count container rilevati"
         fi
-        
-        # Verifica pct access
-        local container_count
-        container_count=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@$PROXMOX_HOST" "pct list | tail -n +2 | wc -l" 2>/dev/null || echo "0")
-        success "Accesso pct confermato - $container_count container rilevati"
         
         echo
         return
@@ -289,9 +322,9 @@ step4_sops_age() {
     
     # Modalità LXC: SOPS già configurato da nh-setup-lxc.sh
     if [[ "$LXC_MODE" == "true" ]]; then
-        info "Modalità LXC: SOPS già configurato, verifico setup..."
+        info "Modalità LXC: SOPS configurazione automatica..."
         
-        # Verifica che SOPS sia configurato
+        # Verifica se SOPS è già configurato
         if [[ -f "$HOME/.nh-mini/age.key" ]] && [[ -f "$NH_DIR/.sops.yaml" ]]; then
             success "Setup SOPS già completo in modalità LXC"
             
@@ -301,8 +334,32 @@ step4_sops_age() {
                 success "Ambiente SOPS caricato"
             fi
         else
-            warning "Setup SOPS incompleto in modalità LXC"
-            info "Esegui: python3 scripts/setup_sops_local.py"
+            # Configura SOPS automaticamente con password raccolta
+            if [[ -n "$SOPS_PASS" ]]; then
+                info "Configurazione SOPS automatica con password fornita..."
+                
+                # Esegui setup_sops_local.py con la password raccolta
+                if [[ -f "${NH_DIR}/scripts/setup_sops_local.py" ]]; then
+                    cd "$NH_DIR"
+                    echo "$SOPS_PASS" | python3 scripts/setup_sops_local.py
+                    
+                    if [[ $? -eq 0 ]]; then
+                        success "Setup SOPS completato automaticamente"
+                        
+                        # Carica ambiente SOPS
+                        if [[ -f "$HOME/.nh-mini/env" ]]; then
+                            source "$HOME/.nh-mini/env"
+                            success "Ambiente SOPS caricato"
+                        fi
+                    else
+                        warning "Setup SOPS fallito - esegui manualmente: python3 scripts/setup_sops_local.py"
+                    fi
+                else
+                    warning "setup_sops_local.py non trovato - esegui manualmente: python3 scripts/setup_sops_local.py"
+                fi
+            else
+                warning "Password SOPS non fornita - esegui manualmente: python3 scripts/setup_sops_local.py"
+            fi
         fi
         
         echo
