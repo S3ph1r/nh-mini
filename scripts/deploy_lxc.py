@@ -205,8 +205,36 @@ class NHLXCDeployer:
                 print(f"❌ Failed to authorize key: {auth_result.stderr}")
                 return False
             
+            # ---------------------------------------------------------
+            # NEW: Inject User/Agent Authorized Keys from SOPS
+            # ---------------------------------------------------------
+            print(f"🔐 Injecting authorized keys from SOPS...")
+            try:
+                ssh_creds = get_service_credential('ssh', 'authorized_keys')
+                if ssh_creds and 'keys' in ssh_creds:
+                    keys_list = ssh_creds['keys']
+                    if keys_list:
+                        # Join keys with newlines and escape for shell
+                        keys_content = "\\n".join(keys_list)
+                        # Use bash heredoc to append safely
+                        inject_cmd = f"pct exec {vmid} -- bash -c 'mkdir -p /root/.ssh && echo \"{keys_content}\" >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'"
+                        inject_result = self.run_ssh_command(inject_cmd, check=False)
+                        
+                        if inject_result.returncode == 0:
+                            print(f"✅ Injected {len(keys_list)} authorized keys from SOPS")
+                        else:
+                            print(f"⚠️  Failed to inject SOPS keys: {inject_result.stderr}")
+                    else:
+                        print("⚠️  No keys found in ssh.authorized_keys secret")
+                else:
+                    print("⚠️  Secret ssh.authorized_keys not found or invalid format")
+            except Exception as e:
+                print(f"⚠️  Error injecting SOPS keys: {e}")
+            # ---------------------------------------------------------
+
             # Setup hostname and hosts
             print(f"🔍 Setting hostname for CT{vmid}...")
+
             # Use simple echo to set hostname (avoid systemd timeout)
             hostname_result = self.run_ssh_command(f"pct exec {vmid} -- bash -c 'echo nh-ct{vmid} > /etc/hostname'", check=False)
             if hostname_result.returncode != 0:

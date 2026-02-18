@@ -268,3 +268,16 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-02-18 - Security Fix: Credential System Audit & Repair
+```json
+{
+  "timestamp": "2026-02-18T19:27:38.705466+00:00",
+  "category": "SECURITY",
+  "component": "credential_system",
+  "change": "Security Fix: Credential System Audit & Repair",
+  "reason": "Critical audit revealed plaintext age key (mitigated via gitignore) and missing SSH keys in SOPS. Implemented ssh.authorized_keys in SOPS, patched deploy_lxc.py, injected keys to CT120, disabled root password.",
+  "author": "agent",
+  "impact": "high"
+}
+```

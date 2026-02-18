@@ -24,9 +24,9 @@ NH-Mini provides unified LXC container deployment and undeployment with secure c
 5. **User Confirmation**: Required for destructive operations
 
 ## SSH Key Management
-- **Format**: `nh-ct{vmid}@proxmox`
-- **Storage**: Container private key in `/root/.ssh/id_nh`
-- **Authorization**: Public key added to Proxmox `/root/.ssh/authorized_keys`
+- **Container → Proxmox**: Container genera chiave in `/root/.ssh/id_nh`, pubkey aggiunta a Proxmox `authorized_keys`
+- **User/Agent → Container**: `deploy_lxc.py` legge `ssh.authorized_keys` da SOPS e inietta le chiavi pubbliche in `/root/.ssh/authorized_keys` del container
+- **Secret SOPS**: `secrets/ssh.authorized_keys.enc.yaml` contiene le chiavi autorizzate (agent + utente)
 - **Cleanup**: Automatic removal during undeploy
 
 ## Usage

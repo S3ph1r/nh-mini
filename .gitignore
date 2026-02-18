@@ -76,3 +76,9 @@ sviluppi/
 # Workspace symlinks
 workspace/current_project
 *.tar.gz
+
+# Security exclusions
+**/*.key
+**/*.dec.yaml
+.nh-mini/
+secrets/*.unencrypted.yaml
