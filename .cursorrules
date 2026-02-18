@@ -93,6 +93,9 @@ KNOWLEDGE INDEX (framework — crescita organica)
   → GitHub operations:  knowledge/development/github-operations-guide.mdc
   → Repo visibility:    knowledge/architecture/repository-visibility-decision.mdc
 
+  Quando devi capire il workspace system o come operare su un progetto:
+  → Workspace context:  knowledge/architecture/workspace-context-system.mdc
+
   Quando devi capire la storia del sistema o documentare un cambiamento:
   → Dev history:        knowledge/development/development-history.mdc
   → Bootstrap guide:    knowledge/development/nh-self-bootstrap.mdc

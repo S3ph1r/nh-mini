@@ -1,0 +1,105 @@
+# Workspace Context System — Come l'agent opera su framework e progetti
+
+type: architecture_decision
+created: 2026-02-18
+related: .cursorrules, core/description-contracts.mdc, workspace/active_config.json
+
+## Principio
+
+NH-Mini separa nettamente **regole** (framework) da **artefatti** (progetto).
+L'agent legge le regole sempre dallo stesso posto, ma scrive artefatti in posti diversi
+a seconda se sta operando sul framework o su un progetto.
+
+## Flow: Agent sul Framework (nessun progetto attivo)
+
+```
+Agent riceve prompt
+  │
+  ├─ Dichiara: "🏠 Contesto: framework NH-Mini"
+  │
+  ├─ LEGGE (tutti da NH-Mini root):
+  │   ├── .cursorrules                    → regole operative
+  │   ├── workspace/active_config.json    → verifica: nessun progetto attivo
+  │   ├── core/host-reality.mdc           → vincoli fisici
+  │   ├── config/nh_config.json           → configurazione rete/host
+  │   ├── state/inventory.json            → stato container
+  │   ├── SECURITY_POLICY.md              → regole credenziali
+  │   └── knowledge/...                   → knowledge del framework
+  │
+  └─ SCRIVE (tutto in NH-Mini root):
+      ├── knowledge/{categoria}/{file}.mdc  → nuova knowledge
+      ├── core/...                          → modifiche ai contratti
+      ├── scripts/...                       → nuovi o modificati script
+      ├── .cursorrules                      → aggiornamento regole (con approvazione)
+      └── development-history.mdc           → log di ogni modifica
+```
+
+## Flow: Agent su un Progetto (es. DIAS attivo)
+
+```
+Agent riceve prompt
+  │
+  ├─ Dichiara: "🎯 Contesto: DIAS"
+  │
+  ├─ LEGGE DAL FRAMEWORK (NH-Mini root — read-only):
+  │   ├── .cursorrules                    → regole operative
+  │   ├── workspace/active_config.json    → progetto attivo = "dias"
+  │   ├── core/description-contracts.mdc  → formati documentazione
+  │   ├── SECURITY_POLICY.md              → regole credenziali
+  │   ├── core/host-reality.mdc           → vincoli fisici
+  │   └── config/nh_config.json           → configurazione rete/host
+  │
+  ├─ LEGGE DAL PROGETTO (sviluppi/dias/):
+  │   ├── .project-context                → contesto specifico del progetto
+  │   ├── docs/blueprint.md               → specifiche funzionali
+  │   └── knowledge/...                   → knowledge locale del progetto
+  │
+  └─ SCRIVE:
+      ├─ NEL PROGETTO (default):
+      │   ├── sviluppi/dias/src/...          → codice
+      │   ├── sviluppi/dias/knowledge/...    → knowledge di progetto
+      │   ├── sviluppi/dias/docs/...         → documentazione
+      │   ├── sviluppi/dias/state/...        → stato runtime
+      │   └── sviluppi/dias/.project-context → aggiornamento contesto
+      │
+      └─ IN NH-MINI (solo eccezioni esplicite):
+          ├── infrastructure-map.mdc    → se crea/modifica container
+          ├── credential_manager        → se aggiunge credenziali
+          └── development-history.mdc   → se modifica il framework stesso
+```
+
+## Formato .project-context
+
+Ogni progetto deve avere un file `.project-context` nella sua root.
+Il formato è definito dal contratto `project_context` in `core/description-contracts.mdc`.
+
+Sezioni fisse (tutte obbligatorie):
+
+| Sezione | Scopo |
+|---------|-------|
+| IDENTITY | Nome, descrizione, repo, stack, blueprint |
+| ARCHITECTURE | Overview e mappa directory |
+| INFRASTRUCTURE | Container, nodi esterni, storage |
+| COMPONENTS | Moduli del progetto con tipo e purpose |
+| KNOWLEDGE_INDEX | Knowledge locale (popolato durante sviluppo) |
+| CREDENTIALS | Namespace credential_manager usati |
+| ERROR_HANDLING | Pattern di errore noti → azione |
+| DEVELOPMENT_PHASE | Fase corrente, priorità, vincoli |
+| OVERRIDES | Deroghe alle regole framework (normalmente vuota) |
+
+## Persistenza del contesto
+
+- Il contesto viene dichiarato all'inizio di ogni risposta
+- Se nessuno cambia focus (né utente né agent), il contesto resta invariato
+- L'agent non attende conferma — dichiara e procede
+- Se la richiesta sembra incompatibile col contesto, l'agent lo segnala
+
+## File coinvolti
+
+- `.cursorrules` → sezioni WORKSPACE CONTEXT e OPERATIONAL SEPARATION
+- `core/description-contracts.mdc` → contratto `project_context`
+- `workspace/active_config.json` → progetto attualmente attivo
+- `workspace/current_project` → symlink al progetto attivo
+- `sviluppi/{progetto}/.project-context` → contesto specifico del progetto
+- `scripts/nh-switch.py` → CLI per cambio progetto
+- `core/workspace_manager.py` → logica di switch e gestione progetti
