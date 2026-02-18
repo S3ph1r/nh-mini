@@ -203,3 +203,16 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-02-18 - Cursorrules v4: aggiunto WORKSPACE CONTEXT (dichia...
+```json
+{
+  "timestamp": "2026-02-18T11:35:30.248681+00:00",
+  "category": "ARCHITECTURE",
+  "component": ".cursorrules + description-contracts",
+  "change": "Cursorrules v4: aggiunto WORKSPACE CONTEXT (dichiarazione non bloccante), OPERATIONAL SEPARATION (lettura framework / scrittura progetto), INITIALIZATION riordinata. Aggiunto contratto project_context a description-contracts.mdc con 9 sezioni fisse + OVERRIDES",
+  "reason": "Separazione netta tra framework e progetti, generalizzazione del workspace system",
+  "author": "agent",
+  "impact": "high"
+}
+```

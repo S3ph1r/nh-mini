@@ -52,3 +52,56 @@ network_exposure:
     - public_endpoint: /api/{project}
       auth_method: api_key
       rate_limiting: "100req/min via nginx"
+
+project_context:
+  purpose: "Descrivere il contesto operativo di un progetto sotto NH-Mini"
+  file: ".project-context (nella root del progetto)"
+  note: "Formato fisso. L'agent carica questo file quando il progetto è attivo."
+  required_sections:
+    - IDENTITY:
+        purpose: "Chi è il progetto"
+        fields:
+          - name          # Nome progetto
+          - description   # Breve descrizione
+          - repo          # Repository Git (o 'locale' se non pushato)
+          - stack         # Tecnologie principali
+          - blueprint     # Path al documento di specifiche (se esiste)
+    - ARCHITECTURE:
+        purpose: "Come è strutturato il progetto"
+        fields:
+          - overview      # Descrizione architettura in 2-3 righe
+          - structure     # Mappa directory principali con purpose
+    - INFRASTRUCTURE:
+        purpose: "Dove gira il progetto"
+        fields:
+          - containers    # Container Proxmox dedicati (VMID, IP, ruolo)
+          - external      # Nodi esterni (se presenti)
+          - storage       # Dove vengono salvati i dati
+    - COMPONENTS:
+        purpose: "Moduli o servizi del progetto"
+        fields:
+          - list          # Elenco componenti con nome, tipo, purpose
+    - KNOWLEDGE_INDEX:
+        purpose: "Knowledge locale del progetto"
+        fields:
+          - entries       # Path relativi ai file knowledge del progetto
+    - CREDENTIALS:
+        purpose: "Credenziali utilizzate dal progetto"
+        fields:
+          - list          # Namespace credential_manager (es: google.api_key)
+          - note: "sempre via NH-Mini credential_manager — mai hardcoded"
+    - ERROR_HANDLING:
+        purpose: "Pattern di errore noti e come gestirli"
+        fields:
+          - patterns      # Elenco errore → azione
+    - DEVELOPMENT_PHASE:
+        purpose: "Stato attuale dello sviluppo"
+        fields:
+          - phase         # setup | development | testing | production
+          - priorities    # Cosa va fatto per primo
+          - constraints   # Limitazioni note
+    - OVERRIDES:
+        purpose: "Deroghe speciali alle regole del framework"
+        note: "Normalmente vuota. Usare SOLO per eccezioni giustificate."
+        fields:
+          - list          # Regola framework derogata → motivo → alternativa

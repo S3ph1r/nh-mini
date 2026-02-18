@@ -1,4 +1,4 @@
-NH Agent DNA — Framework Operativo
+NH Agent DNA — Framework Operativo v4
 
 PHILOSOPHY
 → NH-Mini è un framework minimalista per homelab
@@ -13,18 +13,52 @@ IDENTITY
 → Per la configurazione rete/host: leggi config/nh_config.json
 → Non hardcodare mai IP, VMID o credenziali — usa sempre questi file
 
+WORKSPACE CONTEXT
+→ All'inizio di ogni risposta, dichiara il contesto operativo come prima cosa
+→ Leggi workspace/active_config.json:
+  → Se progetto attivo: "🎯 Contesto: {nome progetto}"
+  → Se nessun progetto: "🏠 Contesto: framework NH-Mini"
+→ NON attendere conferma — procedi, l'utente correggerà se serve
+→ Il contesto persiste tra prompt: se nessuno cambia focus, resta quello precedente
+→ Se la richiesta dell'utente sembra incompatibile col contesto attivo, segnalalo
+
+OPERATIONAL SEPARATION
+→ Quando un progetto è attivo:
+  LEGGI DA (framework — sempre):
+    regole operative        → questo file (.cursorrules)
+    description contracts   → core/description-contracts.mdc
+    security policy         → SECURITY_POLICY.md
+    credenziali             → scripts/credential_manager.py
+    infrastruttura          → knowledge/containers/infrastructure-map.mdc
+    host/rete               → core/host-reality.mdc, config/nh_config.json
+  OPERA IN (progetto — root = sviluppi/{progetto}/):
+    codice                  → sviluppi/{progetto}/src/ (o struttura del progetto)
+    knowledge di progetto   → sviluppi/{progetto}/knowledge/
+    state di progetto       → sviluppi/{progetto}/state/
+    documentazione          → sviluppi/{progetto}/docs/
+    contesto progetto       → sviluppi/{progetto}/.project-context
+  SCRIVI SU NH-MINI SOLO SE:
+    → modifichi infrastruttura condivisa (container, rete, storage)
+    → aggiungi/modifichi credenziali (via credential_manager)
+    → scopri un pattern riutilizzabile da proporre al framework
+    → modifichi regole, script o contratti del framework stesso
+
+→ Quando nessun progetto è attivo:
+  Opera direttamente su NH-Mini — knowledge/, core/, scripts/, config/
+
 INITIALIZATION (every session)
-1. Read this file → indice dinamico + regole operative
-2. Load: core/host-reality.mdc → vincoli fisici (Proxmox/LXC/network)
-3. Load: config/nh_config.json → configurazione rete, host, default LXC
-4. Load: state/inventory.json → stato reale container (auto-aggiornato ogni 15min)
-5. Load: SECURITY_POLICY.md → regole assolute credenziali
-6. If workspace active: load workspace/active_config.json → progetto corrente
+1. Read this file → regole operative + workspace context
+2. Load: workspace/active_config.json → contesto operativo
+3. If progetto attivo: load sviluppi/{progetto}/.project-context → contesto progetto
+4. Load: core/host-reality.mdc → vincoli fisici (Proxmox/LXC/network)
+5. Load: config/nh_config.json → configurazione rete, host, default LXC
+6. Load: state/inventory.json → stato reale container (auto-aggiornato ogni 15min)
+7. Load: SECURITY_POLICY.md → regole assolute credenziali
 
 CORE PRINCIPLES
 → DO NOT INVENT NEW DESCRIPTION FORMATS — usa core/description-contracts.mdc
 → ALWAYS document changes in development-history BEFORE implementing
-→ ALWAYS update KNOWLEDGE INDEX below when creating new knowledge entries
+→ ALWAYS update KNOWLEDGE INDEX when creating new knowledge entries
 → ALWAYS read SECURITY_POLICY.md before handling credentials
 → NEVER hardcode credentials, IPs, or secrets — usa i file di riferimento
 → PREFER minimal changes — non aggiungere complessità se non richiesta
@@ -36,7 +70,7 @@ AUTONOMY BOUNDARIES
 ❌ MUST ASK: create/destroy containers, modify .cursorrules,
             create knowledge entries, switch projects
 
-KNOWLEDGE INDEX (raggruppato per contesto d'uso)
+KNOWLEDGE INDEX (framework — crescita organica)
 
   Quando devi operare come agent:
   → Agent behavior:     knowledge/agent/agent-behavior-guidelines.mdc
@@ -73,7 +107,8 @@ CREDENTIAL SYSTEM
 WORKSPACE PATTERNS
 → Current project: workspace/current_project/ (symlink dinamico)
 → Switch projects: scripts/nh-switch.py or natural language
-→ Project isolation: ogni progetto ha propria knowledge/, state/, secrets/
+→ Project isolation: ogni progetto ha propria knowledge/, state/, docs/
+→ Project context: ogni progetto ha .project-context (formato fisso, vedi description-contracts.mdc)
 → Always verify project type before major changes
 → Details: knowledge/development/workspace-manager.mdc
 
