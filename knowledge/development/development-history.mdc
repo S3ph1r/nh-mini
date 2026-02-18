@@ -30,17 +30,41 @@ Ogni modifica è tracciata con timestamp, motivazione e contesto storico.
 
 ### 2026-02-16 - Migrazione SOPS+Age
 ```json
-{"timestamp": "2026-02-16T14:00:00Z", "category": "SECURITY", "component": "global", "change": "Implementazione sistema SOPS+Age per gestione credenziali", "reason": "Eliminare ogni traccia di credenziali hardcoded nel codebase", "author": "agent", "impact": "high"}
+{
+  "timestamp": "2026-02-16T14:00:00Z",
+  "category": "SECURITY",
+  "component": "global",
+  "change": "Implementazione sistema SOPS+Age per gestione credenziali",
+  "reason": "Eliminare ogni traccia di credenziali hardcoded nel codebase",
+  "author": "agent",
+  "impact": "high"
+}
 ```
 
 ### 2026-02-16 - Rimozione Handler Obsoleto
 ```json
-{"timestamp": "2026-02-16T14:30:00Z", "category": "DEPRECATION", "component": "agent_lxc_undeploy_handler.py", "change": "Eliminato handler obsoleto per undeploy LXC", "reason": "Sostituito da script esterni più sicuri e coerenti", "author": "agent", "impact": "medium"}
+{
+  "timestamp": "2026-02-16T14:30:00Z",
+  "category": "DEPRECATION",
+  "component": "agent_lxc_undeploy_handler.py",
+  "change": "Eliminato handler obsoleto per undeploy LXC",
+  "reason": "Sostituito da script esterni più sicuri e coerenti",
+  "author": "agent",
+  "impact": "medium"
+}
 ```
 
 ### 2026-02-16 - Unificazione Deploy/Undeploy
 ```json
-{"timestamp": "2026-02-16T13:00:00Z", "category": "ARCHITECTURE", "component": "deploy/undeploy system", "change": "Unificazione sistema deploy/undeploy in script esterni", "reason": "Coerenza architetturale e sicurezza migliorata", "author": "agent", "impact": "high"}
+{
+  "timestamp": "2026-02-16T13:00:00Z",
+  "category": "ARCHITECTURE",
+  "component": "deploy/undeploy system",
+  "change": "Unificazione sistema deploy/undeploy in script esterni",
+  "reason": "Coerenza architetturale e sicurezza migliorata",
+  "author": "agent",
+  "impact": "high"
+}
 ```
 
 ## 🔍 Come Usare lo Storico
@@ -96,7 +120,9 @@ tail -n 20 knowledge/development/development-history.mdc
   "category": "SECURITY",
   "component": "credential_system",
   "change": "Implementato sistema unificato SOPS+Age per tutte le credenziali",
-  "reason": "Centralizzare gestione credenziali, eliminare frammentazione cache/SOPS, deduplicazione automatica"
+  "reason": "Centralizzare gestione credenziali, eliminare frammentazione cache/SOPS, deduplicazione automatica",
+  "author": "agent",
+  "impact": "high"
 }
 ```
 
