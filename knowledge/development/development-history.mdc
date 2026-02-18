@@ -242,3 +242,16 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-02-18 - System audit: fixati 3 bug (agent_lxc_handler dupl...
+```json
+{
+  "timestamp": "2026-02-18T12:14:48.383681+00:00",
+  "category": "BUGFIX",
+  "component": "core/",
+  "change": "System audit: fixati 3 bug (agent_lxc_handler duplicated methods, secure_credential_manager hardcoded path, loader.py broken parser). Puliti file root (age tarball, test_sops, NH mini.md spostato in docs/). Creato core-modules.mdc knowledge",
+  "reason": "Audit pre-sviluppo: eliminare debito tecnico prima di iniziare side-projects",
+  "author": "agent",
+  "impact": "high"
+}
+```

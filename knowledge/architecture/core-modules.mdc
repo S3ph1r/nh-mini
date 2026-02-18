@@ -1,0 +1,89 @@
+# Core Modules — Moduli Python del Framework
+
+type: architecture_documentation
+created: 2026-02-18
+related: .cursorrules, scripts/
+
+## Panoramica
+
+La directory `core/` contiene i moduli Python che formano il runtime del framework.
+La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
+
+## core/ — Moduli Python
+
+### discovery.py (operativo)
+- **Funzione**: Scansiona container Proxmox via SSH e aggiorna `state/inventory.json`
+- **Dipendenze**: `config/nh_config.json` per SSH config
+- **Esecuzione**: automatica ogni 15min via `nh-discovery.timer`, o manuale
+- **Output**: `state/inventory.json` con VMID, IP, stati, risorse
+
+### workspace_manager.py (operativo)
+- **Funzione**: Gestisce progetti in `sviluppi/`, switch workspace, symlink
+- **Usato da**: `scripts/nh-switch.py`, `core/agent_workspace_handler.py`
+- **API**: `get_workspace_manager()` → singleton
+
+### config_manager.py (operativo)
+- **Funzione**: Carica `config/nh_config.json`, gestisce configurazione deploy
+- **Usato da**: `core/agent_lxc_handler.py`, `scripts/deploy_lxc.py`
+- **API**: `NHConfig()` → validazione, missing info check
+
+### secure_credential_manager.py (operativo)
+- **Funzione**: API Python per credenziali SOPS+Age (cifra/decifra/lista/elimina)
+- **Usato da**: `scripts/deploy_lxc.py`, `scripts/undeploy_lxc.py`, `scripts/save_proxmox_creds.py`
+- **Dipendenze**: `core/credential_cache.py` per cache in-memory
+- **API**: `get_service_credential(service, name)`, `store_service_credential(service, name, data)`
+
+### credential_cache.py (supporto)
+- **Funzione**: Cache in-memory per credenziali con auto-expire (15min)
+- **Usato da**: `core/secure_credential_manager.py`
+- **Nota**: Non usare direttamente — usare `credential_manager.py` CLI o `secure_credential_manager.py` API
+
+### loader.py (utility)
+- **Funzione**: Carica contesto operativo (host-reality, contracts, inventory, workspace)
+- **Esecuzione**: `python3 core/loader.py` → JSON con stato completo
+- **Nota**: Utile per debugging rapido dello stato del sistema
+
+### agent_lxc_handler.py (NLP handler)
+- **Funzione**: Riconosce richieste deploy/undeploy da linguaggio naturale
+- **Dipendenze**: `core/config_manager.py`
+- **Nota**: Pensato per integrazione con agent NLP, non usato direttamente da CLI
+
+### agent_workspace_handler.py (NLP handler)
+- **Funzione**: Riconosce richieste di switch workspace da linguaggio naturale
+- **Dipendenze**: `core/workspace_manager.py`, `core/intent_parser.py`
+- **Nota**: Pensato per integrazione con agent NLP, non usato direttamente da CLI
+
+### intent_parser.py (NLP utility)
+- **Funzione**: Regex parser per intent in italiano/inglese (switch, list, status)
+- **Usato da**: `core/agent_workspace_handler.py`
+
+## scripts/ — CLI per Agent
+
+| Script | Funzione | Uso tipico |
+|--------|----------|------------|
+| `credential_manager.py` | CLI SOPS+Age | `python3 scripts/credential_manager.py --service X --key Y --get` |
+| `deploy_lxc.py` | Deploy container via Proxmox API | `python3 scripts/deploy_lxc.py --vmid 120 --name dias-brain` |
+| `undeploy_lxc.py` | Undeploy container | `python3 scripts/undeploy_lxc.py 120` |
+| `history_manager.py` | Append al development history | `python3 scripts/history_manager.py add --category X ...` |
+| `push_safe.py` | Push sicuro su GitHub | `python3 scripts/push_safe.py` |
+| `nh-switch.py` | Switch progetto workspace | `python3 scripts/nh-switch.py dias` |
+| `save_proxmox_creds.py` | Salva credenziali Proxmox | Setup iniziale |
+| `setup_sops_local.py` | Setup SOPS+Age locale | Setup iniziale |
+| `installer.py` | Installer NH-Mini | Setup iniziale |
+| `nh-setup-lxc.sh` | Setup iniziale LXC | Bootstrap |
+| `prepare-lxc-proxmox.sh` | Prepara LXC su Proxmox | Bootstrap |
+
+## Relazione CLI ↔ API
+
+```
+Agent (conversazione)
+  │
+  ├── CLI diretta (scripts/)
+  │   ├── credential_manager.py    → usa SOPS+Age
+  │   ├── deploy_lxc.py            → usa core/secure_credential_manager.py
+  │   └── nh-switch.py             → usa core/workspace_manager.py
+  │
+  └── NLP handlers (core/)  [per integrazioni future]
+      ├── agent_lxc_handler.py     → detect intent → chiama deploy_lxc.py
+      └── agent_workspace_handler.py → detect intent → chiama workspace_manager.py
+```

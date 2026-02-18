@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, Union
 from datetime import datetime, timedelta
 import sys
-sys.path.append('/home/Projects/NH-Mini')
+sys.path.append(str(Path(__file__).parent.parent))
 from core.credential_cache import get_credential, clear_credential
 
 class SecureCredentialManager:

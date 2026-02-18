@@ -85,6 +85,7 @@ KNOWLEDGE INDEX (framework — crescita organica)
 
   Quando devi capire l'infrastruttura (container, servizi, dipendenze):
   → Infrastructure map: knowledge/containers/infrastructure-map.mdc
+  → Core modules:       knowledge/architecture/core-modules.mdc
 
   Quando devi lavorare su progetti o gestire il workspace:
   → Workspace manager:  knowledge/development/workspace-manager.mdc

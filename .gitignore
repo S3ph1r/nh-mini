@@ -75,3 +75,4 @@ sviluppi/
 
 # Workspace symlinks
 workspace/current_project
+*.tar.gz

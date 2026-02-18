@@ -10,7 +10,7 @@ def load_context():
         ctx["host_reality"] = {"file": str(hr), "summary": "Proxmox/LXC/vmbr0"}
     dc = Path("core/description-contracts.mdc")
     if dc.exists():
-        ctx["contracts"] = {"file": str(dc), "contracts": ["resource_declaration", "secrets_handling", "deployment_workflow", "network_exposure"]}
+        ctx["contracts"] = {"file": str(dc), "contracts": ["resource_declaration", "secrets_handling", "deployment_workflow", "network_exposure", "project_context"]}
     inv = Path("state/inventory.json")
     if inv.exists():
         state = json.loads(inv.read_text())
@@ -21,8 +21,8 @@ def load_context():
     cr = Path(".cursorrules")
     if cr.exists():
         lines = cr.read_text().split("\n")
-        knowledge = [l.strip()[2:] for l in lines if l.strip().startswith('- "')]
-        ctx["knowledge_index"] = knowledge[:10]
+        knowledge = [l.strip().split("→ ")[-1].strip() for l in lines if "→" in l and "knowledge/" in l]
+        ctx["knowledge_index"] = knowledge[:15]
     
     # Carica workspace info
     ws_config = Path("workspace/active_config.json")
