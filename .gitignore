@@ -70,3 +70,8 @@ Thumbs.db
 # Log files
 *.log
 logs/
+# Progetti sviluppo (repo separati)
+sviluppi/
+
+# Workspace symlinks
+workspace/current_project

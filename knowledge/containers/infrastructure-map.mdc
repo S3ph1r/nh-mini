@@ -1,12 +1,12 @@
 # Infrastructure Map — Container Proxmox
 
 type: resource_declaration
-last_updated: 2026-02-17
+last_updated: 2026-02-18
 auto_source: state/inventory.json + port scan
 
 ## Panoramica
 
-Proxmox host `homelab` (PVE 9.1.1) — 10 container LXC su subnet 192.168.1.0/24
+Proxmox host `homelab` (PVE 9.1.1) — 10 container LXC + 1 pianificato su subnet 192.168.1.0/24
 
 ## Container Attivi
 
@@ -63,6 +63,17 @@ Proxmox host `homelab` (PVE 9.1.1) — 10 container LXC su subnet 192.168.1.0/24
 - **ports**: nessuno esposto (servizio interno)
 - **resources**: 1024MB RAM, 2 CPU, 15GB storage
 
+### CT120 — dias-brain (🟡 pianificato)
+- **type**: applicazione
+- **engine**: Python + Redis
+- **location**: ct120 (192.168.1.120)
+- **purpose**: DIAS Brain — pipeline coordinator + CPU stages (A,B,C,F,G)
+- **isolation_model**: instance
+- **ports**: 6379 (Redis), da definire (API monitoring)
+- **resources**: 4096MB RAM, 2 CPU, 16GB storage
+- **progetto**: DIAS (sviluppi/dias/)
+- **nota**: Da creare. Include Redis + stadi CPU della pipeline
+
 ### CT160 — NHI-CORE-v1.1
 - **type**: applicazione
 - **engine**: NHI core service
@@ -99,6 +110,18 @@ Proxmox host `homelab` (PVE 9.1.1) — 10 container LXC su subnet 192.168.1.0/24
 - **ports**: solo SSH
 - **resources**: 2048MB RAM, 2 CPU, 16GB storage
 
+## Nodi Esterni (non Proxmox)
+
+### GPU Worker — PC Gaming Win11
+- **type**: compute node
+- **engine**: NVIDIA RTX 5060 Ti 16GB VRAM + 32GB RAM
+- **location**: rete locale 192.168.1.x (IP dinamico o fisso da verificare)
+- **purpose**: Esecuzione stadi GPU DIAS (VoiceGen + MusicGen)
+- **OS**: Windows 11
+- **connectivity**: stessa subnet, raggiungibile da CT120 via Redis
+- **progetto**: DIAS
+- **nota**: Si attiva on-demand, solo quando la GPU non è in uso per gaming/lavoro
+
 ## Mappa Dipendenze
 
 ```
@@ -108,6 +131,13 @@ NHI Stack:
   CT160 (NHI-CORE) → CT107 (Embeddings) per generazione vettori
   CT160 (NHI-CORE) → CT104 (MinIO) per object storage
   CT170 (nhi-backup) → backup di NHI stack
+
+DIAS Stack:
+  CT120 (Brain) → Redis locale per code e state
+  CT120 (Brain) → Gemini API per analisi narrativa
+  CT120 (Brain) → NFS share per audio assets
+  GPU Worker → Redis su CT120 per job queue
+  GPU Worker → NFS share per audio output
 
 Monitoring:
   CT103 (Observability) → monitora tutti i container
@@ -122,3 +152,4 @@ NH-Mini:
 - Bridge: vmbr0, gateway 192.168.1.1
 - DNS: varia per container (1.1.1.1, 8.8.8.8)
 - Aggiornare questo file quando si creano/rimuovono container
+

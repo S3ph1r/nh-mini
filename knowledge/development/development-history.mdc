@@ -190,3 +190,16 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-02-18 - Inizializzato progetto DIAS: scaffold completo (8 ...
+```json
+{
+  "timestamp": "2026-02-18T08:03:16.427366+00:00",
+  "category": "FEATURE",
+  "component": "workspace/DIAS",
+  "change": "Inizializzato progetto DIAS: scaffold completo (8 stadi pipeline), workspace attivato, cursorrules progetto, infrastructure-map aggiornata con CT120 Brain e GPU Worker",
+  "reason": "Primo progetto sotto NH-Mini framework, test del sistema multi-progetto",
+  "author": "agent",
+  "impact": "high"
+}
+```
