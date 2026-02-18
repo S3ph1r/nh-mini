@@ -63,16 +63,17 @@ Proxmox host `homelab` (PVE 9.1.1) — 10 container LXC + 1 pianificato su subne
 - **ports**: nessuno esposto (servizio interno)
 - **resources**: 1024MB RAM, 2 CPU, 15GB storage
 
-### CT120 — dias-brain (🟡 pianificato)
+### CT120 — dias-brain (🟢 running)
 - **type**: applicazione
 - **engine**: Python + Redis
 - **location**: ct120 (192.168.1.120)
 - **purpose**: DIAS Brain — pipeline coordinator + CPU stages (A,B,C,F,G)
 - **isolation_model**: instance
 - **ports**: 6379 (Redis), da definire (API monitoring)
-- **resources**: 4096MB RAM, 2 CPU, 16GB storage
+- **resources**: 4096MB RAM, 4 CPU, 30GB storage
+- **os**: Debian 12.12
 - **progetto**: DIAS (sviluppi/dias/)
-- **nota**: Da creare. Include Redis + stadi CPU della pipeline
+- **deployed**: 2026-02-18
 
 ### CT160 — NHI-CORE-v1.1
 - **type**: applicazione

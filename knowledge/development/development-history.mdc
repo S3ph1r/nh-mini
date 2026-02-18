@@ -255,3 +255,16 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-02-18 - Deploy CT120 dias-brain: Debian 12.12, 4096MB RAM,...
+```json
+{
+  "timestamp": "2026-02-18T17:18:38.423264+00:00",
+  "category": "ARCHITECTURE",
+  "component": "CT120/dias-brain",
+  "change": "Deploy CT120 dias-brain: Debian 12.12, 4096MB RAM, 4 CPU, 30GB storage, IP 192.168.1.120. SSH bidirezionale configurato. Primo container DIAS.",
+  "reason": "M1 DIAS: infrastruttura Brain per pipeline audiobook",
+  "author": "agent",
+  "impact": "high"
+}
+```
