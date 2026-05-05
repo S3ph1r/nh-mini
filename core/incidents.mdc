@@ -1,0 +1,19 @@
+# Incident Memory - NH-Mini Framework
+# Questo file registra errori di assunzione e allucinazioni operative per prevenire ricadute.
+
+| Data | Agente | Errore di Assunzione | Costo/Impatto | Risoluzione |
+|------|--------|----------------------|---------------|-------------|
+| 2026-03-15 | Antigravity | Assunto versione Qwen2.5 e repo Bartowski senza verifica fisica (probe). | 30 min / deviazione piano | Implementazione Protocollo Verification-First. |
+| 2026-03-15 | Antigravity | Build fallita: non previsto requisito `/Zc:preprocessor` per CUDA 13.2 + MSVC. | 42 min (compilazione persa) | Aggiornamento GROUNDED PLAN con flag CXX specifico. |
+| 2026-03-15 | Antigravity | Environment mismatch: `llama-cpp-python` installato in `base` invece di `nh-qwen35-llm`. | 10 min | Guida utente all'installazione via path assoluto dell'interprete dell'env. |
+| 2026-03-15 | Antigravity | Build fallita in `nh-qwen35-llm`: `No CUDA toolset found`. | 20 min | Switch a generatore `Ninja` per bypassare integrazione MSBuild/VS incompleta. |
+| 2026-03-16 | Antigravity | `nvcc fatal: 'b0': expected a number` (Errore quoting flag). | 10 min | Correzione sintassi flag `-Xcompiler` senza spazi in CMD. |
+| 2026-03-16 | Antigravity | Reset terminale: utente confuso dal prefisso `(base)`. | 5 min | Spiegazione architettura Conda e reinstradamento verso Native Tools Prompt. |
+| 2026-03-16 | Antigravity | Errore MSB4023 in `CUDA 13.2.targets` (Metadata error). | 15 min | Switch definitivo a `Ninja` dentro Native Tools Command Prompt. |
+| 2026-03-16 | Antigravity | Dipendenze web server (`FastAPI`, `Uvicorn`) mancanti nell'env. | 5 min | Installazione batch nel target environment. |
+| 2026-03-16 | Antigravity | `unknown model architecture: 'qwen35moe'` su `0.3.16`. | 30 min | Risolto installando da GitHub `master`. |
+| 2026-03-16 | Antigravity | Submodule `llama.cpp` in `master` non aggiornato a `qwen35moe`. | 15 min | Clonazione manuale e `git checkout master` nel submodule. |
+| 2026-03-16 | Antigravity | Errore CMake `mtmd` persistente: "Ghost-File" non basta. | 15 min | Identificata "trappola" in `LLAVA_BUILD` di `llama-cpp-python`. |
+| 2026-03-16 | Antigravity | Bug `mtmd` (Incorrect arguments) in `llama.cpp` master. | 5 min | Diagnosi: `${LLAMA_INSTALL_VERSION}` vuota. Patch: VERSION "1.0.0". |
+| 2026-03-16 | Antigravity | `AttributeError: llama_set_adapter_lora not found`. | 5 min | API Mismatch multiplo nel Master. In corso scansione `llama.h`. |
+| 2026-03-15 | Antigravity | Inquinamento ambiente `base`: installate dipendenze build per errore. | 5 min | Procedura di cleanup `pip uninstall` su `base`. |

@@ -1,0 +1,17 @@
+[Unit]
+Description=NH-Mini Telegram Polling Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/Projects/NH-Mini
+ExecStart=/usr/bin/python3 core/telegram_bot.py --poll
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=nh-telegram
+
+[Install]
+WantedBy=multi-user.target

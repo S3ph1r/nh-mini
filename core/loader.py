@@ -43,7 +43,28 @@ def load_context():
             ctx["workspace"] = {"error": str(e)}
     else:
         ctx["workspace"] = {"status": "no_config"}
-    
+
+    # Carica service catalog (no probe in loader per velocità — usare service_catalog.py per probe live)
+    try:
+        import sys as _sys
+        _root = str(Path(__file__).resolve().parent.parent)
+        if _root not in _sys.path:
+            _sys.path.insert(0, _root)
+        from core.service_catalog import get_catalog
+        catalog = get_catalog(probe=False)
+        ctx["service_catalog"] = {
+            key: {"name": svc["name"], "endpoint": f"{svc.get('host','')}:{svc.get('port','')}" if svc.get("port") else svc.get("host",""), "purpose": svc["purpose"]}
+            for key, svc in catalog.items()
+            if not key.startswith("_")
+        }
+    except Exception as e:
+        ctx["service_catalog"] = {"error": str(e)}
+
+    # Carica system-context.md (snapshot infra real generato dal daemon)
+    sys_ctx = Path("state/system-context.md")
+    if sys_ctx.exists():
+        ctx["system_context_file"] = str(sys_ctx)
+
     return ctx
 
 if __name__ == "__main__":

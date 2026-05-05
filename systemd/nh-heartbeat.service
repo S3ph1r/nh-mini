@@ -1,0 +1,17 @@
+[Unit]
+Description=NH-Mini Heartbeat — service probe e alert generation
+After=network.target nh-mini-dashboard.service
+Wants=nh-mini-dashboard.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/home/Projects/NH-Mini
+ExecStart=/usr/bin/python3 /home/Projects/NH-Mini/core/heartbeat.py
+StandardOutput=append:/var/log/nh-mini/heartbeat.log
+StandardError=append:/var/log/nh-mini/heartbeat.log
+# Exit code 1 se ci sono alert HIGH — non trattarlo come errore systemd
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

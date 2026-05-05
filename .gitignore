@@ -11,9 +11,12 @@ secrets/
 ~/.ssh/id_nh
 ~/.ssh/id_ed25519
 
-# State dinamico (viene rigenerato)
+# State dinamico (viene rigenerato automaticamente — non committare)
 state/inventory.json
 state/cache/
+state/alerts.json
+state/system-context.md
+state/session-handover.md
 
 # Python cache
 *.pyc
@@ -82,3 +85,19 @@ workspace/current_project
 **/*.dec.yaml
 .nh-mini/
 secrets/*.unencrypted.yaml
+store_gemini_api_key.py
+
+# Audio/media temporanei
+*.wav
+*.mp3
+
+# Claude Code internals
+.claude/
+
+# Obsidian internals
+docs/.obsidian/
+docs/.trash/
+docs/Senza nome.md
+
+# Log files stray
+2026-02-27*

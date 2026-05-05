@@ -1,0 +1,17 @@
+[Unit]
+Description=NH-Mini Dashboard API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/Projects/NH-Mini
+ExecStart=/usr/bin/python3 web/app.py
+Restart=always
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=nh-mini-api
+
+[Install]
+WantedBy=multi-user.target

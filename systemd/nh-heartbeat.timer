@@ -1,0 +1,12 @@
+[Unit]
+Description=NH-Mini Heartbeat Timer — ogni 5 minuti
+Requires=nh-heartbeat.service
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=5min
+Unit=nh-heartbeat.service
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
