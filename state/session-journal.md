@@ -5,6 +5,29 @@ Ogni entry è un timestamp + tipo + contenuto.
 
 Tipi: START | TASK | DECISION | BLOCKED | RESOLVED | DEVIATION | END
 
+## [2026-05-05 16:08] END
+
+**Completato:**
+- Verifica DELETE feature ARIA in produzione: WAV eliminati su PC 139 dopo ogni download Stage D confermato (log CT201: `🗑️ Remote asset eliminato` su ogni scena Hyperion)
+- scene-009 confermata riprocessata con successo dopo restart Qwen3
+- Analisi stato completo tutti i repo: identificata divergenza critica Stage C P3/P4/P5 su CT201 non committata
+- Stage C P3/P4/P5 recuperato da CT201 → committato e pushato (era in produzione senza git)
+- Mass commit NH-Mini: 6 commit (gitignore, core modules, knowledge, framework v6, scripts, wiki+dashboard)
+- ARIA: 5 commit da PC 139 + 2 da LXC 190 (rate limiter RPD/RPM/TPM, dashboard tray, docs, state-of-gaps)
+- DIAS: 5 commit (Stage 0 SCI, Stage C v2.6.0, common lib fixes, API hub, tracking)
+- CT201 allineato via git pull (conflict stash risolto)
+- `/lint` 40/40 NH-Mini, 45/45 ARIA, 45/45 DIAS ✅
+- gitignore: eliminata API key Gemini hardcodata da `store_gemini_api_key.py`
+
+**Incompleto:** nulla di critico
+
+**Mine per il prossimo agent:**
+- `subtalker_top_k` e `subtalker_top_p` non inviati da Stage D → gap A1-3 ARIA, bassa priorità
+- `dialogue_notes` enrichment path morto → gap A1-2 ARIA, rilevante solo con casting multi-voce
+- Progetto Stratex attivo (workspace active) — sessione 2026-05-04 ha caricato dati BGSAXO+Binance su LXC 105
+
+---
+
 ## [2026-05-04 15:30] TASK — Ingestion e Caricamento DB Stratex
 
 - Inizializzato database `stratex` su LXC 105 (centralizzato).
@@ -27,6 +50,16 @@ Nonostante iniziali indicazioni per un DB locale all'app (LXC 190), abbiamo conf
 
 **Obiettivo**: Estrarre i dati dai report Excel BGSAXO e Binance, normalizzarli e caricarli nel database PostgreSQL di produzione.
 **Grounding**: Report Excel originali presenti in `docs/inbox/`. DB centralizzato su LXC 105.
+
+## [2026-05-04 16:00] END — [RECOVERY: sessione chiusa da agent successivo]
+
+**Completato:**
+- Parser BGSAXO multi-sheet (`bg_saxo.py`) e parser Binance dinamico (`binance.py`)
+- Schema TimescaleDB + pgvector applicato su LXC 105
+- Caricati 354 record BGSAXO e 3562 record Binance
+- Fix bug date Binance (`YY-MM-DD`) e tipo colonna ticker (`currency` → TEXT)
+
+**Incompleto:** nessuna informazione disponibile (sessione non finalizzata)
 
 ---
 

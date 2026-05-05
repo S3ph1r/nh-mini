@@ -450,3 +450,68 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "low"
 }
 ```
+
+### 2026-05-05 - Parametric /doc {app} and /lint {app} hard trigger...
+```json
+{
+  "timestamp": "2026-05-05T14:08:53.817777+00:00",
+  "category": "FEATURE",
+  "component": "scripts/nh-lint.py, knowledge/agent/hard-triggers.mdc, core/description-contracts.mdc",
+  "change": "Parametric /doc {app} and /lint {app} hard triggers with KNOWLEDGE_INDEX spec. nh-lint.py extended with --project flag and check_project_knowledge_index(). Both .project-context files (ARIA, DIAS) rewritten with doc_trigger+lint_check format.",
+  "reason": "Allow agent to verify and update project-specific docs without manual inspection. Enables automated compliance checking per project.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-05 - ARIA asset DELETE endpoint + Stage D cleanup. Aria...
+```json
+{
+  "timestamp": "2026-05-05T14:09:04.449547+00:00",
+  "category": "FEATURE",
+  "component": "sviluppi/ARIA/aria_node_controller/core/orchestrator.py, sviluppi/dias/src/stages/stage_d_voice_gen.py",
+  "change": "ARIA asset DELETE endpoint + Stage D cleanup. AriaAssetHandler.do_DELETE removes WAV from PC 139 after confirmed download by Stage D. Best-effort, non-blocking. Tested in production on Hyperion (confirmed via logs).",
+  "reason": "Prevent unbounded disk growth on PC 139 GPU node from accumulated WAV outputs.",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-05 - Mass commit of 6 months accumulated NH-Mini work: ...
+```json
+{
+  "timestamp": "2026-05-05T14:09:12.269580+00:00",
+  "category": "ARCHITECTURE",
+  "component": "NH-Mini (NH-Mini/, web/, systemd/, core/, scripts/, knowledge/, CLAUDE.md)",
+  "change": "Mass commit of 6 months accumulated NH-Mini work: Obsidian wiki vault, Flask dashboard, heartbeat/telegram/service_catalog modules, systemd services, cursorrules v4->v6, CLAUDE.md wiki schema, 40+ knowledge files, nh-lint/session-end/new-project/promote scripts. gitignore hardened (removed hardcoded Gemini API key from store_gemini_api_key.py).",
+  "reason": "Repository was months behind. Brought git history in sync with production state.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-05 - Stage 0 Sequential Contextual Injection: multi-blo...
+```json
+{
+  "timestamp": "2026-05-05T14:09:30.017651+00:00",
+  "category": "FEATURE",
+  "component": "sviluppi/dias/src/stages/stage_0_intel.py",
+  "change": "Stage 0 Sequential Contextual Injection: multi-block path for books exceeding 700K chars. Cumulative preamble + merge strategy. Stage0Config added to DiasConfig. New continuation prompts for 0.1 and 0.2.",
+  "reason": "Large books (Hyperion ~1.2M chars) exceeded per-minute token quota on Gemini free tier. Single-block path preserved for smaller books.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-05 - base_stage.py: pause key project-specific (dias:pr...
+```json
+{
+  "timestamp": "2026-05-05T14:09:37.203089+00:00",
+  "category": "BUGFIX",
+  "component": "sviluppi/dias/src/common (base_stage.py, gateway_client.py, logging_setup.py)",
+  "change": "base_stage.py: pause key project-specific (dias:project:{book_id}:paused) instead of global. gateway_client.py: stale error results deleted and resubmitted instead of replayed. logging_setup.py: timestamps in local timezone.",
+  "reason": "Global pause was blocking all projects when one failed. Stale errors in mailbox caused silent failures on retry.",
+  "author": "agent",
+  "impact": "medium"
+}
+```
