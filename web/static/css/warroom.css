@@ -1,0 +1,1385 @@
+/* === TOKENS === */
+/* ============================================
+   NHI Design System - Core Tokens
+   Generated from tokens.yaml
+   Version: 1.1.0
+   ============================================ */
+
+/* ========== Google Fonts Import ========== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  /* ========== Color Palette: Neura (Brand) ========== */
+  --nhi-color-neura-50: #EEF2FF;
+  --nhi-color-neura-100: #E0E7FF;
+  --nhi-color-neura-300: #A5B4FC;
+  --nhi-color-neura-500: #6366F1;
+  --nhi-color-neura-600: #4F46E5;
+  --nhi-color-neura-700: #4338CA;
+  --nhi-color-neura-900: #312E81;
+
+  /* ========== Color Palette: Obsidian (Dark Backgrounds) ========== */
+  --nhi-color-obsidian-black: #050505;
+  --nhi-color-obsidian-base: #0F1115;
+  --nhi-color-obsidian-surface: #18181B;
+  --nhi-color-obsidian-overlay: #27272A;
+  --nhi-color-obsidian-border: #3F3F46;
+
+  /* ========== Color Palette: Paper (Light Backgrounds) ========== */
+  --nhi-color-paper-white: #FFFFFF;
+  --nhi-color-paper-base: #FAFAFA;
+  --nhi-color-paper-surface: #F4F4F5;
+  --nhi-color-paper-overlay: #E4E4E7;
+  --nhi-color-paper-border: #D4D4D8;
+
+  /* ========== Semantic Colors ========== */
+  --nhi-color-success: #10B981;
+  --nhi-color-success-light: #D1FAE5;
+  --nhi-color-warning: #F59E0B;
+  --nhi-color-warning-light: #FEF3C7;
+  --nhi-color-error: #EF4444;
+  --nhi-color-error-light: #FEE2E2;
+  --nhi-color-info: #3B82F6;
+  --nhi-color-info-light: #DBEAFE;
+
+  /* ========== Neon Accent Colors (Media Theme) ========== */
+  --nhi-color-neon-violet: #8B5CF6;
+  --nhi-color-neon-cyan: #06B6D4;
+  --nhi-color-neon-pink: #EC4899;
+  --nhi-color-neon-green: #22C55E;
+
+  /* ========== Spacing ========== */
+  --nhi-space-xs: 4px;
+  --nhi-space-sm: 8px;
+  --nhi-space-md: 16px;
+  --nhi-space-lg: 24px;
+  --nhi-space-xl: 32px;
+  --nhi-space-2xl: 48px;
+  --nhi-space-3xl: 64px;
+
+  /* ========== Typography - Font Families ========== */
+  /* Primary UI font - clean and readable */
+  --nhi-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Display/heading font - modern and distinctive */
+  --nhi-font-display: 'Space Grotesk', var(--nhi-font-sans);
+
+  /* Monospace font - for code and data */
+  --nhi-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  --nhi-text-xs: 0.75rem;
+  /* 12px */
+  --nhi-text-sm: 0.875rem;
+  /* 14px */
+  --nhi-text-base: 1rem;
+  /* 16px */
+  --nhi-text-lg: 1.125rem;
+  /* 18px */
+  --nhi-text-xl: 1.25rem;
+  /* 20px */
+  --nhi-text-2xl: 1.5rem;
+  /* 24px */
+  --nhi-text-3xl: 1.875rem;
+  /* 30px */
+  --nhi-text-4xl: 2.25rem;
+  /* 36px */
+
+  --nhi-font-normal: 400;
+  --nhi-font-medium: 500;
+  --nhi-font-semibold: 600;
+  --nhi-font-bold: 700;
+
+  /* ========== Border Radius ========== */
+  --nhi-radius-sm: 4px;
+  --nhi-radius-md: 6px;
+  --nhi-radius-lg: 8px;
+  --nhi-radius-xl: 12px;
+  --nhi-radius-full: 9999px;
+
+  /* ========== Shadows ========== */
+  --nhi-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --nhi-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --nhi-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --nhi-shadow-glow: 0 0 20px rgb(99 102 241 / 0.4);
+
+  /* ========== Transitions ========== */
+  --nhi-transition-fast: 150ms ease;
+  --nhi-transition-normal: 250ms ease;
+  --nhi-transition-slow: 350ms ease;
+
+  /* ========== Breakpoints (for reference) ========== */
+  --nhi-breakpoint-sm: 640px;
+  --nhi-breakpoint-md: 768px;
+  --nhi-breakpoint-lg: 1024px;
+  --nhi-breakpoint-xl: 1280px;
+
+  /* ========== Z-Index Scale ========== */
+  --nhi-z-dropdown: 100;
+  --nhi-z-sticky: 200;
+  --nhi-z-modal: 300;
+  --nhi-z-tooltip: 400;
+  --nhi-z-notification: 500;
+}
+
+/* === PRIMITIVES === */
+/* ============================================
+   NHI Design System - Primitives
+   Base classes for all personalities
+   Version: 1.0.0
+   ============================================ */
+
+/* ========== CSS Reset ========== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--nhi-font-sans);
+  font-size: var(--nhi-text-base);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ========== Layout Classes ========== */
+.nhi-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--nhi-space-md);
+}
+
+.nhi-container-fluid {
+  width: 100%;
+  padding: 0 var(--nhi-space-md);
+}
+
+.nhi-grid {
+  display: grid;
+  gap: var(--nhi-space-md);
+}
+
+.nhi-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.nhi-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.nhi-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.nhi-flex {
+  display: flex;
+}
+
+.nhi-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.nhi-flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nhi-flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nhi-gap-sm {
+  gap: var(--nhi-space-sm);
+}
+
+.nhi-gap-md {
+  gap: var(--nhi-space-md);
+}
+
+.nhi-gap-lg {
+  gap: var(--nhi-space-lg);
+}
+
+/* ========== Card Component ========== */
+.nhi-card {
+  border-radius: var(--nhi-radius-lg);
+  padding: var(--nhi-space-lg);
+  transition: var(--nhi-transition-normal);
+}
+
+.nhi-card-compact {
+  padding: var(--nhi-space-md);
+}
+
+.nhi-card-header {
+  margin-bottom: var(--nhi-space-md);
+  padding-bottom: var(--nhi-space-md);
+}
+
+.nhi-card-body {
+  flex: 1;
+}
+
+.nhi-card-footer {
+  margin-top: var(--nhi-space-md);
+  padding-top: var(--nhi-space-md);
+}
+
+/* ========== Typography ========== */
+.nhi-title {
+  font-size: var(--nhi-text-3xl);
+  font-weight: var(--nhi-font-bold);
+  line-height: 1.2;
+  margin-bottom: var(--nhi-space-sm);
+}
+
+.nhi-subtitle {
+  font-size: var(--nhi-text-xl);
+  font-weight: var(--nhi-font-semibold);
+  line-height: 1.3;
+  margin-bottom: var(--nhi-space-sm);
+}
+
+.nhi-heading {
+  font-size: var(--nhi-text-lg);
+  font-weight: var(--nhi-font-medium);
+  margin-bottom: var(--nhi-space-xs);
+}
+
+.nhi-text-body {
+  font-size: var(--nhi-text-base);
+  line-height: 1.6;
+}
+
+.nhi-text-small {
+  font-size: var(--nhi-text-sm);
+}
+
+.nhi-text-muted {
+  opacity: 0.7;
+}
+
+.nhi-code {
+  font-family: var(--nhi-font-mono);
+  font-size: var(--nhi-text-sm);
+  padding: 2px 6px;
+  border-radius: var(--nhi-radius-sm);
+}
+
+.nhi-code-block {
+  font-family: var(--nhi-font-mono);
+  font-size: var(--nhi-text-sm);
+  padding: var(--nhi-space-md);
+  border-radius: var(--nhi-radius-md);
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+/* ========== Buttons ========== */
+.nhi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--nhi-space-sm);
+  padding: var(--nhi-space-sm) var(--nhi-space-md);
+  font-size: var(--nhi-text-sm);
+  font-weight: var(--nhi-font-medium);
+  border-radius: var(--nhi-radius-md);
+  border: none;
+  cursor: pointer;
+  transition: var(--nhi-transition-fast);
+  text-decoration: none;
+}
+
+.nhi-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nhi-btn-primary {
+  background: var(--nhi-color-neura-500);
+  color: white;
+}
+
+.nhi-btn-primary:hover:not(:disabled) {
+  background: var(--nhi-color-neura-600);
+}
+
+.nhi-btn-secondary {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+.nhi-btn-danger {
+  background: var(--nhi-color-error);
+  color: white;
+}
+
+.nhi-btn-danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.nhi-btn-ghost {
+  background: transparent;
+  color: inherit;
+}
+
+.nhi-btn-ghost:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.nhi-btn-icon {
+  padding: var(--nhi-space-sm);
+  width: 36px;
+  height: 36px;
+}
+
+/* ========== Form Elements ========== */
+.nhi-input {
+  width: 100%;
+  padding: var(--nhi-space-sm) var(--nhi-space-md);
+  font-size: var(--nhi-text-base);
+  border-radius: var(--nhi-radius-md);
+  border: 1px solid;
+  transition: var(--nhi-transition-fast);
+  outline: none;
+}
+
+.nhi-input:focus {
+  border-color: var(--nhi-color-neura-500);
+  box-shadow: 0 0 0 3px var(--nhi-color-neura-100);
+}
+
+.nhi-label {
+  display: block;
+  font-size: var(--nhi-text-sm);
+  font-weight: var(--nhi-font-medium);
+  margin-bottom: var(--nhi-space-xs);
+}
+
+.nhi-select {
+  appearance: none;
+  padding-right: var(--nhi-space-xl);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+/* ========== Alerts & Feedback ========== */
+.nhi-alert {
+  padding: var(--nhi-space-md);
+  border-radius: var(--nhi-radius-md);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nhi-space-sm);
+}
+
+.nhi-alert-info {
+  background: var(--nhi-color-info-light);
+  color: var(--nhi-color-info);
+}
+
+.nhi-alert-success {
+  background: var(--nhi-color-success-light);
+  color: var(--nhi-color-success);
+}
+
+.nhi-alert-warning {
+  background: var(--nhi-color-warning-light);
+  color: var(--nhi-color-warning);
+}
+
+.nhi-alert-error {
+  background: var(--nhi-color-error-light);
+  color: var(--nhi-color-error);
+}
+
+/* ========== Badges ========== */
+.nhi-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--nhi-space-sm);
+  font-size: var(--nhi-text-xs);
+  font-weight: var(--nhi-font-medium);
+  border-radius: var(--nhi-radius-full);
+}
+
+.nhi-badge-success {
+  background: var(--nhi-color-success);
+  color: white;
+}
+
+.nhi-badge-warning {
+  background: var(--nhi-color-warning);
+  color: white;
+}
+
+.nhi-badge-error {
+  background: var(--nhi-color-error);
+  color: white;
+}
+
+.nhi-badge-info {
+  background: var(--nhi-color-info);
+  color: white;
+}
+
+.nhi-badge-neutral {
+  background: var(--nhi-color-obsidian-overlay);
+  color: white;
+}
+
+/* ========== Table ========== */
+.nhi-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.nhi-table th,
+.nhi-table td {
+  padding: var(--nhi-space-sm) var(--nhi-space-md);
+  text-align: left;
+}
+
+.nhi-table th {
+  font-weight: var(--nhi-font-semibold);
+  font-size: var(--nhi-text-sm);
+}
+
+/* ========== Navigation ========== */
+.nhi-nav {
+  display: flex;
+  gap: var(--nhi-space-xs);
+}
+
+.nhi-nav-vertical {
+  flex-direction: column;
+}
+
+.nhi-nav-item {
+  padding: var(--nhi-space-sm) var(--nhi-space-md);
+  border-radius: var(--nhi-radius-md);
+  text-decoration: none;
+  transition: var(--nhi-transition-fast);
+  cursor: pointer;
+}
+
+.nhi-nav-item.active {
+  font-weight: var(--nhi-font-medium);
+}
+
+/* ========== Dividers ========== */
+.nhi-divider {
+  border: none;
+  height: 1px;
+  margin: var(--nhi-space-md) 0;
+}
+
+/* ========== Utility Classes ========== */
+.nhi-hidden {
+  display: none !important;
+}
+
+.nhi-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.nhi-text-center {
+  text-align: center;
+}
+
+.nhi-text-right {
+  text-align: right;
+}
+
+.nhi-mt-sm {
+  margin-top: var(--nhi-space-sm);
+}
+
+.nhi-mt-md {
+  margin-top: var(--nhi-space-md);
+}
+
+.nhi-mt-lg {
+  margin-top: var(--nhi-space-lg);
+}
+
+.nhi-mb-sm {
+  margin-bottom: var(--nhi-space-sm);
+}
+
+.nhi-mb-md {
+  margin-bottom: var(--nhi-space-md);
+}
+
+.nhi-mb-lg {
+  margin-bottom: var(--nhi-space-lg);
+}
+
+.nhi-p-sm {
+  padding: var(--nhi-space-sm);
+}
+
+.nhi-p-md {
+  padding: var(--nhi-space-md);
+}
+
+.nhi-p-lg {
+  padding: var(--nhi-space-lg);
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+
+  .nhi-grid-2,
+  .nhi-grid-3,
+  .nhi-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .nhi-hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .nhi-hide-desktop {
+    display: none !important;
+  }
+}
+
+/* ============================================
+   SCENE SYSTEM - Dynamic Backgrounds
+   Add class to body: nhi-scene-{name}
+   ============================================ */
+
+/* Scene Container - wrap your app */
+.nhi-scene {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.nhi-scene-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: all 0.7s ease-in-out;
+}
+
+.nhi-scene-content {
+  position: relative;
+  z-index: 10;
+}
+
+/* ========== Scene: Clean ========== */
+.nhi-scene-clean .nhi-scene-bg {
+  background: radial-gradient(circle at top right, var(--nhi-scene-tint, transparent), transparent 70%);
+}
+
+/* ========== Scene: Nordic Aurora ========== */
+.nhi-scene-nordic .nhi-scene-bg {
+  background: linear-gradient(to bottom, #0f172a, #020617);
+}
+
+.nhi-scene-nordic .nhi-scene-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at top, #2dd4bf 0%, transparent 40%),
+    radial-gradient(ellipse at bottom right, #3b82f6 0%, transparent 40%);
+  opacity: 0.6;
+}
+
+/* ========== Scene: Ocean ========== */
+.nhi-scene-ocean .nhi-scene-bg {
+  background: linear-gradient(to bottom, #0c4a6e, #020617);
+}
+
+.nhi-scene-ocean .nhi-scene-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 0%, #38bdf8 0%, transparent 60%),
+    radial-gradient(circle at 50% 100%, #0369a1 0%, transparent 60%);
+  opacity: 0.6;
+}
+
+/* ========== Scene: Forest ========== */
+.nhi-scene-forest .nhi-scene-bg {
+  background: linear-gradient(to bottom, #064e3b, #022c22);
+}
+
+.nhi-scene-forest .nhi-scene-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 50%, #4ade80 0%, transparent 40%);
+  opacity: 0.6;
+}
+
+/* ========== Scene: Sahara ========== */
+.nhi-scene-sahara .nhi-scene-bg {
+  background: linear-gradient(to bottom, #1c1917, #451a03);
+}
+
+.nhi-scene-sahara .nhi-scene-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 80% 20%, #fbbf24 0%, transparent 50%),
+    radial-gradient(circle at 0% 80%, #92400e 0%, transparent 50%);
+  opacity: 0.6;
+}
+
+/* ========== Scene: Cyber Grid ========== */
+.nhi-scene-cyber .nhi-scene-bg {
+  background: #000000;
+}
+
+.nhi-scene-cyber .nhi-scene-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, #a855f7 0%, transparent 50%);
+  opacity: 0.6;
+}
+
+.nhi-scene-cyber .nhi-scene-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(18, 18, 23, 0) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18, 18, 23, 0) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 70%, transparent 100%);
+  opacity: 0.2;
+}
+
+/* ========== Scene: Midnight ========== */
+.nhi-scene-midnight .nhi-scene-bg {
+  background: linear-gradient(to bottom, #1e1b4b, #020617);
+}
+
+.nhi-scene-midnight .nhi-scene-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 20%, #818cf8 0%, transparent 40%),
+    radial-gradient(circle at 70% 80%, #c084fc 0%, transparent 40%);
+  opacity: 0.5;
+}
+
+/* ========== Noise Texture (add to any scene) ========== */
+.nhi-scene-noise .nhi-scene-bg::after,
+.nhi-scene .nhi-noise {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* ============================================
+   GLASSMORPHISM SYSTEM
+   Add class: nhi-glass, nhi-glass-strong
+   ============================================ */
+
+.nhi-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nhi-glass-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.nhi-glass-dark {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================
+   COLOR PALETTE MODIFIERS
+   Add class: nhi-palette-{name}
+   ============================================ */
+
+/* Nordic Palette */
+.nhi-palette-nordic {
+  --nhi-color-accent: #38bdf8;
+  --nhi-color-accent-secondary: #e2e8f0;
+  --nhi-color-positive: #38bdf8;
+  --nhi-color-negative: #94a3b8;
+}
+
+/* Ocean Palette */
+.nhi-palette-ocean {
+  --nhi-color-accent: #0ea5e9;
+  --nhi-color-accent-secondary: #38bdf8;
+  --nhi-color-positive: #38bdf8;
+  --nhi-color-negative: #f43f5e;
+}
+
+/* Forest Palette */
+.nhi-palette-forest {
+  --nhi-color-accent: #4ade80;
+  --nhi-color-accent-secondary: #22c55e;
+  --nhi-color-positive: #4ade80;
+  --nhi-color-negative: #f87171;
+}
+
+/* Sahara Palette */
+.nhi-palette-sahara {
+  --nhi-color-accent: #fbbf24;
+  --nhi-color-accent-secondary: #d97706;
+  --nhi-color-positive: #fbbf24;
+  --nhi-color-negative: #ef4444;
+}
+
+/* Canyon Palette */
+.nhi-palette-canyon {
+  --nhi-color-accent: #f87171;
+  --nhi-color-accent-secondary: #dc2626;
+  --nhi-color-positive: #f87171;
+  --nhi-color-negative: #ea580c;
+}
+
+/* Midnight Palette */
+.nhi-palette-midnight {
+  --nhi-color-accent: #818cf8;
+  --nhi-color-accent-secondary: #6366f1;
+  --nhi-color-positive: #818cf8;
+  --nhi-color-negative: #ec4899;
+}
+
+/* ============================================
+   SCROLLBAR CUSTOMIZATION
+   ============================================ */
+
+.nhi-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.nhi-scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.nhi-scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.nhi-scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nhi-scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.nhi-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* === ICONS === */
+/* ============================================
+   NHI Design System - Icon System
+   Lucide Icons via CSS (https://lucide.dev)
+   Version: 1.0.0
+   ============================================ */
+
+/* ========== Icon Base Class ========== */
+.nhi-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ========== Icon Sizes ========== */
+.nhi-icon-xs {
+    width: 12px;
+    height: 12px;
+}
+
+.nhi-icon-sm {
+    width: 16px;
+    height: 16px;
+}
+
+.nhi-icon-md {
+    width: 20px;
+    height: 20px;
+}
+
+.nhi-icon-lg {
+    width: 24px;
+    height: 24px;
+}
+
+.nhi-icon-xl {
+    width: 32px;
+    height: 32px;
+}
+
+.nhi-icon-2xl {
+    width: 48px;
+    height: 48px;
+}
+
+/* ========== Icon Colors ========== */
+.nhi-icon-accent {
+    color: var(--nhi-color-accent);
+}
+
+.nhi-icon-success {
+    color: var(--nhi-color-success);
+}
+
+.nhi-icon-warning {
+    color: var(--nhi-color-warning);
+}
+
+.nhi-icon-error {
+    color: var(--nhi-color-error);
+}
+
+.nhi-icon-info {
+    color: var(--nhi-color-info);
+}
+
+.nhi-icon-muted {
+    color: var(--nhi-color-text-muted);
+}
+
+/* ========== Icon Animations ========== */
+.nhi-icon-spin {
+    animation: nhi-spin 1s linear infinite;
+}
+
+.nhi-icon-pulse {
+    animation: nhi-pulse 2s ease-in-out infinite;
+}
+
+.nhi-icon-bounce {
+    animation: nhi-bounce 1s ease infinite;
+}
+
+@keyframes nhi-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes nhi-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes nhi-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-25%);
+    }
+}
+
+/* ============================================
+   COMMON ICON SVG DEFINITIONS
+   Usage: Copy SVG and add class="nhi-icon"
+   ============================================ */
+
+/*
+NAVIGATION & UI
+---------------
+dashboard:    <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+menu:         <svg class="nhi-icon" viewBox="0 0 24 24"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+x:            <svg class="nhi-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+chevron-down: <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+chevron-up:   <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+chevron-left: <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+chevron-right:<svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+arrow-left:   <svg class="nhi-icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+arrow-right:  <svg class="nhi-icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+search:       <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+settings:     <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
+home:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+user:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+bell:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+plus:         <svg class="nhi-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+minus:        <svg class="nhi-icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+check:        <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+
+FILES & DATA
+------------
+folder:       <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+file:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+book:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+database:     <svg class="nhi-icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+upload:       <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+download:     <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+save:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+trash:        <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+edit:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+copy:         <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+
+SYSTEM & TECH
+-------------
+cpu:          <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+memory:       <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M6 19v-3"/><path d="M10 19v-3"/><path d="M14 19v-3"/><path d="M18 19v-3"/><path d="M8 11V9"/><path d="M16 11V9"/><path d="M12 11V9"/><path d="M2 15h20"/><path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1.1a2 2 0 0 0 0 3.837V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5.1a2 2 0 0 0 0-3.837V7z"/></svg>
+monitor:      <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+server:       <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+terminal:     <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+code:         <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+git-branch:   <svg class="nhi-icon" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+cloud:        <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+wifi:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+globe:        <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+link:         <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+target:       <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+
+SECURITY
+--------
+lock:         <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+unlock:       <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+key:          <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+shield:       <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+eye:          <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+eye-off:      <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+
+STATUS & ALERTS
+---------------
+check-circle: <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+x-circle:     <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+alert-circle: <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+alert-triangle:<svg class="nhi-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+info:         <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+clock:        <svg class="nhi-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+refresh:      <svg class="nhi-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+loader:       <svg class="nhi-icon nhi-icon-spin" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+
+NHI BRAND
+---------
+brain:        <svg class="nhi-icon" viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.54Z"/></svg>
+workflow:     <svg class="nhi-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>
+*/
+
+/* === THEME: warroom === */
+/* ============================================
+   NHI Design System - WarRoom Personality
+   Financial Command Center Theme
+   Glassmorphism + Multi-Scene + Multi-Palette
+   Version: 1.0.0
+   ============================================ */
+
+/* ========== Base Variables ========== */
+:root,
+.nhi-theme-warroom {
+    /* Default: Glass Base + Nordic Palette */
+
+    /* Fonts */
+    --nhi-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --nhi-font-display: 'Space Grotesk', var(--nhi-font-sans);
+    --nhi-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+    /* Glass Base (Default) */
+    --nhi-color-bg: #0f172a;
+    --nhi-color-bg-card: rgba(255, 255, 255, 0.03);
+    --nhi-color-bg-sidebar: rgba(0, 0, 0, 0.2);
+    --nhi-color-bg-elevated: rgba(255, 255, 255, 0.05);
+    --nhi-color-border: rgba(255, 255, 255, 0.1);
+    --nhi-color-text-primary: #ffffff;
+    --nhi-color-text-secondary: #cbd5e1;
+    --nhi-color-text-muted: #94a3b8;
+
+    /* Nordic Palette (Default) */
+    --nhi-color-accent: #38bdf8;
+    --nhi-color-accent-secondary: #e2e8f0;
+    --nhi-color-success: #38bdf8;
+    --nhi-color-error: #94a3b8;
+    --nhi-color-positive: #38bdf8;
+    --nhi-color-negative: #94a3b8;
+
+    /* Chart Colors (Nordic) */
+    --nhi-chart-1: #e2e8f0;
+    --nhi-chart-2: #94a3b8;
+    --nhi-chart-3: #64748b;
+    --nhi-chart-4: #475569;
+    --nhi-chart-5: #38bdf8;
+
+    /* Glass Effect */
+    --nhi-blur: 12px;
+    --nhi-glass-bg: rgba(255, 255, 255, 0.03);
+    --nhi-glass-border: rgba(255, 255, 255, 0.1);
+
+    /* Transitions */
+    --nhi-transition-colors: color 0.3s, background-color 0.3s, border-color 0.3s;
+    --nhi-transition-scene: all 0.7s ease-in-out;
+}
+
+/* ========== Base Modifiers ========== */
+
+/* Linear Base - Solid backgrounds, no blur */
+.nhi-theme-warroom.nhi-base-linear,
+.nhi-base-linear {
+    --nhi-color-bg: #08090a;
+    --nhi-color-bg-card: #141517;
+    --nhi-color-bg-sidebar: #08090a;
+    --nhi-color-bg-elevated: #1a1b1e;
+    --nhi-color-border: #26282d;
+    --nhi-blur: 0px;
+}
+
+/* Cyberpunk Base - Deep black, neon borders */
+.nhi-theme-warroom.nhi-base-cyber,
+.nhi-base-cyber {
+    --nhi-color-bg: #050507;
+    --nhi-color-bg-card: #0d0d12;
+    --nhi-color-bg-sidebar: #050507;
+    --nhi-color-bg-elevated: #111115;
+    --nhi-color-border: rgba(0, 212, 255, 0.2);
+    --nhi-blur: 0px;
+}
+
+/* ========== Palette Modifiers ========== */
+
+/* Ocean Palette */
+.nhi-theme-warroom.nhi-palette-ocean {
+    --nhi-color-accent: #0ea5e9;
+    --nhi-color-accent-secondary: #38bdf8;
+    --nhi-color-positive: #38bdf8;
+    --nhi-color-negative: #f43f5e;
+    --nhi-chart-1: #0ea5e9;
+    --nhi-chart-2: #3b82f6;
+    --nhi-chart-3: #6366f1;
+    --nhi-chart-4: #818cf8;
+    --nhi-chart-5: #94a3b8;
+}
+
+/* Forest Palette */
+.nhi-theme-warroom.nhi-palette-forest {
+    --nhi-color-accent: #4ade80;
+    --nhi-color-accent-secondary: #22c55e;
+    --nhi-color-positive: #4ade80;
+    --nhi-color-negative: #f87171;
+    --nhi-chart-1: #22c55e;
+    --nhi-chart-2: #10b981;
+    --nhi-chart-3: #14b8a6;
+    --nhi-chart-4: #84cc16;
+    --nhi-chart-5: #78716c;
+}
+
+/* Sahara Palette */
+.nhi-theme-warroom.nhi-palette-sahara {
+    --nhi-color-accent: #fbbf24;
+    --nhi-color-accent-secondary: #d97706;
+    --nhi-color-positive: #fbbf24;
+    --nhi-color-negative: #ef4444;
+    --nhi-chart-1: #fbbf24;
+    --nhi-chart-2: #f59e0b;
+    --nhi-chart-3: #d97706;
+    --nhi-chart-4: #b45309;
+    --nhi-chart-5: #78350f;
+}
+
+/* Canyon Palette */
+.nhi-theme-warroom.nhi-palette-canyon {
+    --nhi-color-accent: #f87171;
+    --nhi-color-accent-secondary: #dc2626;
+    --nhi-color-positive: #f87171;
+    --nhi-color-negative: #ea580c;
+    --nhi-chart-1: #f87171;
+    --nhi-chart-2: #ef4444;
+    --nhi-chart-3: #b91c1c;
+    --nhi-chart-4: #991b1b;
+    --nhi-chart-5: #7f1d1d;
+}
+
+/* Midnight Palette */
+.nhi-theme-warroom.nhi-palette-midnight {
+    --nhi-color-accent: #818cf8;
+    --nhi-color-accent-secondary: #6366f1;
+    --nhi-color-positive: #818cf8;
+    --nhi-color-negative: #ec4899;
+    --nhi-chart-1: #818cf8;
+    --nhi-chart-2: #6366f1;
+    --nhi-chart-3: #4f46e5;
+    --nhi-chart-4: #a78bfa;
+    --nhi-chart-5: #c084fc;
+}
+
+/* ========== WarRoom-Specific Components ========== */
+
+/* Financial Data Cards */
+.nhi-theme-warroom .nhi-card,
+.warroom-card {
+    background: var(--nhi-glass-bg);
+    backdrop-filter: blur(var(--nhi-blur));
+    -webkit-backdrop-filter: blur(var(--nhi-blur));
+    border: 1px solid var(--nhi-glass-border);
+    border-radius: 12px;
+}
+
+/* Metric Display */
+.warroom-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.warroom-metric-value {
+    font-family: var(--nhi-font-mono);
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--nhi-color-text-primary);
+}
+
+.warroom-metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--nhi-color-text-muted);
+}
+
+.warroom-metric-change {
+    font-family: var(--nhi-font-mono);
+    font-size: 0.875rem;
+}
+
+.warroom-metric-change.positive {
+    color: var(--nhi-color-positive);
+}
+
+.warroom-metric-change.negative {
+    color: var(--nhi-color-negative);
+}
+
+/* Portfolio Table */
+.warroom-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.warroom-table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--nhi-color-text-muted);
+    border-bottom: 1px solid var(--nhi-color-border);
+}
+
+.warroom-table td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: var(--nhi-color-text-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.warroom-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Ticker Symbol */
+.warroom-ticker {
+    font-family: var(--nhi-font-mono);
+    font-weight: 600;
+    color: var(--nhi-color-accent);
+}
+
+/* Sidebar Navigation */
+.warroom-sidebar {
+    background: var(--nhi-color-bg-sidebar);
+    backdrop-filter: blur(var(--nhi-blur));
+    -webkit-backdrop-filter: blur(var(--nhi-blur));
+    border-right: 1px solid var(--nhi-color-border);
+}
+
+.warroom-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--nhi-color-text-muted);
+    font-size: 0.875rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.warroom-nav-item:hover {
+    color: var(--nhi-color-text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.warroom-nav-item.active {
+    color: var(--nhi-color-accent);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Alert/Signal Indicators */
+.warroom-signal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.warroom-signal-buy {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--nhi-color-positive);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.warroom-signal-sell {
+    background: rgba(248, 113, 113, 0.15);
+    color: var(--nhi-color-negative);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.warroom-signal-hold {
+    background: rgba(148, 163, 184, 0.15);
+    color: var(--nhi-color-text-muted);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Status Dots */
+.warroom-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.warroom-status-dot.online {
+    background: var(--nhi-color-positive);
+    box-shadow: 0 0 8px var(--nhi-color-positive);
+}
+
+.warroom-status-dot.offline {
+    background: var(--nhi-color-negative);
+    animation: none;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Sparkline Container */
+.warroom-sparkline {
+    height: 40px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.warroom-sparkline-bar {
+    flex: 1;
+    background: var(--nhi-color-accent);
+    opacity: 0.6;
+    border-radius: 2px;
+    transition: opacity 0.2s;
+}
+
+.warroom-sparkline-bar:hover {
+    opacity: 1;
+}
+
+/* Toolbar & Layout Utilities */
+.warroom-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--nhi-space-md);
+    padding: 0.75rem 1rem;
+    background: var(--nhi-color-bg-elevated);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.warroom-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    /* Standardizing gap */
+}
+
+.warroom-divider-vertical {
+    width: 1px;
+    height: 24px;
+    background: var(--nhi-color-border);
+    margin: 0 0.5rem;
+    display: inline-block;
+}

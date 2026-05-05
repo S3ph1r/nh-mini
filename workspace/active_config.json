@@ -1,7 +1,6 @@
 {
-  "active": "dias",
-  "path": "/home/Projects/NH-Mini/sviluppi/dias",
-  "last_switch": "2026-02-18T07:30:00Z",
-  "previous": null,
-  "description": "DIAS — Distributed Immersive Audiobook System"
+  "active": "stratex",
+  "path": "/home/Projects/NH-Mini/sviluppi/stratex",
+  "last_switch": "2026-05-04T10:12:27.482997",
+  "previous": "dias"
 }

@@ -1,0 +1,262 @@
+/* NH-Mini Dashboard — custom components over warroom theme */
+
+/* ── Services ────────────────────────────────────────────────────────────── */
+
+.nh-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.nh-service-card {
+  padding: 1.1rem 1.25rem;
+  border-radius: 12px;
+  transition: transform 0.15s;
+}
+.nh-service-card:hover { transform: translateY(-2px); }
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+
+.nhi-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nh-btn-ghost {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--nhi-text-primary, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.15s;
+}
+.nh-btn-ghost:hover { background: rgba(255,255,255,0.08); }
+.nh-btn-ghost:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Pages ───────────────────────────────────────────────────────────────── */
+
+.nh-page {
+  padding: 1.5rem 2rem;
+  max-width: 1100px;
+}
+
+.nh-page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.nh-page-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--nhi-text-primary, #e2e8f0);
+}
+
+.nh-badge {
+  background: rgba(99,179,237,0.15);
+  border: 1px solid rgba(99,179,237,0.3);
+  color: #63b3ed;
+  border-radius: 20px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.nh-section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nhi-text-muted, #94a3b8);
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* ── Cards grid ──────────────────────────────────────────────────────────── */
+
+.nh-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.nh-card {
+  padding: 1.1rem 1.25rem;
+  border-radius: 12px;
+}
+
+.nh-card-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nhi-text-muted, #94a3b8);
+  margin-bottom: 0.4rem;
+}
+
+.nh-card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--nhi-text-primary, #e2e8f0);
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+.nh-card-sub {
+  font-size: 0.75rem;
+  color: var(--nhi-text-muted, #94a3b8);
+}
+
+/* ── Container grid ──────────────────────────────────────────────────────── */
+
+.nh-container-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.nh-card-dim {
+  opacity: 0.55;
+}
+.nh-legacy .nh-card {
+  border-color: rgba(255,255,255,0.06);
+}
+
+/* ── Status badges ───────────────────────────────────────────────────────── */
+
+.nh-status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nh-status-running  { background: rgba(72,187,120,0.2); color: #48bb78; border: 1px solid rgba(72,187,120,0.4); }
+.nh-status-stopped  { background: rgba(245,101,101,0.15); color: #fc8181; border: 1px solid rgba(245,101,101,0.3); }
+.nh-status-on-demand{ background: rgba(237,137,54,0.15); color: #ed8936; border: 1px solid rgba(237,137,54,0.3); }
+.nh-status-unknown  { background: rgba(160,174,192,0.15); color: #a0aec0; border: 1px solid rgba(160,174,192,0.2); }
+
+/* ── Topbar status dot ───────────────────────────────────────────────────── */
+
+.nh-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.nh-status-dot-ok  { background: #48bb78; box-shadow: 0 0 6px #48bb78; }
+.nh-status-dot-err { background: #fc8181; }
+
+/* ── Projects ────────────────────────────────────────────────────────────── */
+
+.nh-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.nh-project-card {
+  padding: 1.2rem 1.4rem;
+  border-radius: 12px;
+  transition: transform 0.15s;
+}
+.nh-project-card:hover { transform: translateY(-2px); }
+
+.nh-project-active {
+  border: 1px solid rgba(99,179,237,0.4);
+  box-shadow: 0 0 16px rgba(99,179,237,0.08);
+}
+
+/* ── Alerts ───────────────────────────────────────────────────────────────── */
+
+/* Badge topbar */
+.nh-alerts-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0 5px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.nh-alerts-badge:hover { transform: scale(1.1); }
+
+.nh-alerts-badge-high {
+  background: rgba(245,101,101,0.9);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(245,101,101,0.5);
+  animation: pulse-alert 2s infinite;
+}
+.nh-alerts-badge-medium {
+  background: rgba(237,137,54,0.9);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(237,137,54,0.4);
+}
+
+@keyframes pulse-alert {
+  0%, 100% { box-shadow: 0 0 10px rgba(245,101,101,0.5); }
+  50%       { box-shadow: 0 0 20px rgba(245,101,101,0.9); }
+}
+
+/* Nav badge */
+.nh-nav-badge {
+  display: inline-block;
+  margin-left: auto;
+  background: rgba(245,101,101,0.8);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0 5px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* Alert cards */
+.nh-alert-card {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border-left: 3px solid transparent;
+  transition: transform 0.15s;
+}
+.nh-alert-card:hover { transform: translateX(2px); }
+.nh-alert-card-high   { border-left-color: #fc8181; }
+.nh-alert-card-medium { border-left-color: #ed8936; }
+.nh-alert-card-low    { border-left-color: #63b3ed; }
+
+/* Alert severity badge overrides */
+.nh-alert-badge-high   { background: rgba(245,101,101,0.2); color: #fc8181; border: 1px solid rgba(245,101,101,0.4); }
+.nh-alert-badge-medium { background: rgba(237,137,54,0.2); color: #ed8936; border: 1px solid rgba(237,137,54,0.35); }
+.nh-alert-badge-low    { background: rgba(99,179,237,0.2); color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
+
+/* Alert value color */
+.nh-alert-high { color: #fc8181; }
+
+/* Healthy chips grid */
+.nh-healthy-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.nh-healthy-chip {
+  background: rgba(72,187,120,0.12);
+  border: 1px solid rgba(72,187,120,0.25);
+  color: #68d391;
+  border-radius: 20px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+

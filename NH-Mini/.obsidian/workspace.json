@@ -1,0 +1,221 @@
+{
+  "main": {
+    "id": "ab409396b4c038ee",
+    "type": "split",
+    "children": [
+      {
+        "id": "e90d73827a3ae249",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f3391ea3edec8893",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "log.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "log"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "a9c2c5073f4888f7",
+    "type": "split",
+    "children": [
+      {
+        "id": "872fb4ffc20006f9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6f16947cf4b35d26",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Esplora risorse"
+            }
+          },
+          {
+            "id": "bdf63f4d5fcf6a7e",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Ricerca"
+            }
+          },
+          {
+            "id": "c868a918927feff7",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Segnalibri"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "9ae0fa15e8e8d050",
+    "type": "split",
+    "children": [
+      {
+        "id": "2a7e12c1751f5481",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "89e49f9af5f65626",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "entities/containers/ct201-dias-rt.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Riferimenti a ct201-dias-rt"
+            }
+          },
+          {
+            "id": "7eb8f5567a15be44",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "entities/containers/ct201-dias-rt.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Collegamenti in uscita da ct201-dias-rt"
+            }
+          },
+          {
+            "id": "cc2774cab499046f",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etichette"
+            }
+          },
+          {
+            "id": "7aaeed781216feec",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Tutte le proprietà"
+            }
+          },
+          {
+            "id": "bedd17008c9a283a",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "entities/containers/ct201-dias-rt.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Struttura di ct201-dias-rt"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Apri selezione rapida": false,
+      "graph:Apri vista grafo": false,
+      "canvas:Crea nuova lavagna": false,
+      "daily-notes:Apri nota del giorno": false,
+      "templates:Inserisci modello": false,
+      "command-palette:Apri riquadro comandi": false,
+      "bases:Crea nuova Base": false
+    }
+  },
+  "active": "f3391ea3edec8893",
+  "lastOpenFiles": [
+    "entities/containers/ct201-dias-rt.md",
+    "index.md",
+    "concepts/aria-environments.md",
+    "concepts/dias-voice-pipeline-quality.md",
+    "overview.md",
+    "log.md",
+    "entities/systems/stack-dias.md",
+    "entities/systems/stack-nh-mini.md",
+    "entities/containers/ct101-chromadb.md",
+    "entities/systems/stack-aria.md",
+    "entities/systems",
+    "entities/containers/ct202-gateway.md",
+    "entities/containers/ct190-nh-mini.md",
+    "entities/containers/ct120-dias-brain.md",
+    "entities/containers/ct105-postgres.md",
+    "entities/containers/ct103-observability.md",
+    "entities/containers/ct104-minio.md",
+    "entities/containers/ct160-nhi-core.md",
+    "concepts/dependency-map.md",
+    "concepts/dias-pipeline.md",
+    "sources/dias-aria-integration-master.md",
+    "sources/aria-blueprint.md",
+    "sources/aria-master-roadmap.md",
+    "sources/aria-environments-setup.md",
+    "sources/dias-technical-reference.md",
+    "sources/aria-qwen3-tts-backend.md",
+    "sources/dias-preproduction-guide.md",
+    "concepts",
+    "entities/containers",
+    "entities",
+    "sources",
+    "Senza nome"
+  ]
+}
