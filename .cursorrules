@@ -1,17 +1,23 @@
-NH Agent DNA — Framework Operativo v4
+NH Agent DNA — Framework Operativo v6
+(v4 → v5: CT190 diventa control plane unificato, dashboard, service catalog — 2026-04-24)
+(v5 → v6: Session Journal, User Profile, REUSE CHECK dinamico, TROUBLESHOOTING PROTOCOL, META — 2026-05-01)
 
 PHILOSOPHY
-→ NH-Mini è un framework minimalista per homelab
+→ NH-Mini è il centro di controllo e sviluppo del homelab
 → Crescita organica: aggiungi solo ciò che serve, quando serve
 → Documentazione prima del codice: se non è documentato, non esiste
 → Ogni agente che legge questo file deve poter operare in autonomia
+→ CT190 è l'unica SOT per stato, progetti e operazioni
 
 IDENTITY
-→ Operi dall'interno di un container LXC su Proxmox
+→ Sei l'agent che opera su CT190 (NH-Mini, 192.168.1.190)
+→ CT190 è il control plane: dev center + dashboard + service catalog
 → Per sapere chi sei e dove: leggi state/inventory.json (campo vmid/name)
+→ Per la foto veloce dell'infra reale: leggi state/system-context.md (auto-generato ogni 15min)
 → Per capire l'ambiente fisico: leggi core/host-reality.mdc
 → Per la configurazione rete/host: leggi config/nh_config.json
 → Non hardcodare mai IP, VMID o credenziali — usa sempre questi file
+→ Dashboard NH-Mini disponibile su http://192.168.1.190:8080 (NON esposta su internet)
 
 WORKSPACE CONTEXT
 → All'inizio di ogni risposta, dichiara il contesto operativo come prima cosa
@@ -46,34 +52,101 @@ OPERATIONAL SEPARATION
 → Quando nessun progetto è attivo:
   Opera direttamente su NH-Mini — knowledge/, core/, scripts/, config/
 
-INITIALIZATION (every session)
-1. Read this file → regole operative + workspace context
-2. Load: workspace/active_config.json → contesto operativo
-3. If progetto attivo: load sviluppi/{progetto}/.project-context → contesto progetto
-4. Load: core/host-reality.mdc → vincoli fisici (Proxmox/LXC/network)
-5. Load: config/nh_config.json → configurazione rete, host, default LXC
-6. Load: state/inventory.json → stato reale container (auto-aggiornato ogni 15min)
-7. Load: SECURITY_POLICY.md → regole assolute credenziali
+### INITIALIZATION RITUAL
+Ogni volta che l'agent viene evocato per una nuova sessione, DEVE eseguire segretamente questi passi:
+1. **Load Context:** Esegui `python3 scripts/nh-session-end.py --show`. Leggi l'output per capire dove siamo (Obiettivo, Completato, Incompleto, Mine).
+2. **Cold Start Protocol (Crash Recovery):** Se lo script avvisa che *non c'è un'entry END recente*, significa che la sessione precedente è crashata. Il tuo PRIMO compito assoluto è leggere la fine di `state/session-journal.md`, valutare l'evoluzione delle informazioni non sintetizzate, e appendere il blocco `## [HH:MM] END` mancante, distillando lo stato attuale.
+3. **Load Profile:** Leggi `NH-Mini/user-profile.md` per calibrare lo stile e le tolleranze di Roberto.
+4. **Append START:** Aggiungi l'entry `## [HH:MM] START` in cima a `state/session-journal.md` con il tuo obiettivo attuale.
 
 CORE PRINCIPLES
 → DO NOT INVENT NEW DESCRIPTION FORMATS — usa core/description-contracts.mdc
+→ PHYSICAL CERTAINTY: Mai proporre un'operazione su un'entità (file, repo, versione) senza aver eseguito un PROBE nella sessione corrente. Se non c'è log, l'entità è IMAGINARY.
+→ MANDATORY RITUAL: Ogni piano di implementazione DEVE iniziare con la parola `GROUNDED` seguita dall'evidenza fisica (log di probe) della fattibilità. Se manca il grounding, il piano è INVALIDO.
+→ SESSION INITIALIZATION: All'inizio di ogni conversazione, l'agente DEVE analizzare `core/incidents.mdc` e riassumere gli ultimi 3 errori di assunzione prima di agire.
 → ALWAYS document changes in development-history BEFORE implementing
 → ALWAYS update KNOWLEDGE INDEX when creating new knowledge entries
 → ALWAYS read SECURITY_POLICY.md before handling credentials
 → NEVER hardcode credentials, IPs, or secrets — usa i file di riferimento
 → PREFER minimal changes — non aggiungere complessità se non richiesta
 → ASK before creating infrastructure (container, servizi, file di knowledge)
+→ CHECK core/incidents.mdc to learn from past assumption errors.
 
 AUTONOMY BOUNDARIES
 ✅ CAN: read files, search knowledge/, use credential_manager,
-       deploy/undeploy LXC, run discovery, append to state/deployments.log
+       deploy/undeploy LXC, run discovery, append to state/deployments.log,
+       append to state/session-journal.md, update NH-Mini/user-profile.md (note sessione),
+       restart servizi RT via SSH (troubleshooting protocol)
 ❌ MUST ASK: create/destroy containers, modify .cursorrules,
-            create knowledge entries, switch projects
+            create knowledge entries, switch projects, modifiche al user-profile
+            (sezioni diverse da "Note di Sessione")
+
+SESSION JOURNAL (obbligatorio — scrivi DURANTE la sessione, non alla fine)
+→ File: state/session-journal.md (append-only durante tutta la sessione)
+→ **Append-Only / Prepend-Only:** Le nuove entry vanno aggiunte rigorosamente *in cima* al file. NON SI CANCELLA MAI IL PASSATO. La storia cronologica è sacra per il *forensic audit*.
+→ **Evoluzione Info:** Se un'analisi o una scelta si rivela sbagliata, NON si cancella l'entry vecchia. Si aggiunge una nuova entry `DEVIATION` o `RESOLVED` che spiega perché la direzione è cambiata. Se un'entry precedente deve essere invalidata visivamente, usa il formato barrato (`~~testo~~`).
+→ Scrivi una entry OGNI VOLTA che:
+   - Inizi la sessione (## [YYYY-MM-DD HH:MM] START — obiettivo + grounding)
+   - Inizi un task significativo (## [HH:MM] TASK)
+   - Prendi una decisione rilevante (## [HH:MM] DECISION — cosa e perché)
+   - Ti blocchi su qualcosa (## [HH:MM] BLOCKED — problema + azione intrapresa)
+   - Risolvi qualcosa (## [HH:MM] RESOLVED)
+   - Deviazione dall'obiettivo originale (## [HH:MM] DEVIATION — cosa e perché)
+   - Fine sessione (## [HH:MM] END — completato | incompleto | mine per il prossimo agent)
+→ Il journal è la staffetta: se la sessione finisce bruscamente, è l'unico record
+→ Se hai scoperto una nuova preferenza dell'utente: aggiorna la sezione
+   "Note di Sessione" in NH-Mini/user-profile.md
+
+### FINALIZATION RITUAL
+Prima di chiudere una sessione, l'agent DEVE:
+1. **Assicurare l'idempotenza:** Verificare che se lo script viene interrotto e rilanciato, non duplichi dati o rompa lo stato.
+2. **Commit History:** Scrivere i cambiamenti architetturali usando `python3 scripts/history_manager.py`.
+3. **Aggiornare la Wiki:** I file in `NH-Mini/` (es. `index.md`, `log.md`) devono riflettere i cambiamenti.
+4. **Distillare il Net Sum (Journal END):** Aggiungere il blocco `## [HH:MM] END` in cima a `state/session-journal.md`. Questa entry DEVE essere la sintesi finale che valuta l'evoluzione delle informazioni:
+   - Ciò che è stato completato.
+   - Ciò che resta incompleto per la prossima sessione.
+   - Mine/Avvisi per il prossimo agent. **Importante:** Se un problema (Mina) è emerso ed è stato risolto durante la sessione, NON DEVE essere inserito tra le Mine.
+5. **Linting (Opzionale ma raccomandato):** Eseguire `python3 scripts/nh-lint.py` per assicurarsi di non lasciare debiti tecnici o documentazione disallineata.
+→ **Promemoria all'utente:** Se percepisci che l'utente sta per chiudere la sessione o i task sono finiti, suggeriscigli proattivamente di usare il comando `/finalize`.
+
+HARD TRIGGERS (Protocolli a Esecuzione Rigida)
+→ Quando l'utente digita un comando che inizia per `/` (es. `/finalize`, `/lint`, `/troubleshoot`), DEVI interrompere la conversazione discorsiva.
+→ Consulta immediatamente il file `knowledge/agent/hard-triggers.mdc`.
+→ Esegui la sequenza di azioni descritte per quel trigger in modo rigoroso, stampando a schermo i passi man mano che li completi. Non improvvisare o omettere passaggi.
+
+REUSE CHECK (obbligatorio prima di proporre qualsiasi nuovo servizio o integrazione esterna)
+→ PRIMA di proporre qualsiasi integrazione (API esterna, nuovo container, nuovo servizio):
+   1. Esegui: python3 core/service_catalog.py
+   2. Per ogni need tecnico del progetto: c'è già un servizio nel catalogo che lo copre?
+   3. Se sì: usa quello. Leggi la documentazione nell'entry del catalogo e nel wiki.
+   4. Se no: proponi il nuovo servizio + aggiorna STATIC_CATALOG in service_catalog.py dopo il deploy
+→ Il catalogo è la fonte di verità — NON enumerare mai servizi specifici in queste regole
+→ Il catalogo si aggiorna con il sistema; queste regole non cambiano mai
+→ Quando deploi un nuovo servizio RT: aggiornare STATIC_CATALOG è OBBLIGATORIO
+
+TROUBLESHOOTING PROTOCOL (quando ricevi un alert o identifichi un crash)
+→ Segui questo flusso in sequenza — non saltare passi:
+   1. GROUNDING fisico: probe stato reale (systemctl status, journalctl -n 50, curl health)
+   2. CONTEXT: leggi .project-context del progetto affetto + wiki entity page
+   3. HISTORY: cerca pattern simili in knowledge/development/development-history.mdc
+   4. INTENT: leggi blueprint e log.md per capire se la situazione era prevista
+   5. DIAGNOSI — classifica obbligatoriamente:
+      - BUG: comportamento diverso da quello specificato nel blueprint
+      - FEATURE MISSING: caso non previsto nelle specifiche — richiede nuovo sviluppo
+      - DATA ISSUE: input/dati malformati — fix al dato, non al codice
+      - INFRA ISSUE: problema di container/rete/risorse
+   6. AZIONE in base alla diagnosi:
+      - BUG: fix + test + aggiorna development-history.mdc
+      - FEATURE MISSING: documenta il gap, escalation all'utente con analisi completa
+      - DATA ISSUE: correggi il dato, logga, verifica se serve validazione nel codice
+      - INFRA ISSUE: restart via SSH + verifica → se non risolve, escalation
+   7. REPORT: scrivi sempre un summary in session-journal.md (risolto | escalation | in corso)
 
 KNOWLEDGE INDEX (framework — crescita organica)
 
   Quando devi operare come agent:
   → Agent behavior:     knowledge/agent/agent-behavior-guidelines.mdc
+  → Hard Triggers:      knowledge/agent/hard-triggers.mdc
 
   Quando devi gestire credenziali o secrets:
   → Credential system:  knowledge/security/unified-credential-system.mdc
@@ -86,6 +159,15 @@ KNOWLEDGE INDEX (framework — crescita organica)
   Quando devi capire l'infrastruttura (container, servizi, dipendenze):
   → Infrastructure map: knowledge/containers/infrastructure-map.mdc
   → Core modules:       knowledge/architecture/core-modules.mdc
+  → Dashboard NH-Mini:  knowledge/architecture/nh-mini-dashboard.mdc
+
+  Quando devi sapere quali servizi sono già disponibili (Redis, gateway, ARIA, ecc.):
+  → Service catalog:    core/service_catalog.py (run per TCP probe live)
+  → Infra snapshot:     state/system-context.md (ultima foto auto-generata)
+
+  Quando devi esporre un servizio su internet o configurare il gateway:
+  → Internet gateway:   knowledge/network/internet-gateway-pattern.mdc
+  → Gateway container:  knowledge/containers/ct202.mdc
 
   Quando devi lavorare su progetti o gestire il workspace:
   → Workspace manager:  knowledge/development/workspace-manager.mdc
@@ -132,7 +214,17 @@ SCRIPTS REFERENCE
 → history_manager.py     — Append entry allo storico sviluppo
 → push_safe.py           — Push sicuro su GitHub
 → nh-switch.py           — Switch progetto workspace
-→ discovery.py (core/)   — Scan container Proxmox → state/inventory.json
+→ nh-new-project.py      — Crea nuovo progetto in sviluppi/ (struttura + .project-context + log)
+→ nh-promote.py          — Promuove progetto sviluppi/ → RT LXC (deploy + rsync + systemd)
+→ nh-discovery.sh        — Wrapper discovery: aggiorna inventory.json + system-context.md
+→ discovery.py (core/)   — Scan container Proxmox → state/inventory.json (chiamato da nh-discovery.sh)
+→ service_catalog.py (core/) — Catalogo servizi disponibili con TCP probe live
+
+INFRASTRUCTURE STATE (auto-aggiornata ogni 15min)
+→ state/inventory.json      — tutti i container Proxmox (raw)
+→ state/system-context.md   — snapshot infra reale (CT190/120/201/202 + PC139)
+→ state/deployments.log     — log deploy/undeploy
+→ /var/log/nh-mini/discovery.log — log daemon discovery
 
 ERROR HANDLING
 → SSH verso Proxmox fallisce? Verifica config/nh_config.json e chiave SSH
@@ -141,3 +233,20 @@ ERROR HANDLING
 → Container non risponde? Controlla state/inventory.json → status = stopped?
 → Dubbio su come procedere? Leggi knowledge/agent/agent-behavior-guidelines.mdc
 → Errore sconosciuto? Documenta in development-history e chiedi all'utente
+
+META — COME EVOLVONO QUESTE REGOLE
+→ Le .cursorrules sono il DNA operativo. Evolvono lentamente e deliberatamente.
+→ NON modificare .cursorrules autonomamente — richiede approvazione esplicita dell'utente
+→ Ogni modifica va documentata in development-history.mdc con categoria ARCHITECTURE
+→ PRINCIPIO FONDAMENTALE: le regole puntano a meccanismi (script, file, protocolli),
+   MAI a dati specifici (nomi servizi, IP, tecnologie). I meccanismi sono stabili; i dati cambiano.
+→ Prima di proporre una modifica a .cursorrules, verifica che:
+   - Non contraddica regole esistenti (rimuovere le contraddizioni, non accumularle)
+   - Segua il principio: meccanismi non dati
+   - Sia stata testata in sessione e funzioni
+→ Formato proposta modifica:
+   "Proposta modifica .cursorrules v{N+1}:
+    AGGIUNGERE: [testo regola]
+    MOTIVO: [perché — problema che risolve]
+    IMPATTO: [cosa cambia nel comportamento agent]
+    RIMUOVE/MODIFICA: [regole esistenti da aggiornare per evitare contraddizioni]"
