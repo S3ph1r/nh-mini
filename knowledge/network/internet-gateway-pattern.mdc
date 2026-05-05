@@ -1,0 +1,117 @@
+---
+type: network_exposure
+pattern: nginx-ngrok-gateway
+container: ct202
+last_updated: 2026-04-20
+---
+
+# 🌐 Pattern: Internet Gateway via nginx + ngrok
+
+## Cosa fa questo pattern
+
+Espone servizi interni dell'homelab su internet tramite un tunnel ngrok permanente,
+con routing HTTP gestito da nginx su un container dedicato.
+
+**NON è un gateway di rete** (quello è il router 192.168.1.1/Proxmox).
+È un **reverse proxy applicativo** che gestisce solo traffico HTTP/HTTPS
+in ingresso attraverso il tunnel ngrok.
+
+```
+Internet
+    │
+    ▼  (tunnel HTTPS permanente)
+ngrok → CT202:80
+    │
+    ▼  (reverse proxy nginx)
+nginx  ──/dias/────→ CT201:8000   (DIAS Dashboard)
+       ──/grafana/──→ CT103:3000   (Grafana)
+       ──/nhi/──────→ CT160:8000   (NHI Core)
+       ──/minio/────→ CT104:9001   (MinIO Console)
+```
+
+## Responsabilità di CT202
+
+| Fa | Non fa |
+|---|---|
+| nginx reverse proxy HTTP | Applicazioni o logica business |
+| ngrok tunnel agent (autostart) | Database o state |
+| Routing per path | Autenticazione app-level |
+| SSL termination (via ngrok) | Network gateway (è il router) |
+
+**Principio**: CT202 può essere riavviato, aggiornato o ricreato senza impatto sulle app.
+Le app non sanno di essere esposte — CT202 sa tutto di loro, loro non sanno niente di lui.
+
+## Struttura nginx
+
+```
+/etc/nginx/conf.d/
+    └── gateway.conf            ← server block unico (non toccare)
+/etc/nginx/locations.d/
+    ├── _template.disabled      ← copia per aggiungere nuovi servizi
+    ├── dias.conf               ← /dias/ → CT201:8000
+    └── grafana.disabled        ← /grafana/ → CT103:3000 (abilitare quando pronto)
+```
+
+`gateway.conf` fa `include /etc/nginx/locations.d/*.conf` — solo i `.conf` vengono caricati.
+
+**Per disabilitare**: `mv service.conf service.disabled && nginx -s reload`
+**Per abilitare**: `mv service.disabled service.conf && nginx -t && nginx -s reload`
+**Per aggiungere**: `cp _template.disabled myapp.conf` → edita → `nginx -t && nginx -s reload`
+
+## Template nginx per nuovo servizio
+
+```nginx
+# /etc/nginx/conf.d/_template.conf.disabled
+# Copia questo file, rinomina (es: myapp.conf), rimuovi .disabled
+
+location /NOME-SERVIZIO/ {
+    proxy_pass          http://192.168.1.XXX:PORTA/;
+    proxy_set_header    Host              $host;
+    proxy_set_header    X-Real-IP         $remote_addr;
+    proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header    X-Forwarded-Proto $scheme;
+    proxy_read_timeout  300s;
+}
+```
+
+## Sub-path configuration per ogni app
+
+Ogni app deve sapere che è servita da un sotto-percorso. Configurazione una-tantum:
+
+| App | Configurazione richiesta |
+|---|---|
+| **DIAS** (FastAPI) | `root_path="/dias"` in uvicorn, `base="/dias"` in SvelteKit |
+| **Grafana** | `GF_SERVER_ROOT_URL=https://DOMINIO/grafana` + `GF_SERVER_SERVE_FROM_SUB_PATH=true` |
+| **NHI** (FastAPI) | `root_path="/nhi"` in uvicorn |
+| **MinIO Console** | `MINIO_BROWSER_REDIRECT_URL=https://DOMINIO/minio` |
+| **Prometheus** | `--web.route-prefix=/prometheus` |
+
+## ngrok authtoken
+
+L'authtoken ngrok è in SOPS:
+```bash
+python3 scripts/credential_manager.py get ngrok authtoken
+```
+
+Setup ngrok sul container (da eseguire una volta):
+```bash
+ngrok config add-authtoken <TOKEN>
+```
+
+## Endpoint pubblico attuale
+
+- **Dominio**: `obliging-fitting-cheetah.ngrok-free.app`
+- **Auth**: nessuna (accesso libero) — da proteggere con basic_auth nginx per ambienti sensibili
+- **Rate limiting**: nessuno — ngrok free plan ha limiti propri (40 connessioni/min)
+
+## Limitazioni ngrok free plan
+
+| Limite | Valore |
+|---|---|
+| Tunnel simultanei | 1 |
+| Dominio statico | 1 (obliging-fitting-cheetah.ngrok-free.app) |
+| Connessioni/min | 40 |
+| Sessioni simultanee | 20 |
+
+Se servono più domini separati (es. `dias.tuodominio.com`, `grafana.tuodominio.com`),
+considerare Cloudflare Tunnel (gratuito con dominio Cloudflare).

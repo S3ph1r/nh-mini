@@ -1,0 +1,85 @@
+# NH-Mini Dashboard — Documentazione Componente
+
+type: architecture_documentation
+created: 2026-04-24
+related: web/app.py, core/service_catalog.py, knowledge/architecture/core-modules.mdc
+
+## Panoramica
+
+Dashboard web di controllo per NH-Mini. Ospitata su CT190 (:8080), accessibile solo in LAN.
+Sostituisce NHI-CORE (CT160) come "faccia" del sistema — CT160 è in dismissione progressiva.
+
+## Stack Tecnico
+
+- **Backend**: FastAPI (Python 3.12) — `web/app.py`
+- **Frontend**: Vanilla HTML + JavaScript — nessun build step, agent-maintainable
+- **Design system**: warroom CSS da NHI-CORE v1.2.0 — `web/static/css/warroom.css`
+  - Tema: glassmorphism + aurora nordica
+  - Font: Inter (primario), Space Grotesk (secondario), JetBrains Mono (codice)
+- **Servizio**: systemd `nh-mini-dashboard.service` (Restart=on-failure, abilitato al boot)
+
+## Struttura File
+
+```
+web/
+├── app.py                  # FastAPI backend
+└── static/
+    ├── index.html          # SPA — 4 pagine: Overview, Infrastructure, Projects, ARIA
+    ├── css/
+    │   ├── warroom.css     # Design system NHI-CORE (copiato localmente)
+    │   ├── tokens.css      # CSS tokens
+    │   └── dashboard.css   # Componenti custom NH-Mini
+    └── js/
+        └── dashboard.js    # Logica frontend (fetch API, render, navigation)
+```
+
+## Pagine
+
+| Pagina | Dati mostrati | Fonte dati |
+|--------|--------------|------------|
+| Overview | Stats infra reale, container cards, last discovery | `/api/overview`, `/api/infrastructure` |
+| Infrastructure | Container grid real/legacy/external con status badge | `/api/infrastructure` |
+| Projects | Cards `sviluppi/` con description/stack/status | `/api/projects` |
+| ARIA | Info statica PC139 + tabella porte + dev workflow | hardcoded (stabile) |
+
+## API Endpoints
+
+```
+GET  /api/health                          — health check
+GET  /api/overview                        — summary (infra + progetti + external)
+GET  /api/infrastructure                  — containers split: real / legacy / external
+GET  /api/projects                        — lista sviluppi/ con workspace attivo
+GET  /api/projects/{name}/context         — .project-context YAML parsato
+GET  /api/services?probe=true             — service catalog con TCP probe
+POST /api/containers/{vmid}/start         — start container via Proxmox SSH
+POST /api/containers/{vmid}/stop          — stop container via Proxmox SSH
+POST /api/discovery/refresh               — trigger manuale nh-discovery.sh
+```
+
+## Auto-refresh
+
+- Frontend: polling ogni 60s su `/api/overview`, health check ogni 30s
+- Pulsante ↻ in topbar: trigger `/api/discovery/refresh` + reload overview
+- Backend discovery: systemd timer ogni 15min (indipendente dalla dashboard)
+
+## Accesso
+
+- **URL locale**: http://192.168.1.190:8080
+- **NON esposta via CT202 gateway** — accesso solo da LAN (by design)
+- Per accesso remoto: VPN o SSH tunnel (`ssh -L 8080:192.168.1.190:8080 root@192.168.1.190`)
+
+## Estensione
+
+Per aggiungere una nuova pagina:
+1. Aggiungere `<section id="page-X">` in `web/static/index.html`
+2. Aggiungere voce nav con `data-page="X"` nella sidebar
+3. Aggiungere `loadX()` in `web/static/js/dashboard.js`
+4. Aggiungere endpoint `/api/X` in `web/app.py` se serve nuovo dato
+5. Aggiornare questo file
+
+## Storia
+
+- **2026-04-24**: Creata come sostituto della dashboard NHI-CORE (CT160).
+  NHI-CORE v1.1 scansionava Proxmox ogni ora e generava context files per l'agent.
+  NH-Mini Dashboard unifica: dashboard web + API + context generation in CT190.
+  Design system warroom CSS copiato da NHI-CORE tramite API prima della dismissione.

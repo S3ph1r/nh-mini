@@ -281,3 +281,172 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-02-18 - Implemented M2: Common Library (config, redis, mod...
+```json
+{
+  "timestamp": "2026-02-18T21:12:40.833140+00:00",
+  "category": "FEATURE",
+  "component": "src/common/",
+  "change": "Implemented M2: Common Library (config, redis, models, basestage, logging)",
+  "reason": "Foundation for DIAS pipeline",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-02-27 - ARIA Refactoring: Samba→HTTP Asset Server. Rimossi...
+```json
+{
+  "timestamp": "2026-02-27T17:44:20.032083+00:00",
+  "category": "ARCHITECTURE",
+  "component": "sviluppi/ARIA",
+  "change": "ARIA Refactoring: Samba→HTTP Asset Server. Rimossi tutti i path /mnt/aria-shared e shared_path. Il Node Controller ora salva output localmente su Windows (C:\\Users\\{user}\\aria\\data\\outputs) e li espone via HTTP (porta 8082). IP del nodo auto-detect o configurabile via GUI. Puliti 11 file legacy, creato .project-context, aggiornata infrastructure-map.mdc",
+  "reason": "L'architettura Samba causava WinError 3/5, latenza I/O e complessità. La nuova pipeline è interamente locale su Windows con URL HTTP nei risultati Redis",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-02-28 - Risolto accento inglese nel TTS italiano tramite a...
+```json
+{
+  "timestamp": "2026-02-28T17:29:14.644409+00:00",
+  "category": "BUGFIX",
+  "component": "sviluppi/ARIA (Fish TTS)",
+  "change": "Risolto accento inglese nel TTS italiano tramite allineamento voice_ref_text e audio reference. Implementato log diagnostico verboso nell'orchestratore. Ottimizzati parametri temperature/top_p=0.7 per stabilità acustica.",
+  "reason": "Il modello multilingua Fish S1-mini richiede trascrizioni esatte per agganciare la fonetica italiana durante il voice cloning.",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-03-07 - Deploy CT201 dias-rt: Debian 12, 4096MB RAM, 4 CPU...
+```json
+{
+  "timestamp": "2026-03-07T22:17:17.007159+00:00",
+  "category": "ARCHITECTURE",
+  "component": "CT201/dias-rt",
+  "change": "Deploy CT201 dias-rt: Debian 12, 4096MB RAM, 4 CPU, 20GB storage, IP 192.168.1.201. Node.js 20 e SSH config.",
+  "reason": "Ambiente runtime isolato per DIAS e Dashboard",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-03-15 - Implementato Protocollo Verification-First (Physic...
+```json
+{
+  "timestamp": "2026-03-15T18:05:50.271217+00:00",
+  "category": "ARCHITECTURE",
+  "component": "framework_core",
+  "change": "Implementato Protocollo Verification-First (Physical Certainty)",
+  "reason": "Prevenire allucinazioni operative e assunzioni non verificate degli agenti",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-03-15 - Formalizzato Protocollo GROUNDED e Contratto di Ha...
+```json
+{
+  "timestamp": "2026-03-15T18:28:12.833162+00:00",
+  "category": "ARCHITECTURE",
+  "component": "agent_guidelines",
+  "change": "Formalizzato Protocollo GROUNDED e Contratto di Handover",
+  "reason": "Rendere irreversibili i principi di verifica fisica e prevenire la context entropy",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-01 - Introdotto Cold Start Protocol, obbligo Net Sum e ...
+```json
+{
+  "timestamp": "2026-05-01T10:31:34.679527+00:00",
+  "category": "ARCHITECTURE",
+  "component": ".cursorrules",
+  "change": "Introdotto Cold Start Protocol, obbligo Net Sum e immutabilità Journal",
+  "reason": "Migliorare la gestione del contesto per gli agent ed evitare perdite di log in caso di crash o sintesi errata",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-01 - Aggiunto Hard Triggers Protocol e file indice hard...
+```json
+{
+  "timestamp": "2026-05-01T10:43:18.945030+00:00",
+  "category": "ARCHITECTURE",
+  "component": ".cursorrules",
+  "change": "Aggiunto Hard Triggers Protocol e file indice hard-triggers.mdc",
+  "reason": "Permettere all'utente di forzare esecuzioni procedurali con comandi speciali (es. /finalize) e prevenire amnesia del contesto",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-01 - Implementazione Telegram Push & Approval-Based Rem...
+```json
+{
+  "timestamp": "2026-05-01T11:44:14.198344+00:00",
+  "category": "FEATURE",
+  "component": "core/telegram_bot.py",
+  "change": "Implementazione Telegram Push & Approval-Based Remediation",
+  "reason": "Notifiche mobili e controllo umano sui fix automatici",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-01 - Implementato TelemetryDB SQLite in ARIA: hook in p...
+```json
+{
+  "timestamp": "2026-05-01T15:00:54.995496+00:00",
+  "category": "FEATURE",
+  "component": "ARIA/core/telemetry",
+  "change": "Implementato TelemetryDB SQLite in ARIA: hook in post_result(), cattura token Gemini, metriche RTF/VRAM Qwen3, schema 17 colonne con WAL mode",
+  "reason": "Nessun registro persistente dei task elaborati — impossibile analizzare performance e pattern di errore nel tempo",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-02 - Eliminato dead code pace_factor/pitch_shift/enable...
+```json
+{
+  "timestamp": "2026-05-02T07:16:03.658480+00:00",
+  "category": "REFACTOR",
+  "component": "DIAS/stage_c_scene_director",
+  "change": "Eliminato dead code pace_factor/pitch_shift/enable_dynamic_params. Sostituita lookup table 5 voci con formula continua da Stage B floats (arousal→energy→temperature, arousal→subtalker_temperature). Aggiunto primary_emotion per-scena via prompt v2.6.0. Stage C scrive temperature/subtalker al top-level scena per Stage D.",
+  "reason": "Qwen3-TTS non accetta pace_factor/pitch_shift. enable_dynamic_params veniva sovrascritto da theatrical_standard in Stage D. Formula continua elimina dipendenza da lookup table discreta e scala per qualsiasi emozione.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-04 - Audit end-to-end produzione: tutti i parametri flu...
+```json
+{
+  "timestamp": "2026-05-04T06:51:12.738465+00:00",
+  "category": "ARCHITECTURE",
+  "component": "DIAS→Qwen3 parameter flow",
+  "change": "Audit end-to-end produzione: tutti i parametri fluiscono correttamente. Scoperta: server produzione è backends/qwen3tts/server.py. dialogue_notes enrichment morto (Stage C null + Stage D non forwarda). P3/P4/P5 confermati in produzione su Hyperion.",
+  "reason": "Verifica post-deploy refactor P3/P4/P5 — conferma che subtalker_temperature, temperature, instruct arrivano al modello. Identificato gap dialogue_notes per future sessioni multi-voce.",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-05-04 - Sessione di audit qualità end-to-end: confermato f...
+```json
+{
+  "timestamp": "2026-05-04T06:53:54.050472+00:00",
+  "category": "ARCHITECTURE",
+  "component": "DIAS pipeline audit + /doc /lint /finalize",
+  "change": "Sessione di audit qualità end-to-end: confermato flusso parametri Stage C→D→ARIA→Qwen3. Nessuna modifica al codice. Documentazione sincronizzata via /doc. Lint 38/38.",
+  "reason": "Verifica post-deploy P3/P4/P5 per garantire che i parametri TTS calcolati da Stage B/C arrivino effettivamente al modello Qwen3 in produzione.",
+  "author": "agent",
+  "impact": "low"
+}
+```

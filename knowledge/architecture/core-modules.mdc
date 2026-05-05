@@ -2,7 +2,8 @@
 
 type: architecture_documentation
 created: 2026-02-18
-related: .cursorrules, scripts/
+updated: 2026-04-24
+related: .cursorrules, scripts/, web/
 
 ## Panoramica
 
@@ -14,8 +15,17 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 ### discovery.py (operativo)
 - **Funzione**: Scansiona container Proxmox via SSH e aggiorna `state/inventory.json`
 - **Dipendenze**: `config/nh_config.json` per SSH config
-- **Esecuzione**: automatica ogni 15min via `nh-discovery.timer`, o manuale
+- **Esecuzione**: via `scripts/nh-discovery.sh` (wrapper), automatica ogni 15min via `nh-discovery.timer`
 - **Output**: `state/inventory.json` con VMID, IP, stati, risorse
+- **Non chiamare direttamente** — usare il wrapper `nh-discovery.sh` che genera anche `state/system-context.md`
+
+### service_catalog.py (operativo — aggiunto 2026-04-24)
+- **Funzione**: Catalogo dei servizi disponibili nell'infrastruttura con TCP probe live
+- **Output**: dict con chiavi `redis`, `gateway`, `aria_node`, `nh_mini_api`, `dias_api`, `sops_age`
+- **Ogni entry**: name, host, port, purpose, pattern, status (available/unreachable/local)
+- **Esecuzione**: `python3 core/service_catalog.py` → sommario markdown con stato live
+- **Usato da**: `core/loader.py` (no probe, caricamento veloce), `web/app.py` (GET /api/services)
+- **Pattern**: aggiungere nuovi servizi a `STATIC_CATALOG` quando si deploya un nuovo LXC RT
 
 ### workspace_manager.py (operativo)
 - **Funzione**: Gestisce progetti in `sviluppi/`, switch workspace, symlink
@@ -39,9 +49,10 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 - **Nota**: Non usare direttamente — usare `credential_manager.py` CLI o `secure_credential_manager.py` API
 
 ### loader.py (utility)
-- **Funzione**: Carica contesto operativo (host-reality, contracts, inventory, workspace)
+- **Funzione**: Carica contesto operativo completo all'init sessione
+- **Output**: JSON con host-reality, contracts, inventory, workspace, service_catalog, system_context_file
 - **Esecuzione**: `python3 core/loader.py` → JSON con stato completo
-- **Nota**: Utile per debugging rapido dello stato del sistema
+- **Aggiornato 2026-04-24**: ora include service_catalog (link a core/service_catalog.py) e system_context_file (state/system-context.md)
 
 ### agent_lxc_handler.py (NLP handler)
 - **Funzione**: Riconosce richieste deploy/undeploy da linguaggio naturale
@@ -57,6 +68,18 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 - **Funzione**: Regex parser per intent in italiano/inglese (switch, list, status)
 - **Usato da**: `core/agent_workspace_handler.py`
 
+### heartbeat.py (operativo — aggiunto 2026-05-01)
+- **Funzione**: Demone di monitoraggio salute servizi (TCP probe) e container (Proxmox API)
+- **Esecuzione**: Ogni 5 minuti via `nh-heartbeat.timer`
+- **Output**: Aggiorna `state/alerts.json` e invia notifiche push via `telegram_bot.py`
+- **Caratteristiche**: Rilevamento automatico di guasti e risoluzioni, escalation a Telegram
+
+### telegram_bot.py (operativo — aggiunto 2026-05-01)
+- **Funzione**: Modulo di comunicazione via Telegram API con supporto troubleshooting interattivo
+- **Funzionalità**: Invio notifiche push con log diagnostici e bottoni interattivi (Inline Buttons)
+- **Polling**: Demone di ascolto callback attivo in background via `nh-telegram.service`
+- **Integrazione**: Utilizza il sistema SOPS per token e chat_id, esegue comandi SSH di remediation su approvazione
+
 ## scripts/ — CLI per Agent
 
 | Script | Funzione | Uso tipico |
@@ -67,13 +90,48 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 | `history_manager.py` | Append al development history | `python3 scripts/history_manager.py add --category X ...` |
 | `push_safe.py` | Push sicuro su GitHub | `python3 scripts/push_safe.py` |
 | `nh-switch.py` | Switch progetto workspace | `python3 scripts/nh-switch.py dias` |
+| `nh-new-project.py` *(2026-04-24)* | Crea nuovo progetto in sviluppi/ | `python3 scripts/nh-new-project.py --name myapp --yes` |
+| `nh-promote.py` *(2026-04-24)* | Promuove progetto da dev a RT LXC | `python3 scripts/nh-promote.py myapp --vmid 203` |
+| `nh-discovery.sh` *(2026-04-24)* | Wrapper discovery: inventory + system-context.md | Eseguito da systemd ogni 15min |
+| `nh-lint.py` *(2026-05-01)* | Compliance check: progetti, infra, doc, journal | `python3 scripts/nh-lint.py --fix-hints` |
+| `nh-session-end.py` *(2026-05-01)* | Genera handover summary dal session-journal | `python3 scripts/nh-session-end.py` |
 | `save_proxmox_creds.py` | Salva credenziali Proxmox | Setup iniziale |
 | `setup_sops_local.py` | Setup SOPS+Age locale | Setup iniziale |
 | `installer.py` | Installer NH-Mini | Setup iniziale |
 | `nh-setup-lxc.sh` | Setup iniziale LXC | Bootstrap |
 | `prepare-lxc-proxmox.sh` | Prepara LXC su Proxmox | Bootstrap |
+| `setup_ct202_gateway.sh` | Setup container CT202 gateway | Deploy gateway |
 
-## Relazione CLI ↔ API
+## web/ — Dashboard NH-Mini (aggiunto 2026-04-24)
+
+### web/app.py
+- **Funzione**: Backend FastAPI della dashboard NH-Mini — control plane web
+- **Porta**: 8080 (CT190, accesso solo LAN — NON esposta su internet)
+- **Servizio systemd**: `nh-mini-dashboard.service` (abilitato al boot)
+- **API endpoints**:
+  - `GET /api/health` — health check
+  - `GET /api/overview` — summary infra reale + progetti
+  - `GET /api/infrastructure` — container split real/legacy/external
+  - `GET /api/projects` — lista `sviluppi/` con workspace attivo
+  - `GET /api/projects/{name}/context` — .project-context YAML parsato
+  - `GET /api/services?probe=true` — service catalog con TCP probe
+  - `POST /api/containers/{vmid}/start|stop` — controllo container via Proxmox SSH
+  - `POST /api/discovery/refresh` — trigger manuale nh-discovery.sh
+- **Frontend**: `web/static/index.html` — 4 pagine: Overview, Infrastructure, Projects, ARIA
+- **Design system**: warroom CSS (da NHI-CORE, copiato in `web/static/css/warroom.css`)
+
+## Systemd Units (CT190)
+
+| Unit | Tipo | Trigger | Funzione |
+|------|------|---------|---------|
+| `nh-discovery.timer` | Timer | ogni 15min + boot | Scansiona Proxmox |
+| `nh-discovery.service` | Service | via timer | Esegue nh-discovery.sh |
+| `nh-mini-dashboard.service` | Service | boot, always restart | Serve web/app.py su :8080 |
+| `nh-heartbeat.timer` | Timer | ogni 5min | Probe servizi → state/alerts.json |
+| `nh-heartbeat.service` | Service | via timer | Esegue core/heartbeat.py |
+| `nh-telegram.service` | Service | boot, always restart | Polling bot Telegram per troubleshooting |
+
+## Relazione CLI ↔ API ↔ Dashboard
 
 ```
 Agent (conversazione)
@@ -81,9 +139,17 @@ Agent (conversazione)
   ├── CLI diretta (scripts/)
   │   ├── credential_manager.py    → usa SOPS+Age
   │   ├── deploy_lxc.py            → usa core/secure_credential_manager.py
-  │   └── nh-switch.py             → usa core/workspace_manager.py
+  │   ├── nh-switch.py             → usa core/workspace_manager.py
+  │   ├── nh-new-project.py        → crea sviluppi/{name}/ + .project-context + log wiki
+  │   ├── nh-promote.py            → deploy RT LXC via deploy_lxc.py + rsync + systemd
+  │   └── nh-discovery.sh          → chiama discovery.py + genera system-context.md
   │
-  └── NLP handlers (core/)  [per integrazioni future]
-      ├── agent_lxc_handler.py     → detect intent → chiama deploy_lxc.py
-      └── agent_workspace_handler.py → detect intent → chiama workspace_manager.py
+  ├── NLP handlers (core/)  [per integrazioni future]
+  │   ├── agent_lxc_handler.py     → detect intent → chiama deploy_lxc.py
+  │   └── agent_workspace_handler.py → detect intent → chiama workspace_manager.py
+  │
+  └── Dashboard API (web/app.py — :8080)
+      ├── GET /api/overview        → legge inventory.json + sviluppi/
+      ├── GET /api/services        → chiama core/service_catalog.py
+      └── POST /api/discovery/refresh → esegue nh-discovery.sh
 ```

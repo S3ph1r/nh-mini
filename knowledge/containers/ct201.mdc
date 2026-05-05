@@ -1,0 +1,40 @@
+---
+type: container_spec
+vmid: 201
+name: ct201-dias-rt
+role: runtime
+project: DIAS
+ip_address: 192.168.1.201
+---
+
+# 📦 Container: DIAS Runtime (CT201)
+
+## Overview
+Questo container ospita l'ambiente di produzione (Runtime) per il progetto DIAS. 
+Separa l'esecuzione della pipeline e della Dashboard dall'ambiente di sviluppo (CT190).
+
+## 🔧 Risorse & Sistema
+- **OS**: Debian 12 (Standard)
+- **CPU**: 4 Cores
+- **RAM**: 4GB
+- **Storage**: 20GB (local-lvm)
+- **Network**: 192.168.1.201 (Static)
+
+## 🛠️ Stack Tecnologico
+- **Runtime Python**: Ambiente Conda/Venv per l'esecuzione della pipeline.
+- **Node.js**: v20.x (per SvelteKit Dashboard).
+- **Process Manager**: Uvicorn (per API Hub).
+
+## 🔐 Accesso & Sicurezza
+- **SSH**: Chiave bidirezionale configurata con Proxmox host.
+- **Workaround**: `PermitRootLogin yes` abilitato per compatibilità automazione NH.
+- **User**: `root` (default NH).
+
+## 🚀 Servizi
+| Servizio | Porta | Descrizione |
+|----------|-------|-------------|
+| **DIAS API Hub** | 8000 | FastAPI Bridge per Dashboard |
+| **Web Dashboard** | 5173 | SvelteKit Frontend (Dev/Prod) |
+
+---
+*Documento creato durante il deploy M3 di DIAS — 2026-03-07*

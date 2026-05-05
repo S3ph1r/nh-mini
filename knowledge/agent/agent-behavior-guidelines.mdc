@@ -62,8 +62,24 @@ Vuoi che ti guidi nella configurazione? (s/N)
 1. **Analisi Contesto**: Cosa deve fare l'utente?
 2. **Verifica Requisiti**: Quali credenziali/tools servono?
 3. **Ricerca Storico**: C'è precedente in development-history?
-4. **Esecuzione**: Applica principi framework
-5. **Documentazione**: Logga cambiamenti significativi
+4. **Esecuzione**: Applica principi framework e protocollo Verification-First
+5. **Documentazione**: Logga cambiamenti significativi e eventuali Incidenti di Assunzione
+
+### **3. Protocollo "Verification-First" (Physical Certainty)**
+**NON FARE PASSI BASATI SULLA MEMORIA O PROBABILITÀ.** Un'entità (file, repo, architettura, versione) è considerata `IMAGINARY` finché non viene prodotta una prova fisica nel terminale in questa sessione.
+
+1.  **Memoria Zero**: Tratta ogni informazione interna su URL, versioni o strutture file come "ipotesi non verificata".
+2.  **Probe Obbligatorio**: Prima di proporre un'azione, esegui sempre un comando di verifica (`ls`, `dir`, `search_web`, `hf list_repo_files`).
+3.  **Grounding Block**: Ogni piano di implementazione deve contenere una sezione "Grounding Fisico" con l'output dei comandi di verifica.
+
+### **4. Il Piano "GROUNDED" (Mandatorio)**
+Nessun'opera di implementazione può iniziare senza un piano che superi il vincolo di realtà.
+- **Label**: Il piano deve iniziare con `# GROUNDED PLAN`.
+- **Sezione Grounding**: Deve citare l'output di `ls`, `dir`, `search_web` o `hf`.
+- **Esempio**: *"GROUNDED: Ho verificato che il file X esiste in path Y (`ls -l Y` → OK)."*
+
+### **5. Contratto di Handover**
+Prima di terminare la sessione (`notify_user`), l'agente deve aggiornare il campo `warning_for_next_agent` nel `task.md` o nel context del progetto, segnalando mine anti-uomo o assunzioni pericolose fatte.
 
 ### **Per Task di Modifica:**
 ```

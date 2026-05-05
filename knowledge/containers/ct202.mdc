@@ -1,0 +1,87 @@
+---
+type: container_spec
+vmid: 202
+name: ct202-gateway
+role: infrastructure
+project: homelab-shared
+ip_address: 192.168.1.202
+---
+
+# 📦 Container: Internet Gateway (CT202)
+
+## Overview
+
+Container dedicato **esclusivamente** al routing HTTP e al tunnel ngrok.
+Nessuna applicazione, nessuna logica di business.
+Principio: stessa filosofia di CT120 (Redis) — un container, una responsabilità.
+
+Vedi: `knowledge/network/internet-gateway-pattern.mdc` per il pattern completo.
+
+## 🔧 Risorse & Sistema
+
+- **OS**: Debian 12 minimal
+- **CPU**: 1 core
+- **RAM**: 256MB
+- **Storage**: 4GB
+- **Network**: 192.168.1.202 (static), bridge vmbr0
+
+## 🛠️ Stack
+
+| Componente | Versione | Ruolo |
+|---|---|---|
+| nginx | stable (apt) | Reverse proxy HTTP |
+| ngrok | latest | Tunnel pubblico permanente |
+| systemd | OS | Autostart ngrok al boot |
+
+## 🚀 Servizi esposti
+
+| Path pubblico | Backend interno | LXC |
+|---|---|---|
+| `/dias/` | CT201:8000 | DIAS Dashboard + API |
+| `/grafana/` | CT103:3000 | Grafana |
+| *(aggiungere qui nuovi servizi)* | | |
+
+## 🔐 Secrets
+
+- **ngrok authtoken**: in SOPS → `python3 scripts/credential_manager.py get ngrok authtoken`
+- Nessun altro secret in questo container
+
+## 📁 File chiave sul container
+
+```
+/etc/nginx/conf.d/
+    gateway.conf         ← server block principale
+    dias.conf            ← routing DIAS
+    _template.conf.disabled  ← template per nuovi servizi
+/etc/systemd/system/
+    ngrok.service        ← autostart ngrok
+/root/.config/ngrok/
+    ngrok.yml            ← config ngrok (authtoken + tunnel)
+```
+
+## 🔄 Operazioni comuni
+
+```bash
+# Aggiungere servizio
+cp /etc/nginx/conf.d/_template.conf.disabled /etc/nginx/conf.d/newapp.conf
+# editare newapp.conf
+nginx -t && nginx -s reload
+
+# Disabilitare servizio
+mv /etc/nginx/conf.d/grafana.conf /etc/nginx/conf.d/grafana.conf.disabled
+nginx -s reload
+
+# Stato ngrok
+systemctl status ngrok
+
+# Reload nginx senza downtime
+nginx -s reload
+```
+
+## Setup
+
+Script: `scripts/setup_ct202_gateway.sh`
+Eseguire sul container vergine dopo il primo boot.
+
+---
+*Creato: 2026-04-20 — deploy iniziale CT202*
