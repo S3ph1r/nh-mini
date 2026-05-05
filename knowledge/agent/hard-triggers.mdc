@@ -1,0 +1,88 @@
+# NH-Mini — Hard Triggers Protocol
+
+Questo documento definisce i comandi testuali (Hard Triggers) che l'utente può impartire all'agente per forzare l'esecuzione di protocolli rigidi e standardizzati.
+Quando l'agente riceve uno di questi trigger, DEVE sospendere la conversazione informale ed eseguire in modo procedurale i passi indicati.
+
+---
+
+## `/finalize` (Protocollo di Chiusura Sessione)
+**Scopo:** Garantire che nessuna informazione di contesto vada persa tra una sessione e l'altra e che la history sia aggiornata.
+**Esecuzione:**
+1. Esegui `python3 scripts/nh-lint.py` per verificare che non ci siano pendenze o file mancanti. Se ci sono errori, chiedi all'utente se vuole risolverli prima di chiudere.
+2. Usa `python3 scripts/history_manager.py add ...` per committare i cambiamenti architetturali della sessione. Chiedi all'utente un riepilogo se non sei sicuro di cosa committare.
+3. Aggiorna i file in `NH-Mini/` (es. `log.md`, `index.md`) se necessario.
+4. Distilla il Net Sum: Scrivi il blocco `## [HH:MM] END` in cima a `state/session-journal.md`. Ricorda di non includere tra le `Mine` problemi che sono già stati risolti.
+5. Rispondi all'utente con un messaggio di conferma e la sintesi di chiusura.
+
+---
+
+## `/lint` (Protocollo di Compliance)
+**Scopo:** Verificare lo stato di salute del framework e l'allineamento della documentazione, senza prendere decisioni in autonomia.
+
+**Forma base** `/lint`:
+1. Esegui `python3 scripts/nh-lint.py --fix-hints`.
+2. Mostra all'utente il riepilogo (Passed, Warnings, Errors) e le soluzioni suggerite dallo script.
+3. **FERMATI.** Non eseguire alcun fix in autonomia. Chiedi all'utente direttive esatte su quali incongruenze sanare e come procedere, e attendi la sua risposta.
+
+**Forma estesa** `/lint {app}` (es. `/lint DIAS`, `/lint ARIA`):
+1. Esegui `python3 scripts/nh-lint.py --fix-hints --project {app}` (include i check NH-Mini + check KNOWLEDGE_INDEX del progetto).
+2. Per ogni entry KNOWLEDGE_INDEX del `.project-context` del progetto, verifica manualmente:
+   - Il file esiste?
+   - Il file è non-vuoto e rispetta il `lint_check` dichiarato?
+3. Mostra riepilogo unificato (NH-Mini checks + project checks).
+4. **FERMATI.** Stessa regola: nessun fix autonomo.
+
+---
+
+## `/troubleshoot` (Protocollo Diagnostico)
+**Scopo:** Affrontare alert o bug in modo scientifico, senza tirare a indovinare e senza proporre soluzioni "creative" non verificate.
+**Esecuzione:**
+1. **Grounding:** Esegui comandi reali per verificare lo stato (es. `systemctl status`, `journalctl`, `curl`).
+2. **Context:** Leggi il `.project-context` del progetto coinvolto.
+3. **History:** Cerca problemi simili in `knowledge/development/development-history.mdc`.
+4. **Intent:** Leggi il blueprint per capire il comportamento atteso.
+5. **Diagnosi:** Classifica il problema come BUG, FEATURE MISSING, DATA ISSUE, o INFRA ISSUE.
+6. **Azione:** Proponi o applica la soluzione in base alla diagnosi.
+7. **Report:** Scrivi l'esito nel `state/session-journal.md` (es. `## [HH:MM] RESOLVED` o `BLOCKED`).
+
+---
+
+## `/reuse` (Protocollo Architetturale)
+**Scopo:** Prevenire l'ingegnerizzazione di servizi doppi e garantire che i nuovi progetti usino l'infrastruttura condivisa esistente.
+**Esecuzione:**
+1. Esegui `python3 core/service_catalog.py` o leggi il dizionario `STATIC_CATALOG`.
+2. Verifica se esiste già un servizio nel catalogo che risolve il bisogno architettonico dell'utente.
+3. Se esiste, proponi l'utilizzo di quello leggendo la sua documentazione nel wiki.
+4. Se non esiste, proponi un nuovo servizio e avvisa che alla fine del deploy andrà aggiornato lo `STATIC_CATALOG`.
+
+---
+
+## `/handover` (Protocollo di Allineamento)
+**Scopo:** Recuperare o mostrare rapidamente il contesto operativo in qualsiasi momento della sessione, senza leggere l'intero diario.
+**Esecuzione:**
+1. Esegui `python3 scripts/nh-session-end.py --show`.
+2. Stampa l'output all'utente per allinearvi sullo stato attuale dei lavori (Obiettivo, Completato, Incompleto, Mine).
+
+---
+
+## `/doc` (Protocollo di Sincronizzazione Documentale)
+**Scopo:** Allineare istantaneamente la documentazione ufficiale del sistema con i progressi della sessione corrente, senza chiuderla.
+
+**Forma base** `/doc` — solo NH-Mini:
+1. **Scansione:** Leggi le entries `TASK` e `DECISION` recenti dal `state/session-journal.md`.
+2. **Aggiornamento Architettura:** Se sono stati creati script o moduli, aggiorna `knowledge/architecture/core-modules.mdc`. Se l'architettura dei container è cambiata, aggiorna `knowledge/containers/infrastructure-map.mdc`.
+3. **Aggiornamento Profilo:** Se l'utente ha espresso nuove preferenze, aggiungile in `NH-Mini/user-profile.md`.
+4. **Aggiornamento Wiki:** Se sono stati introdotti nuovi concetti, assicurati che la pagina `NH-Mini/index.md` o i file in `NH-Mini/concepts/` li riflettano.
+5. **Storico:** Esegui `python3 scripts/history_manager.py add ...` per committare ufficialmente eventuali scelte architetturali.
+6. **Conferma:** Elenca all'utente i file modificati.
+
+**Forma estesa** `/doc {app}` (es. `/doc DIAS`, `/doc ARIA`) — NH-Mini + doc interna del progetto:
+1. Esegui tutti i passi della forma base (NH-Mini tracking invariato).
+2. **Leggi** `sviluppi/{app}/.project-context` → sezione `KNOWLEDGE_INDEX`.
+3. **Per ogni entry**, valuta se il `doc_trigger` è soddisfatto dalle entries TASK/DECISION del session-journal della sessione corrente.
+4. **Aggiorna** i file con `doc_trigger` soddisfatto: apri il file, aggiungi o modifica la sezione pertinente con le informazioni emerse dalla sessione. Usa il contesto del journal come fonte — non inventare.
+5. **Aggiorna** la source page corrispondente in `NH-Mini/sources/{app}-*.md` se il contenuto del file di progetto è cambiato significativamente.
+6. **Conferma:** Elenca separatamente i file NH-Mini e i file progetto modificati.
+
+**Nota su sessioni multi-app** (es. lavoro su DIAS e ARIA nella stessa sessione):
+Esegui `/doc DIAS` e `/doc ARIA` in sequenza. La forma base viene eseguita una sola volta (al primo `/doc`), i passi 2-5 si ripetono per ogni app.

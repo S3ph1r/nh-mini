@@ -36,6 +36,7 @@ deployment_workflow:
     - code_source
     - service_setup
     - health_check
+    - grounding_block       # Evidenza fisica (probe log) della fattibilità
   examples:
     - container_allocation: ct{next}
       code_source: git@github.com:user/project.git
@@ -82,9 +83,16 @@ project_context:
         fields:
           - list          # Elenco componenti con nome, tipo, purpose
     - KNOWLEDGE_INDEX:
-        purpose: "Knowledge locale del progetto"
+        purpose: "Knowledge locale del progetto — usato da /doc e /lint parametrici"
         fields:
-          - entries       # Path relativi ai file knowledge del progetto
+          - entries       # Lista di oggetti con i seguenti campi:
+              # path:         Path relativo al file knowledge del progetto (obbligatorio)
+              # doc_trigger:  Condizione in linguaggio naturale che indica QUANDO aggiornare il file (obbligatorio)
+              # lint_check:   Condizione verificabile dall'agente per il controllo di consistenza (obbligatorio)
+        note: >
+          Quando l'agente riceve /doc {app}, legge doc_trigger di ogni entry e
+          aggiorna i file la cui condizione è soddisfatta dalle entry TASK/DECISION
+          del session-journal. Quando riceve /lint {app}, verifica lint_check per ogni entry.
     - CREDENTIALS:
         purpose: "Credenziali utilizzate dal progetto"
         fields:
