@@ -48,7 +48,7 @@ Vedi `knowledge/architecture/nh-mini-dashboard.mdc` per dettagli tecnici.
 
 ## Infrastruttura Reale Gestita
 
-- [[ct120-dias-brain]] — Redis bus + DIAS pipeline CPU
+- [[ct120-redis]] — Redis bus + DIAS pipeline CPU
 - [[ct201-dias-rt]] — DIAS runtime dashboard + API
 - [[ct202-gateway]] — Internet gateway nginx + ngrok
 - [[concepts/dependency-map]] — dipendenze tra componenti

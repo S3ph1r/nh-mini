@@ -39,7 +39,7 @@ def _load_inventory() -> list[dict]:
 STATIC_CATALOG: dict[str, dict] = {
     "redis": {
         "name": "Redis Universal State Bus",
-        "container": "CT120 (dias-brain)",
+        "container": "CT120 (ct120-redis)",
         "host": "192.168.1.120",
         "port": 6379,
         "purpose": "Job queue e state bus condiviso. Usato da DIAS (pipeline) e ARIA (GPU jobs).",

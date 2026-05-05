@@ -20,18 +20,17 @@ Tutto il resto è legacy/reference — vedi sezione sotto.
 - **os**: Linux 6.17.2-1-pve
 - **nota**: Questo è il container da cui l'agent opera. Unico SOT per lo stato del sistema.
 
-### CT120 — dias-brain 🟢 REDIS HUB
-- **type**: applicazione + infrastruttura condivisa
-- **engine**: Python + Redis
+### CT120 — ct120-redis 🟢 REDIS HUB
+- **type**: infrastruttura condivisa
+- **engine**: Redis
 - **location**: ct120 (192.168.1.120)
-- **purpose**: DIAS Brain — pipeline coordinator CPU (stage A,B,C,F,G) + Redis Universal State Bus condiviso da tutti i progetti
+- **purpose**: Universal State Bus — Redis condiviso da tutti i progetti (DIAS, ARIA, Stratex)
 - **isolation_model**: instance
-- **ports**: 6379 (Redis — condiviso, usato da DIAS e ARIA)
+- **ports**: 6379 (Redis — accessibile su LAN)
 - **resources**: 4096MB RAM, 4 CPU, 30GB storage
 - **os**: Debian 12.12
-- **progetto**: DIAS (sviluppi/dias/)
 - **deployed**: 2026-02-18
-- **nota**: Redis su CT120 è il bus condiviso — ARIA (PC139) lo usa via BRPOP/LPUSH per job queue GPU
+- **nota**: Non legato a DIAS — rinominato da `dias-brain` il 2026-05-05. ARIA (PC139) usa BRPOP/LPUSH per GPU job queue.
 
 ### CT201 — dias-rt 🟢 RUNTIME DIAS
 - **type**: applicazione (runtime)

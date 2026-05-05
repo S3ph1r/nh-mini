@@ -36,7 +36,7 @@ Raccolta e visualizzazione metriche da tutta l'infrastruttura. Grafana esposto t
 
 ## Note
 
-- Redis exporter sulla porta 9121 — monitora Redis di [[ct120-dias-brain]]
+- Redis exporter sulla porta 9121 — monitora Redis di [[ct120-redis]]
 - Prometheus scrape interval: da verificare
 
 ## Vedi anche

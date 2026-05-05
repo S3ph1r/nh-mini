@@ -85,7 +85,7 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 | Script | Funzione | Uso tipico |
 |--------|----------|------------|
 | `credential_manager.py` | CLI SOPS+Age | `python3 scripts/credential_manager.py --service X --key Y --get` |
-| `deploy_lxc.py` | Deploy container via Proxmox API | `python3 scripts/deploy_lxc.py --vmid 120 --name dias-brain` |
+| `deploy_lxc.py` | Deploy container via Proxmox API | `python3 scripts/deploy_lxc.py --vmid 201 --name ct201-dias-rt` |
 | `undeploy_lxc.py` | Undeploy container | `python3 scripts/undeploy_lxc.py 120` |
 | `history_manager.py` | Append al development history | `python3 scripts/history_manager.py add --category X ...` |
 | `push_safe.py` | Push sicuro su GitHub | `python3 scripts/push_safe.py` |

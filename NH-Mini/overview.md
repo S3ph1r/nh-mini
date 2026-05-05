@@ -17,7 +17,7 @@ Homelab basato su **Proxmox PVE 9.1.1** (MiniPC Ryzen5, 32GB RAM, 1TB) su subnet
 | VMID | Nome | Ruolo | IP | Status |
 |------|------|-------|----|--------|
 | 190 | **NH-Mini ⭐** | Dev center + Control plane (questo) | 192.168.1.190 | 🟢 running |
-| 120 | dias-brain | DIAS pipeline CPU + **Redis bus condiviso** | 192.168.1.120 | 🟢 running |
+| 120 | ct120-redis | **Redis Universal State Bus** condiviso (DIAS, ARIA, Stratex) | 192.168.1.120 | 🟢 running |
 | 201 | dias-rt | DIAS Dashboard + API Hub (runtime) | 192.168.1.201 | 🟢 running |
 | 202 | ct202-gateway | Internet gateway (nginx + ngrok) | 192.168.1.202 | 🟢 running |
 | — | **PC Gaming** | ARIA Node Controller (RTX 5060 Ti 16GB) | 192.168.1.139 | on-demand |

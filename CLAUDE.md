@@ -48,7 +48,7 @@ updated: YYYY-MM-DD
 
 | Tipo | Schema | Esempio |
 |------|--------|---------|
-| Container | `ct{vmid}-{nome}.md` | `ct120-dias-brain.md` |
+| Container | `ct{vmid}-{nome}.md` | `ct120-redis.md` |
 | Sistema/Stack | `stack-{nome}.md` | `stack-nhi.md` |
 | Concept | `{nome-kebab}.md` | `dependency-map.md` |
 | Source | uguale al file raw | `infrastructure-map.md` |

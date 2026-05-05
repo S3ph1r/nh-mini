@@ -79,4 +79,4 @@ ARIA: torch.cuda.OutOfMemoryError
 
 - [[concepts/aria-redis-protocol]] — nomenclatura code e schema payload
 - [[stack-aria]] — sistema ARIA completo
-- [[ct120-dias-brain]] — Redis infrastructure node (LXC 120)
+- [[ct120-redis]] — Redis infrastructure node (LXC 120)

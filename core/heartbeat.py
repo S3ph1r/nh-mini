@@ -33,7 +33,7 @@ Schema state/alerts.json:
       }
     ],
     "healthy": ["gateway", "nh_mini_api"],
-    "containers_checked": [{"vmid": 120, "name": "dias-brain", "status": "running"}]
+    "containers_checked": [{"vmid": 120, "name": "ct120-redis", "status": "running"}]
   }
 
 Uso:

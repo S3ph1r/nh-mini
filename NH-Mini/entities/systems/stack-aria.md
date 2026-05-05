@@ -93,5 +93,5 @@ PC 139: salva WAV → %ARIA_ROOT%\data\outputs\{job_id}.wav
 - [[concepts/aria-redis-protocol]] — nomenclatura code e schema payload (SOT)
 - [[concepts/aria-task-lifecycle]] — ciclo di vita di un task
 - [[stack-dias]] — principale cliente ARIA
-- [[ct120-dias-brain]] — Redis su LXC 120 (infrastructure node)
+- [[ct120-redis]] — Redis su LXC 120 (infrastructure node)
 - [[concepts/dependency-map]] — topologia infrastruttura

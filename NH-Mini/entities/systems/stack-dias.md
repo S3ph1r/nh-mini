@@ -20,7 +20,7 @@ Benchmark qualitativo: **BBC Radio Drama anni '80** e **Star Wars Audio Drama (N
 | Stack | Python, Redis, Google Gemini, [[stack-aria\|ARIA]] (Qwen3TTS, Fish, ACE-Step), FFmpeg |
 | Codebase | `sviluppi/dias/` |
 | Blueprint | `sviluppi/dias/docs/blueprint.md` (v7.0, Aprile 2026) |
-| Container Brain | [[ct120-dias-brain]] (Redis) + [[ct190-nh-mini]] (codice) |
+| Container Brain | [[ct120-redis]] (Redis) + [[ct190-nh-mini]] (codice) |
 | Container Runtime | [[ct201-dias-rt]] (Dashboard + API Hub) |
 
 ## Ruoli dei Nodi
@@ -212,7 +212,7 @@ M4B con capitoli corretti (n capitoli = n del fingerprint)
 ## Dipendenze
 
 - [[stack-aria]] — TTS (voce) + ACE-Step (audio) via Redis
-- [[ct120-dias-brain]] — Redis come Universal State Bus
+- [[ct120-redis]] — Redis come Universal State Bus
 - [[ct201-dias-rt]] — Dashboard e API Hub runtime
 - Gemini API — analisi semantica, B2 musical director (cloud, 1000 chiamate/giorno)
 

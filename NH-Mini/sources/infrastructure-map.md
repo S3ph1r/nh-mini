@@ -10,7 +10,7 @@ updated: 2026-04-24
 
 **File raw:** `knowledge/containers/infrastructure-map.mdc`
 **Data ingest:** 2026-04-24
-**Pagine toccate:** [[overview]], [[ct101-chromadb]], [[ct103-observability]], [[ct104-minio]], [[ct105-postgres]], [[ct120-dias-brain]], [[ct160-nhi-core]], [[ct190-nh-mini]], [[ct201-dias-rt]], [[ct202-gateway]], [[concepts/dependency-map]]
+**Pagine toccate:** [[overview]], [[ct101-chromadb]], [[ct103-observability]], [[ct104-minio]], [[ct105-postgres]], [[ct120-redis]], [[ct160-nhi-core]], [[ct190-nh-mini]], [[ct201-dias-rt]], [[ct202-gateway]], [[concepts/dependency-map]]
 
 ## Takeaway chiave
 

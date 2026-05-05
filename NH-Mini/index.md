@@ -22,7 +22,7 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[ct103-observability]] | 103 | Grafana + Prometheus — monitoring | running |
 | [[ct104-minio]] | 104 | Object storage S3 — condiviso | running |
 | [[ct105-postgres]] | 105 | Database relazionale — condiviso | running |
-| [[ct120-dias-brain]] | 120 | DIAS coordinator + Redis | running |
+| [[ct120-redis]] | 120 | Redis Universal State Bus | running |
 | [[ct160-nhi-core]] | 160 | NHI-CORE v1.1 — AI core | running |
 | [[ct190-nh-mini]] | 190 | NH-Mini agent framework ⭐ | running |
 | [[ct201-dias-rt]] | 201 | DIAS runtime — dashboard + API | running |

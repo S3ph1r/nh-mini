@@ -25,7 +25,7 @@ ct190 (NH-Mini / Stratex Dev)
 ## Stack DIAS
 
 ```
-ct120 (dias-brain)
+ct120 (ct120-redis)
   → Redis locale         : code e state interni
   → Gemini API           : analisi narrativa (esterno)
   → GPU Worker (PC 139)  : job queue via Redis (BRPOP/LPUSH)
@@ -34,7 +34,7 @@ ct201 (dias-rt)
   → ct120               : coordinator (dipendenza di deploy)
 ```
 
-[[ct120-dias-brain]] è il coordinator centrale. Il [[ct201-dias-rt|runtime DIAS]] espone dashboard e API.
+[[ct120-redis]] è il coordinator centrale. Il [[ct201-dias-rt|runtime DIAS]] espone dashboard e API.
 
 ## Stack ARIA
 
@@ -65,7 +65,7 @@ Internet
 | Servizio | Container | Consumatori |
 |---------|-----------|-------------|
 | PostgreSQL + pgvector | [[ct105-postgres]] | Stratex, NH-Mini |
-| Redis (Task Queue) | [[ct120-dias-brain]] | DIAS, ARIA, Stratex |
+| Redis (Task Queue) | [[ct120-redis]] | DIAS, ARIA, Stratex |
 | Embeddings (CPU) | [[ct107-nhi-embeddings]] | Stratex, DIAS |
 | MinIO S3 | [[ct104-minio]] | Stratex, NH-Mini |
 | Monitoring | [[ct103-observability]] | Tutti |

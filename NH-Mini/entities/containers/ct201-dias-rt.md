@@ -28,11 +28,11 @@ Runtime di produzione per lo stack DIAS. Ospita la Dashboard Svelte e l'API Hub 
 
 ## Ruolo
 
-Strato presentation + API del sistema DIAS. La Dashboard Svelte (porta 5173) è l'interfaccia utente. L'API Hub (porta 8000) gestisce le richieste e le invia al [[ct120-dias-brain|coordinator]].
+Strato presentation + API del sistema DIAS. La Dashboard Svelte (porta 5173) è l'interfaccia utente. L'API Hub (porta 8000) gestisce le richieste e le invia al [[ct120-redis|coordinator]].
 
 ## Dipendenze
 
-- **Dipende da:** [[ct120-dias-brain]] (coordinator, job queue Redis)
+- **Dipende da:** [[ct120-redis]] (coordinator, job queue Redis)
 - **Esposto via:** [[ct202-gateway]] → ct201:5173 (dashboard) e ct201:8000 (API)
 
 ## Flusso
@@ -52,6 +52,6 @@ Utente esterno → ct202 (nginx) → ct201:5173 (Dashboard)
 
 ## Vedi anche
 
-- [[ct120-dias-brain]] — coordinator DIAS
+- [[ct120-redis]] — coordinator DIAS
 - [[ct202-gateway]] — gateway di esposizione esterna
 - [[concepts/dependency-map]] — stack DIAS completo
