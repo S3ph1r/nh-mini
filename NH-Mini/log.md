@@ -6,6 +6,30 @@ Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
 ---
 
+## [2026-05-06] dev | Stratex: Tax Center + Settings + Authelia auth
+
+**File modificati/creati:**
+- `sviluppi/stratex/frontend/src/components/sections/TaxCenterSection.tsx` — nuovo
+- `sviluppi/stratex/frontend/src/components/sections/SettingsSection.tsx` — nuovo
+- `sviluppi/stratex/frontend/src/api/hooks/useTaxSummary.ts` — nuovo
+- `sviluppi/stratex/frontend/src/api/hooks/useTaxEvents.ts` — nuovo
+- `sviluppi/stratex/frontend/src/api/hooks/useTaxTLH.ts` — nuovo
+- `sviluppi/stratex/frontend/src/api/hooks/useSettings.ts` — nuovo
+- `sviluppi/stratex/frontend/src/api/hooks/useMe.ts` — nuovo
+- `sviluppi/stratex/backend/stratex/api/settings.py` — nuovo
+- `sviluppi/stratex/backend/stratex/auth.py` — nuovo
+- `CT202:/etc/nginx/locations.d/authelia.conf` — nuovo
+- `CT202:/etc/nginx/locations.d/stratex.conf` — aggiornato (auth_request)
+- `CT202:/etc/authelia/configuration.yml` — nuovo
+- `CT202:/etc/authelia/users_database.yml` — nuovo
+
+**Decisioni chiave:**
+- Authelia v4.39.19 su CT202 (no Docker, binary, SQLite storage, file-based users)
+- Forward-auth pattern nginx → FastAPI read `Remote-User` header → `get_current_user` dependency
+- Settings in `user_preferences` key-value table (già in schema DB)
+
+---
+
 ## [2026-05-03] update | Audit end-to-end produzione + stato post-refactor P3/P4/P5
 
 **File modificati:**
@@ -507,3 +531,23 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - Stack: Da definire
 - Servizi: —
 - Path: `sviluppi/stratex/`
+
+---
+
+## [2026-05-05] infra | CT120 rinominato dias-brain → ct120-redis
+
+- Hostname Proxmox aggiornato: `pct set 120 --hostname ct120-redis`
+- Rinomina propagata in 17 file: `infrastructure-map.mdc`, `core-modules.mdc`, `service_catalog.py`, `heartbeat.py`, `CLAUDE.md`, 13 pagine wiki
+- `ct120-dias-brain.md` → `ct120-redis.md` (riscritta con ruolo corretto: Universal State Bus)
+- Commit: `dd996bb`
+
+---
+
+## [2026-05-05] dev | Stratex — Alembic setup + DB verification
+
+- DB CT105 verificato: 10 tabelle, 3843 transazioni, 236 asset, 1769 fx_rates
+- Unica delta schema: `assets.country` mancante nel DB → migration `64edb06dccca` applicata
+- `models.py`: `raw_data` aggiornato da `JSON` a `JSONB` (allineato al DB reale)
+- Credenziali DB salvate in SOPS (`ct105.postgres`)
+- `.env` gitignored, `.env.example` committabile, `session.py` senza hardcoded
+- `psycopg2-binary` + `alembic` installati nel venv Stratex

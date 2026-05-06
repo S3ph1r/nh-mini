@@ -5,6 +5,50 @@ Ogni entry è un timestamp + tipo + contenuto.
 
 Tipi: START | TASK | DECISION | BLOCKED | RESOLVED | DEVIATION | END
 
+## [2026-05-06 12:26] END
+
+**Completato:**
+- Stratex: Tax Center frontend completo (`TaxCenterSection.tsx` — year pills, 4 stat cards, events table paginata, asset class breakdown, TLH panel, export CSV)
+- Stratex: tre hook nuovi (`useTaxSummary`, `useTaxEvents`, `useTaxTLH`) + `GlassCard` estesa con `subtitle` prop
+- Stratex: Settings page completa (`SettingsSection.tsx` — Profile/Display/Tax/System, save bar sticky, PATCH ottimistico) + `GET/PATCH /api/settings` backend
+- Stratex: hook `useSettings` + `useUpdateSettings` (react-query mutation)
+- CT202: Authelia v4.39.19 installato e avviato (37MB RAM, `argon2id`, SQLite storage)
+- CT202: nginx aggiornato — `/authelia/` portal proxy + `/_authz` internal forward-auth endpoint + `stratex.conf` con `auth_request`
+- Stratex backend: `auth.py` con `get_current_user` dependency + `/api/me` endpoint
+- Stratex frontend: `useMe` hook + display_name dinamico nel TopBar
+- Lint 41/41 ✅
+
+**Incompleto:**
+- Authelia: password default `StratexAdmin2026!` va cambiata dall'utente
+- Options section: in pausa (no strumenti)
+
+**Mine per il prossimo agent:**
+- Stratex: Cashflow/Dividends frontend (forecast 12m, upcoming payments)
+- Stratex: AI Chat SSE streaming reale + conversation management
+- Stratex: Alert WebSocket (`wss://.../ws/alerts` + toast notifications)
+- Stratex: i18n Phase 0+1 (locale in user_preferences + react-i18next)
+
+---
+
+## [2026-05-05 17:45] END
+
+**Completato:**
+- CT120 rinominato `dias-brain` → `ct120-redis` in Proxmox + 17 file (commit `dd996bb`)
+- Stratex: DB CT105 verificato (3843 tx, 236 asset, dati reali BGSAXO+Binance)
+- Stratex: Alembic configurato, migration `64edb06dccca` applicata (`assets.country`)
+- Stratex: credenziali DB in SOPS, `.env` gitignored, `session.py` senza hardcoded
+- Stratex: `models.py` allineato al DB reale (JSONB per raw_data)
+- Lint 40/40 ✅
+
+**Incompleto:** nulla di critico
+
+**Mine per il prossimo agent:**
+- Stratex: API endpoints completi (portfolio/summary, transactions, performance, allocation)
+- Stratex: frontend disconnesso dal backend reale (mocked)
+- Celery workers non attivi (yfinance, ECB FX)
+
+---
+
 ## [2026-05-05 16:08] END
 
 **Completato:**

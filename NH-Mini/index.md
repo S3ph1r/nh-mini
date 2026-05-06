@@ -114,7 +114,7 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 - **Concepts:** 14
 - **Sources ingerite:** 20
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-04 (Inizializzazione Stratex — Import doc da PC 139)
+- **Ultimo aggiornamento:** 2026-05-06 (Stratex: Tax Center, Settings, Authelia forward-auth su CT202)
 
 ---
 
