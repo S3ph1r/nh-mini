@@ -1,9 +1,196 @@
+## [2026-05-11 14:15] END
+**Obiettivo sessione**: Definizione architettura Liquid Brain e audit app Android.
+- **Completato**: 
+  - Architettura Liquid Brain (Swap-In/Out) definita e documentata.
+  - Global Registry (LXC 203) progettato.
+  - Audit completo App Android v1 e individuazione gap (GPS/Metadata).
+  - Creato Handoff Document per upgrade App v2.0 (copiato su LXC 190 e PC 139).
+  - Wiki e MDC aggiornati secondo protocollo NH-Mini.
+- **Incompleto**: 
+  - Implementazione fisica del registry.db e dei relativi endpoint.
+  - Script di Session Management per mount/unmount.
+- **Mine**:
+  - Attenzione alla discrepanza tra il codice del repo App (TODO GPS) e la realtà dei file .m4a (GPS presente). Usare i file reali come ground truth.
+
+---
+
+## [2026-05-11 03:40] END
+
+**Completato:**
+- **Stabilità Blackwell**: Fixato crash torchaudio via `soundfile.read()` e pinning `transformers==4.57.6`.
+- **Contratto Tecnico**: Aggiornato `sviluppi/ARIA/docs/backends/lifelog-asr.md` con protocolli Redis e Payload 256d.
+- **Biometria**: Switch ufficiale a vettori 256d (ResNet34) e registrazione architetturale.
+- **Service Catalog**: Integrato backend ASR nel monitoraggio di NH-Mini (:8087).
+- **Wiki**: Create pagine concept per Stratex/Lifelog2 Dev e nuova entità Service ASR.
+- **Lint**: 100% Compliance (50/50 check) raggiunta sanando i 3 warning pendenti.
+
+**Incompleto:**
+- Migrazione schema DB `persons.voiceprint_embedding` da Vector(192) a Vector(256).
+- Refactor `stage_c_asr.py` per persistenza biometrica (Stage D1).
+
+**Mine:**
+- ⚠️ Il database `lifelog_roberto` (CT105) rifiuterà gli embedding di ARIA finché non viene eseguito l'ALTER TABLE a 256 dimensioni.
+- ⚠️ Assicurarsi che `HF_HUB_OFFLINE` sia disabilitato per il primo caricamento dei modelli gated su PC 139.
+
+---
+
 # Session Journal — NH-Mini
 
 File append-only. L'agent scrive **durante** la sessione, non alla fine.
 Ogni entry è un timestamp + tipo + contenuto.
 
 Tipi: START | TASK | DECISION | BLOCKED | RESOLVED | DEVIATION | END
+
+## [2026-05-09 13:57] END
+
+**Completato:**
+- ARIA PC139: identificato e fixato bug idle timeout in `orchestrator.py` — branch `if not decision:` iterava `known_models` (vuoto con DIAS in pausa) invece di `_procs.keys()`, impedendo a `mark_idle()` di scattare e tenendo il backend Qwen3-TTS attivo per 3+ giorni senza mai spegnersi.
+- ARIA: restart pulito confermato (13:22:42 su PC139) — 2 processi Python, nessun backend caricato, telemetria DB ok (10.951 task, ultimo TTS 10:20:36).
+- Git sync: commit `24c6d32` su LXC 190, push su GitHub, pull su PC139 (`8cd2ad1`).
+- `/doc aria` completato: stack-aria.md (backend table + sezione idle timeout + Lifelog2 come consumatore), log.md entry, aria-state-of-gaps.md (gap A0-3 resolved), ARIA-blueprint.md (sezione Backend Idle Timeout §7), aria-project-context.md aggiornata.
+- `/lint aria`: 46 passed, 2 warnings (stratex_dev e lifelog2_dev — pre-esistenti), 0 errors.
+
+**Incompleto:** nulla di critico.
+
+**Mine per il prossimo agent:**
+- **Lifelog2 M3 TEST** ← priorità alta: test end-to-end Stage B→C con 1 WAV V1 — verificare SpeakerTurn in CT105 `lifelog_roberto` e transcript JSON in MinIO `transcripts/raw/roberto/`.
+- Hyperion: monitorare avanzamento (ETA ~12 maggio, 70 t/h, ora con idle timeout funzionante ARIA si spegnerà correttamente tra una sessione DIAS e l'altra).
+- Lint warnings (bassa priorità): aggiungere link `stratex_dev` e `lifelog2_dev` nel wiki.
+
+---
+
+## [2026-05-09 12:55] END
+
+**Completato:**
+- DIAS: Ottimizzazione heartbeat orchestratore (30s -> 5s) per reattività dashboard.
+- DIAS: Implementata coerenza globale della pausa manuale in tutti i worker (`BaseStage` compliant e custom: Stage D2, E, F).
+- DIAS: Dashboard Svelte 5 ottimizzata con Infinite Scroll nelle tiles degli stadi (testata con >7000 asset).
+- DIAS: UI UX polish — spostato pulsante salvataggio pre-produzione, contestualizzato Voice Carousel.
+- Framework: Aggiornate `.cursorrules` (v9) con il pattern **PIPELINE SUSPENSION**.
+- Framework: Aggiornata `knowledge/architecture/core-modules.mdc` e `infrastructure-map.mdc`.
+- Deployment: Sincronizzazione totale LXC 190 -> 201 via Git + build dashboard RT.
+- `/lint` 41/41 superati per lo stack DIAS.
+
+**Incompleto:** nulla di critico.
+
+**Mine per il prossimo agent:**
+- Monitorare la stabilità di CT201 con il heartbeat a 5s durante lunghe sessioni di mastering (Stage F).
+- Verificare se l'utente desidera portare il pattern di pausa atomica (`BaseStage`) anche sui worker di Stratex/Lifelog2 per uniformità.
+
+---
+
+## [2026-05-09 11:30] START — DIAS Pipeline Optimization & Dashboard Stability
+
+**Obiettivo:** Ridurre la latenza di monitoraggio, garantire la coerenza della pausa manuale e ottimizzare la dashboard per grandi dataset.
+**Grounding:** LXC 201 RT attivo, Redis HUB (CT120) raggiungibile, Progetto `dan_simmons_hyperion` con 7000+ asset.
+
+---
+
+# Session Journal — NH-Mini
+
+File append-only. L'agent scrive **durante** la sessione, non alla fine.
+Ogni entry è un timestamp + tipo + contenuto.
+
+Tipi: START | TASK | DECISION | BLOCKED | RESOLVED | DEVIATION | END
+
+## [2026-05-07 13:09] END
+
+**Completato:**
+- ARIA PC139: backend STT `LifelogASRBackend` — `server.py` FastAPI :8087, `asr_pipeline.py` (Qwen3-ASR-1.7B + ForcedAligner + pyannote), `backends/lifelog_asr.py` wrapper (health-check pattern, non subprocess.Popen)
+- ARIA PC139: `orchestrator.py` patchato con 6 modifiche (import, `_lifelog_asr_backend`, `model_logic_ids`, elif branch, `_process_lifelog_asr_task()`)
+- ARIA PC139: `backends_manifest.json` aggiornato — entry `qwen3-asr-1.7b` porta 8087, env `lifelog-asr`, startup_wait 180s
+- Lifelog2: `stage_c_asr.py` worker completo — consumer `lifelog:cg:asr`, BRPOP callback `aria:c:lifelog:{job_id}`, SpeakerTurn insert (campi corretti: `speaker_label_raw`, `start_offset_ms`, `end_offset_ms`, `text_raw`), transcript JSON su MinIO `transcripts/raw/`, emit `lifelog:stream:enrich`
+- ARIA docs: `ARIA-Service-Registry.md`, `ARIA-blueprint.md`, `aria-state-of-gaps.md` aggiornati (gap A0-2 resolved, A1-4 noted)
+- Lifelog2 docs: `architecture.md`, `development-log.md` aggiornati con M2+M3
+- Analisi GPU exclusivity ARIA: STT task aspetta in coda se TTS attivo; al cambio modello ~4.5 min delay (180s warmup ASR + 60s TTS restart). Singolo test = trascurabile su Hyperion
+- Analisi produzione Hyperion: telemetria reale da `aria-telemetry.db` — **70 t/h** effettivi, 5.964/13.509 scene (44.1%), 11.1h audio grezzo prodotto, **ETA ~12 maggio** (4.5 giorni cal. a 24h/die)
+- `/doc nh-mini` completato — stack-lifelog2.md aggiornato (M3 in test), log.md entry analisi Hyperion
+- `/lint nh-mini`: 41 passed, 2 warnings, 0 errors
+
+**Incompleto:**
+- 2 warnings lint: `stratex_dev` e `lifelog2_dev` non linkati nel wiki (bassa priorità)
+
+**Mine per il prossimo agent:**
+- **Lifelog2 M3 TEST** ← priorità alta: riavviare ARIA orchestratore su PC139 → test end-to-end Stage B→C con 1 WAV V1 (verifica SpeakerTurn in CT105 `lifelog_roberto`, transcript JSON in MinIO `transcripts/raw/roberto/`)
+- Hyperion: monitorare avanzamento (70 t/h, ~7.545 scene rimanenti, ETA ~12 maggio)
+- Lint warnings (bassa priorità): aggiungere `stratex_dev` e `lifelog2_dev` nelle pagine wiki `stack-stratex.md` e `stack-lifelog2.md`
+
+---
+
+## [2026-05-07 23:45] END
+
+**Completato:**
+- Lifelog2: esplorazione dati V1 su PC139 (192.168.1.139) — 2482 memories, 1700 .m4a, trascrizioni Whisper complete, SQLite + ChromaDB
+- Lifelog2: creato bucket `lifelog` su MinIO CT104 (`minioadmin:minioadmin`)
+- Lifelog2: script `scripts/v1_import.py` — SCP da PC139 → MinIO → DB CT105 → Redis events
+- Lifelog2: 20 segmenti V1 importati (10 ambient + 10 personale) in `raw-decrypted-temp/roberto/` su MinIO
+- Lifelog2: 20 RawCapture + 20 Segment in `lifelog_roberto` CT105 con `pipeline_status="queued"`
+- Lifelog2: 20 eventi emessi su Redis stream `lifelog:stream:ingest`
+
+**Incompleto:** nulla di critico
+
+**Mine per il prossimo agent:**
+- Lifelog2 M2: pipeline worker Stage A — consumer Redis `lifelog:stream:ingest`, download M4A da MinIO `raw-decrypted-temp/`, conversione WAV 16kHz mono (ffmpeg), aggiornamento `pipeline_status = "preprocessing" → "asr"`
+- Lifelog2: I 20 segmenti sono in `queued` — pronti per il pipeline quando sarà implementato
+- Lifelog2: confronto output ASR V2 vs trascrizioni V1 (ground truth in `D:\LifeLogData\archive\transcripts_enriched\`)
+
+---
+
+## [2026-05-07 10:00] START — Lifelog2: V1 data exploration + MinIO setup + import pipeline
+
+**Obiettivo:** Esplorare i dati V1 su PC139, creare il bucket MinIO `lifelog`, importare 20 segmenti come test del pipeline V2.
+**Grounding:** CT104 MinIO live (minioadmin), CT105 DB `lifelog_roberto` live con schema V2, PC139 accessibile via SSH.
+
+---
+
+## [2026-05-07 11:00] DECISION — M4A come input "post-decryption" per il test V2
+
+I file WAV temporanei V1 sono stati eliminati dopo il processing. Si usano i .m4a di `archive/audio/processed/` come input diretto al pipeline V2 simulando l'uscita dalla fase di decifratura. Il preprocessing worker (Stage A) provvederà alla conversione WAV 16kHz mono.
+MinIO prefix scelto: `raw-decrypted-temp/roberto/` — coerente con l'architettura come file "appena decriptato".
+
+---
+
+## [2026-05-07 12:00] TASK — Import 20 segmenti V1 → MinIO + DB + Redis
+
+- Bucket `lifelog` creato su CT104
+- `scripts/v1_import.py`: SCP da PC139 → /tmp/v1_test/ → MinIO `raw-decrypted-temp/roberto/{YYYY}/{MM}/{DD}/` → RawCapture + Segment in CT105 → xadd su `lifelog:stream:ingest`
+- idempotency_key = uuid5(NAMESPACE_URL, "v1:{filename}") — deterministico, reimportare è idempotente
+- 10 ambient (2025-08-01 / 2025-08-06) + 10 personale (2025-10-09 / 2025-12-18) — tutti con lat/lon e trascrizione V1
+
+---
+
+## [2026-05-06 21:35] END
+
+**Completato:**
+- Stratex: `news_sources` table + `market_intelligence` estesa (Alembic migration v2 con 23 fonti validate, 7 attive)
+- Stratex: `rss_scraper.py` — feedparser + trafilatura per testo completo articoli
+- Stratex: `youtube_scraper.py` — yt-dlp + youtube-transcript-api v1.x (api.fetch(), non get_transcript)
+- Stratex: `news_fetcher.py` — orchestratore fetch ogni 12h nel lifespan FastAPI
+- Stratex: `api/intelligence.py` — CRUD completo: feed, item detail, sources list/create/patch/delete, fetch trigger/status
+- Stratex: `IntelligenceSection.tsx` — FeedTab + SourcesTab + ItemDrawer (corpo completo articoli e trascrizioni YouTube)
+- Stratex: hook `useIntelligenceItem`, `useSources`, `useToggleSource`, `useAddSource`, `useDeleteSource`, `useTriggerFetch`
+- Stratex: build frontend deployata (StaticFiles da dist/ locale)
+- Fix: `cashflow.py` estimated_annual_yield (NameError `text` non importato da SQLAlchemy)
+- Fix: youtube-transcript-api v1.x API (`api.fetch()` invece di classe `YouTubeTranscriptApi.get_transcript`)
+- Fix: Alembic migration FK violation (NULL news_source_id prima di DELETE news_sources)
+- Fix: lucide-react `Youtube` → `PlayCircle` (icona non esportata dalla versione installata)
+- Fix: `_item_dict` spostato a scope di modulo per accessibilità da endpoint detail
+- `/doc stratex` + `/finalize` completati
+
+**Incompleto:**
+- `enricher.py` Gemini batch — pianificato, non implementato (traduzione + portfolio scoring in 1-2 chiamate da 250k token)
+
+**Mine per il prossimo agent:**
+- Stratex: `enricher.py` Gemini Flash batch (lingua da `user_preferences.locale`, portfolio assets come contesto, output: title_translated, body_translated, portfolio_scores, impact_urgency)
+- Stratex: AI Chat SSE streaming reale + conversation management (`conversations` + `conversation_messages` tables)
+- Stratex: Alert WebSocket (`wss://.../ws/alerts` + toast notifications)
+- Stratex: i18n Phase 0 — `locale` in `user_preferences` + react-i18next
+- Authelia: password default `StratexAdmin2026!` va cambiata dall'utente
+
+**Nota architetturale da ricordare:**
+Gemini Flash usato direttamente dall'LXC (non via Redis→ARIA) per enrichment batch intelligence — deviazione deliberata documentata in blueprint.md e development-history.
+
+---
 
 ## [2026-05-06 12:26] END
 
@@ -589,3 +776,40 @@ Aggiornamento `NH-Mini/log.md` con entry sessione odierna.
 - `aria.bat` — aggiunta riga avvio dashboard hidden (PowerShell `WindowStyle Hidden`) dopo orchestratore
 - `aria_node_controller/main_tray.py` — aggiunta voce menu `🖥️ Apri Dashboard (8089)` con `webbrowser.open`
 
+
+## [2026-05-06 13:05] START — Lifelog2 Project Initialization
+
+**Obiettivo**: Setup dell'ambiente di sviluppo e dello skeleton backend.
+- Creato pacchetto backend .
+- Definiti  e documentazione locale ().
+- Inizializzato  con endpoint .
+- Installazione dipendenze in corso.
+
+## [2026-05-06 13:10] DECISION — Progetto rinominato lifelog2
+- Corretto naming del package da `lifelog` a `lifelog2`.
+- Allineata documentazione e logger.
+- API operativa su porta 8002.
+
+## [2026-05-06 13:28] FIX — ARIA PC 139 Shutdown
+- Eseguito kill forzato di python.exe su PC 139.
+- Modificato `orchestrator.py` e `main_tray.py` per garantire la chiusura di dashboard e backend all'exit.
+- Sincronizzati file su PC 139.
+
+## [2026-05-06 14:05] FINAL FIX — ARIA GPU Orchestration
+- Applicata logica di esclusività totale GPU.
+- Risolto race condition su JIT startup.
+- Sistema pronto per il riavvio su PC 139.
+
+## [2026-05-11 14:15] END | Lifelog2 Architecture Evolution & App Audit
+**Obiettivo sessione**: Definizione architettura Liquid Brain e audit app Android.
+- **Completato**: 
+  - Architettura Liquid Brain (Swap-In/Out) definita e documentata.
+  - Global Registry (LXC 203) progettato.
+  - Audit completo App Android v1 e individuazione gap (GPS/Metadata).
+  - Creato Handoff Document per upgrade App v2.0 (copiato su LXC 190 e PC 139).
+  - Wiki e MDC aggiornati secondo protocollo NH-Mini.
+- **Incompleto**: 
+  - Implementazione fisica del registry.db e dei relativi endpoint.
+  - Script di Session Management per mount/unmount.
+- **Mine**:
+  - Attenzione alla discrepanza tra il codice del repo App (TODO GPS) e la realtà dei file .m4a (GPS presente). Usare i file reali come ground truth.

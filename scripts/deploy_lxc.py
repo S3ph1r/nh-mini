@@ -434,7 +434,7 @@ def main():
     # Handle setup request
     if args.setup:
         config = NHConfig(args.config_dir)
-        config.setup_interactive()
+        config.interactive_setup()
         return
     
     # Handle credential migration

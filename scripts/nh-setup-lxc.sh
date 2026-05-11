@@ -102,6 +102,9 @@ install_requirements() {
         sshpass
     
     success "Requirements installati"
+    
+    info "Fix PAM Systemd Lag (LXC login timeout)..."
+    pct exec $LXC_ID -- sed -i 's/^session\s*optional\s*pam_systemd.so/# &/' /etc/pam.d/common-session
 }
 
 # Setup SSH bidirezionale

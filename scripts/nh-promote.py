@@ -27,7 +27,9 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 SVILUPPI = ROOT / "sviluppi"
 
-SSH_KEY = "/root/.ssh/id_nh"
+SSH_KEY = Path.home() / ".ssh" / "id_ed25519"
+if not SSH_KEY.exists():
+    SSH_KEY = Path.home() / ".ssh" / "id_rsa"
 SSH_OPTS = f"-i {SSH_KEY} -o StrictHostKeyChecking=no -o ConnectTimeout=10"
 
 
@@ -49,7 +51,17 @@ def ssh(ip: str, cmd: str, check: bool = True) -> subprocess.CompletedProcess:
 
 
 def rsync(src: str, ip: str, dst: str) -> bool:
-    cmd = f"rsync -az --delete -e 'ssh {SSH_OPTS}' {src} root@{ip}:{dst}"
+    excludes = [
+        "node_modules",
+        ".svelte-kit",
+        ".venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".git",
+        ".DS_Store"
+    ]
+    exclude_args = " ".join([f"--exclude='{e}'" for e in excludes])
+    cmd = f"rsync -az --delete {exclude_args} -e 'ssh {SSH_OPTS}' {src} root@{ip}:{dst}"
     r = subprocess.run(cmd, shell=True, text=True)
     return r.returncode == 0
 
@@ -91,6 +103,11 @@ def push_code(project_dir: Path, ip: str, remote_dir: str) -> bool:
 
     print(f"   rsync src/ → {ip}:{remote_dir} ...")
     if rsync(str(src_dir) + "/", ip, remote_dir):
+        # Also push requirements.txt if exists in root
+        req_file = project_dir / "requirements.txt"
+        if req_file.exists():
+            print(f"   rsync requirements.txt → {ip}:{remote_dir} ...")
+            rsync(str(req_file), ip, remote_dir)
         print(f"   ✅ Codice caricato")
         return True
     else:
@@ -183,12 +200,16 @@ def main():
     parser.add_argument("--yes", "-y", action="store_true", help="Non chiedere conferma")
     args = parser.parse_args()
 
-    name = args.project.strip().lower()
+    name = args.project.strip()
     project_dir = SVILUPPI / name
 
     if not project_dir.exists():
-        print(f"❌ Progetto '{name}' non trovato in {SVILUPPI}")
-        sys.exit(1)
+        # Try lowercase as fallback
+        name = name.lower()
+        project_dir = SVILUPPI / name
+        if not project_dir.exists():
+            print(f"❌ Progetto '{args.project}' non trovato in {SVILUPPI}")
+            sys.exit(1)
 
     ctx = load_project_context(project_dir)
     description = ctx.get("IDENTITY", {}).get("description", "—")
@@ -240,8 +261,14 @@ def main():
     print("\n📦 Step 1/4 — Deploy LXC...")
     ok = deploy_rt_lxc(name, vmid, args.memory, args.cpu, args.storage, args.template)
     if not ok:
-        print("❌ Deploy LXC fallito. Verifica i log di deploy_lxc.py")
-        sys.exit(1)
+        print("   ⚠️  Deploy LXC non ha creato un nuovo container (potrebbe già esistere).")
+        # Verifichiamo se l'IP è raggiungibile prima di dare per scontato che possiamo procedere
+        print(f"   🔍 Verifico raggiungibilità {ip}...")
+        check_ssh = subprocess.run(f"nc -z -w 3 {ip} 22", shell=True, capture_output=True)
+        if check_ssh.returncode != 0:
+            print(f"❌ Impossibile raggiungere {ip} via SSH. Deploy o configurazione fallita.")
+            sys.exit(1)
+        print(f"   ✅ {ip} raggiungibile. Procedo col push codice.")
 
     # Recupera VMID reale se auto-assegnato
     if not vmid:

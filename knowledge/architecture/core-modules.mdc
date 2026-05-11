@@ -80,6 +80,11 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 - **Polling**: Demone di ascolto callback attivo in background via `nh-telegram.service`
 - **Integrazione**: Utilizza il sistema SOPS per token e chat_id, esegue comandi SSH di remediation su approvazione
 
+### SerialOrchestrator & BaseStage (Pattern Progetti — 2026-05-09)
+- **Funzione**: Framework di orchestrazione sequenziale per pipeline multi-stadio.
+- **BaseStage**: Classe base per i worker con gestione automatica di code Redis, logging e sistema di **Pausa Atomica**.
+- **Orchestrator**: Monitora il progresso degli stadi e lo stato dei worker con heartbeat a 5s per la dashboard.
+
 ## scripts/ — CLI per Agent
 
 | Script | Funzione | Uso tipico |
@@ -101,6 +106,7 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 | `nh-setup-lxc.sh` | Setup iniziale LXC | Bootstrap |
 | `prepare-lxc-proxmox.sh` | Prepara LXC su Proxmox | Bootstrap |
 | `setup_ct202_gateway.sh` | Setup container CT202 gateway | Deploy gateway |
+| `nh-secrets-sync.py` | Sincronizza secrets SOPS tra nodi | Manutenzione |
 
 ## web/ — Dashboard NH-Mini (aggiunto 2026-04-24)
 

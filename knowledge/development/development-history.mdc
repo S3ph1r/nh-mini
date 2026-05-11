@@ -515,3 +515,187 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "medium"
 }
 ```
+
+### 2026-05-05 - Rinominato da dias-brain a ct120-redis in Proxmox ...
+```json
+{
+  "timestamp": "2026-05-05T18:29:46.983054+00:00",
+  "category": "ARCHITECTURE",
+  "component": "CT120",
+  "change": "Rinominato da dias-brain a ct120-redis in Proxmox e in tutta la documentazione",
+  "reason": "Il nome dias-brain era fuorviante: Redis serve tutta l'infrastruttura (DIAS, ARIA, Stratex), non solo DIAS",
+  "author": "agent",
+  "impact": "medium",
+  "git_commit": "dd996bb"
+}
+```
+
+### 2026-05-05 - Alembic setup: prima migration applicata (assets.c...
+```json
+{
+  "timestamp": "2026-05-05T18:30:01.694845+00:00",
+  "category": "FEATURE",
+  "component": "Stratex",
+  "change": "Alembic setup: prima migration applicata (assets.country), credenziali DB in SOPS, .env gitignored, session.py senza hardcoded",
+  "reason": "DB reale su CT105 verificato (3843 transazioni, 236 asset). Schema allineato tra models.py e DB. Workflow migration documentato.",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-06 - Tax Center frontend + Settings page + Authelia v4....
+```json
+{
+  "timestamp": "2026-05-06T10:26:24.525807+00:00",
+  "category": "FEATURE",
+  "component": "stratex",
+  "change": "Tax Center frontend + Settings page + Authelia v4.39 deploy",
+  "reason": "Completamento Tax Center (summary/events/TLH/CSV), Settings persistenti su DB, autenticazione forward-auth via Authelia+nginx su CT202",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-06 - Intelligence module: news_sources table, RSS scrap...
+```json
+{
+  "timestamp": "2026-05-06T19:51:38.298485+00:00",
+  "category": "FEATURE",
+  "component": "stratex/intelligence",
+  "change": "Intelligence module: news_sources table, RSS scraper (feedparser+trafilatura), YouTube scraper (yt-dlp+transcript-api v1.x), fetch loop ogni 12h in FastAPI lifespan, IntelligenceSection dashboard completa con FeedTab+SourcesTab+ItemDrawer",
+  "reason": "Rassegna stampa multi-fonte (7 fonti attive: CNBC, FT Alphaville, SCMP, The Diplomat, Ars Technica, HackerNews, Marco Casario YouTube) con lettura corpo completo articoli e trascrizioni video",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-06 - Deviazione architetturale: Gemini Flash chiamato d...
+```json
+{
+  "timestamp": "2026-05-06T19:52:06.140321+00:00",
+  "category": "ARCHITECTURE",
+  "component": "stratex/intelligence/enricher",
+  "change": "Deviazione architetturale: Gemini Flash chiamato direttamente dall'LXC per enrichment batch (traduzione lingua utente + portfolio scoring), non via Redis→ARIA",
+  "reason": "Context window 250k token consente batch di tutti gli item in 1-2 chiamate; evita latenza Redis per operazioni non real-time. RSS batch ~35k token, YouTube batch ~38k token.",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-06 - Creato bucket 'lifelog' su CT104. Script v1_import...
+```json
+{
+  "timestamp": "2026-05-06T23:41:39.615663+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/MinIO+Import",
+  "change": "Creato bucket 'lifelog' su CT104. Script v1_import.py: SCP da PC139 → MinIO raw-decrypted-temp/roberto/ → RawCapture+Segment in CT105 lifelog_roberto → Redis lifelog:stream:ingest. 20 segmenti V1 importati con pipeline_status=queued.",
+  "reason": "Test pipeline V2 con audio reale di qualità garantita (V1 già processato). Ground truth V1 disponibile in D:\\LifeLogData\\archive\\transcripts_enriched\\ per confronto con output ASR V2.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-07 - Aggiunto backend STT Qwen3-ASR-1.7B per Lifelog2: ...
+```json
+{
+  "timestamp": "2026-05-07T10:42:37.727209+00:00",
+  "category": "FEATURE",
+  "component": "ARIA/lifelog-asr",
+  "change": "Aggiunto backend STT Qwen3-ASR-1.7B per Lifelog2: env lifelog-asr, server FastAPI :8087, orchestratore patchato, manifest aggiornato, modelli scaricati",
+  "reason": "Lifelog2 Stage C richiede trascrizione audio + diarizzazione speaker per costruire memoria strutturata Z1",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-07 - Implementati Stage B (preprocess: M4A→WAV, quality...
+```json
+{
+  "timestamp": "2026-05-07T10:42:46.129555+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/pipeline",
+  "change": "Implementati Stage B (preprocess: M4A→WAV, quality gate, MinIO) e Stage C (ASR: ARIA job, SpeakerTurn, transcript MinIO, enriching emit)",
+  "reason": "Pipeline Lifelog2 M2 completa, M3 setup pronto per test end-to-end con backend ARIA",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-07 - stage_c_asr.py ASR worker + ARIA LifelogASRBackend...
+```json
+{
+  "timestamp": "2026-05-07T11:06:42.917920+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2",
+  "change": "stage_c_asr.py ASR worker + ARIA LifelogASRBackend integrazione completa",
+  "reason": "M3 pipeline: trascrizione audio segmenti con Qwen3-ASR-1.7B via ARIA, diarizzazione speaker, SpeakerTurn insert su CT105, transcript JSON su MinIO, emit lifelog:stream:enrich",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-07 - Backend STT qwen3-asr-1.7b: server.py FastAPI :808...
+```json
+{
+  "timestamp": "2026-05-07T11:06:50.569488+00:00",
+  "category": "FEATURE",
+  "component": "ARIA",
+  "change": "Backend STT qwen3-asr-1.7b: server.py FastAPI :8087, asr_pipeline.py 3-modelli, orchestrator patch + backends_manifest.json",
+  "reason": "Supporto trascrizione audio per Lifelog2 pipeline. Env lifelog-asr isolato con PyTorch cu128 sm_120, transformers==4.57.6 pinnato (5.x degrada accuracy), pyannote.audio==4.0.1 pinnato (4.0.2+ incompatibile cu128)",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-09 - Reduced heartbeat to 5s and implemented consistent...
+```json
+{
+  "timestamp": "2026-05-09T10:51:25.192148+00:00",
+  "category": "ARCHITECTURE",
+  "component": "DIAS-Orchestrator",
+  "change": "Reduced heartbeat to 5s and implemented consistent project-specific pause across all workers (D2, E, F)",
+  "reason": "Improve dashboard responsiveness and ensure global state consistency",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-09 - Implemented Infinite Scroll for stage tiles and co...
+```json
+{
+  "timestamp": "2026-05-09T10:51:25.221044+00:00",
+  "category": "FEATURE",
+  "component": "DIAS-Dashboard",
+  "change": "Implemented Infinite Scroll for stage tiles and contextualized UI elements (Voice Carousel, Save Button)",
+  "reason": "Handle massive project datasets (>7000 files) and improve UX",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-09 - Fix idle timeout: iterare _procs.keys() invece di ...
+```json
+{
+  "timestamp": "2026-05-09T11:40:52.397953+00:00",
+  "category": "BUGFIX",
+  "component": "ARIA/orchestrator.py",
+  "change": "Fix idle timeout: iterare _procs.keys() invece di known_models nel branch if not decision",
+  "reason": "Quando le code Redis sono vuote (client in pausa), known_models è vuoto e mark_idle() non veniva mai chiamato — i backend JIT rimanevano attivi indefinitamente nonostante IDLE_TIMEOUT_S=2700s",
+  "author": "agent",
+  "impact": "medium",
+  "git_commit": "24c6d32"
+}
+```
+
+### 2026-05-11 - Switch biometrico a vettori 256d (ResNet34)
+```json
+{
+  "timestamp": "2026-05-11T01:30:18.696793+00:00",
+  "category": "ARCHITECTURE",
+  "component": "ARIA ASR",
+  "change": "Switch biometrico a vettori 256d (ResNet34)",
+  "reason": "Superamento legacy SpeechBrain 192d per allineamento a pipeline Qwen3 Blackwell",
+  "author": "agent",
+  "impact": "high"
+}
+```

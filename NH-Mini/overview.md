@@ -43,6 +43,7 @@ CT190 → git pull/push → tutti i progetti
 |---------|-----|---------|----------|
 | [[stack-dias\|DIAS]] | CT190 (`sviluppi/dias/`) | CT201 | Gemini API (via ARIA) |
 | [[stack-aria\|ARIA]] | PC139 (Win11, SOT) + CT190 (mirror) | PC139 | RTX 5060 Ti locale |
+| [[stack-lifelog2\|Lifelog2]] | CT190 (`sviluppi/Lifelog2/`, API su :8002) | `ct203` (plan) | ARIA PC139 (ASR, embed CT107) |
 
 ## Roadmap NH-Mini
 

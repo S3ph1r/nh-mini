@@ -75,6 +75,9 @@ sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "echo '$PUB_KEY' >> /root/.ssh/a
 # Setup hostname e hosts
 sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- hostnamectl set-hostname $HOSTNAME"
 sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- bash -c 'echo 192.168.1.2 proxmox >> /etc/hosts'"
+
+# Fix PAM Systemd Lag (LXC login timeout)
+sshpass -p $PROXMOX_PASS ssh root@$PROXMOX_HOST "pct exec $VMID -- sed -i 's/^session\s*optional\s*pam_systemd.so/# &/' /etc/pam.d/common-session"
 ```
 
 ### Step 6: Verification

@@ -1,9 +1,9 @@
 ---
 title: "ARIA — Adaptive Resource for Inference and AI"
 type: entity
-tags: [sistema, aria, gpu, tts, llm, redis, windows]
+tags: [sistema, aria, gpu, tts, stt, llm, redis, windows]
 sources: [aria-project-context.md, aria-blueprint.md, aria-api-contract.md]
-updated: 2026-04-24
+updated: 2026-05-09
 ---
 
 # ARIA — Adaptive Resource for Inference and AI
@@ -45,6 +45,7 @@ Processo daemon Windows che:
 4. Espone HTTP Asset Server (porta 8082) per servire output
 
 Entrypoint: `main_tray.py` (system tray icon)
+Monitoring: [[stack-aria-dashboard|ARIA Dashboard v2.3 Pro]]
 GUI configurazione: `settings_gui.py` (customtkinter)
 
 ### Backend AI (ambienti Conda separati)
@@ -52,11 +53,12 @@ GUI configurazione: `settings_gui.py` (customtkinter)
 | Backend | Model ID | Porta | VRAM | Stato |
 |---------|----------|-------|------|-------|
 | Qwen3-TTS | `qwen3-tts-1.7b` | 8083 | ~5 GB | ✅ Operativo |
-| Fish S1-mini | `fish-s1-mini` | 8080 | ~4 GB | 🔄 Da ricreare |
+| Fish S1-mini | `fish-s1-mini` | 8080 | ~4 GB | ✅ Operativo |
 | Voice Cloning | (companion Fish) | 8081 | CPU | 🔄 Da ricreare |
 | LLM | `qwen3.5-35b-moe-q3ks` | 8085 | ~13 GB | 🔲 In sviluppo |
-| Cloud Gemini | `gemini-1.5-flash-lite` | — | cloud | ✅ Routing attivo |
-| ACE-Step Music | `acestep-1.5-xl-sft` | — | ~16 GB | ✅ Per DIAS D2 |
+| Cloud Gemini | `gemini-flash-lite-latest` | — | cloud | ✅ Routing attivo |
+| ACE-Step Music | `acestep-1.5-xl-sft` | 8084 | ~8 GB | ✅ Per DIAS D2 |
+| Lifelog ASR | `qwen3-asr-1.7b` | 8087 | ~9 GB | ✅ Operativo (Blackwell) |
 
 ### HTTP Asset Server
 
@@ -84,14 +86,30 @@ PC 139: salva WAV → %ARIA_ROOT%\data\outputs\{job_id}.wav
 | BUSY | Task in esecuzione (transizione automatica) |
 | OFFLINE | PC spento — heartbeat assente da >30s |
 
+## Gestione Backend (Idle Timeout)
+
+Backend JIT: avviati on-demand al primo task, fermati automaticamente dopo `IDLE_TIMEOUT_S = 2700s` (45 min) di inattività. Il meccanismo è gestito da `ModelProcessManager` in `orchestrator.py`:
+
+- `mark_idle(mid)` — marca un backend come idle (timestamp)
+- `shutdown_idle_backends()` — killa i backend idle da > 45 min
+- **Fix 2026-05-09**: il branch `if not decision:` ora itera `_procs.keys()` invece di `known_models`. Quando le code Redis sono vuote (client in pausa), `known_models` è vuoto ma `_procs` contiene i backend caricati — senza il fix `mark_idle()` non veniva mai chiamato.
+
 ## Consumatori Attuali
 
 - **[[stack-dias|DIAS]]** — TTS (voce scene) + ACE-Step (sound design)
+- **[[stack-lifelog2|Lifelog2]]** — STT (trascrizione audio + diarizzazione, coda `aria:q:stt:local:qwen3-asr-1.7b:lifelog`)
 
 ## Vedi anche
 
+- [[stack-aria-dashboard]] — Monitoraggio live v2.3 Pro
 - [[concepts/aria-redis-protocol]] — nomenclatura code e schema payload (SOT)
 - [[concepts/aria-task-lifecycle]] — ciclo di vita di un task
 - [[stack-dias]] — principale cliente ARIA
 - [[ct120-redis]] — Redis su LXC 120 (infrastructure node)
 - [[concepts/dependency-map]] — topologia infrastruttura
+
+### Update 2026-05-11: Blackwell ASR Stability & Voiceprint
+- **Blackwell Compatibility**: Risolti crash `libtorchcodec` su Windows/PC139 sostituendo `torchaudio.load` con `soundfile.read` nel backend ASR.
+- **Pyannote 4.0.1 Integration**: Aggiornato `asr_pipeline.py` per gestire il nuovo oggetto `DiarizeOutput` e l'attributo `speaker_diarization`.
+- **High-Res Voiceprint**: Passaggio da embedding 192d (SpeechBrain) a **256d (ResNet34)** nativo della pipeline ASR. **ATTENZIONE**: Richiede aggiornamento DB Lifelog2 (Vector(256)).
+- **Gated Models Auth**: Implementato login globale Hugging Face nel server per accesso on-demand ai modelli protetti.

@@ -6,6 +6,143 @@ Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
 ---
 
+## [2026-05-09] dev | Lifelog2: Memory Shell (SvelteKit + Tailwind 4) + CT 203 Setup
+
+**Frontend Genesis:**
+- Inizializzato progetto SvelteKit 5 in `src/frontend/` con Tailwind 4 (@tailwindcss/vite).
+- Configurato Design System "Memory OS": oklch colors (ink theme), typography (Instrument Serif, DM Sans, JetBrains Mono), cinematic effects (glassmorphism, hero glow).
+- Implementati componenti core: `Sidebar` (collassabile), `HeroCinematic`, `ScoreRing` (radar chart SVG), `MemoryCard` (blur per sealed memories), `RetentionPill`.
+- Layout 3 colonne con Right Rail (Filmstrip/Open/Pipeline) e Topbar Breadcrumbs.
+
+**Backend Alignment:**
+- `MemoryAtom` model: aggiornate `retention_class` a `ephemeral | counted | summarized | remembered | preserved | sealed` (allineato al blueprint v2).
+- Nuovo router `api/routers/dashboard.py` con endpoint `/dashboard/today` (mock data per test UI) e `/dashboard/pipeline`.
+- Vite Proxy configurato per instradare `/api` → `:8002`.
+
+**Infrastructure (CT203):**
+- Progettazione **CT203 — Lifelog (v2)** come nodo di Runtime (RT).
+- Aggiornata `infrastructure-map.mdc` e creato wiki `entities/containers/ct203-lifelog.md`.
+- Registrato `lifelog2_rt` nel `service_catalog.py` (192.168.1.203:8002).
+
+---
+
+## [2026-05-09] dev | ARIA: fix idle timeout orchestrator + riavvio confermato
+
+**Bug risolto — orchestrator.py `_run_loop()` idle branch:**
+- Sintomo: backend Qwen3-TTS rimasto attivo 3+ giorni senza spegnersi (DIAS in pausa manuale)
+- Root cause: `if not decision:` iterava `known_models` (vuoto quando code Redis assenti) invece di `_procs` — `mark_idle()` non veniva mai chiamato, `shutdown_idle_backends()` non killava nessuno
+- Fix: `for mid in list(self.process_manager._procs.keys()):`
+- Deploy: commit su LXC 190 (`24c6d32`), push GitHub, pull su PC139. ARIA riavviata.
+- Verifica post-restart: clean startup 13:22:42, solo 2 processi Python, nessun backend caricato. Telemetria: 10.951 task totali, ultimo TTS alle 10:20:36.
+
+---
+
+## [2026-05-07] analysis | Hyperion (DIAS) produzione: telemetria ARIA + proiezione completamento
+
+**Dati telemetria reale** (da `logs/aria-telemetry.db` su PC139):
+- Qwen3-TTS: 6.084 task totali (5.973 ok, 111 errori 1.8%), periodo 3–7 maggio
+- Throughput effettivo: **70 task/h** (ore attive, RTF medio 6.9, ~47s/scena)
+- Audio prodotto: ~667 min = **11.1 ore di audio grezzo** (May 3–7)
+- Sessioni: 4 totali, ARIA gira quasi 24/7 per Hyperion (gap >30 min molto rari)
+- Avanzamento: **5.964/13.509 scene** (44.1%), rimanenti 7.545
+- **ETA completamento: ~11–12 maggio** (4.5 giorni calendario a 24h/die)
+
+---
+
+## [2026-05-07] dev | ARIA + Lifelog2: backend STT Qwen3-ASR-1.7B + Stage B preprocessing
+
+**ARIA PC139 — nuovo backend:**
+- Env conda `lifelog-asr`: Python 3.12, PyTorch 2.11.0+cu128 (sm_120 native), qwen-asr 0.0.6, transformers==4.57.6 (pinnato), pyannote.audio 4.0.1 (NON 4.0.2+)
+- Modelli scaricati: `qwen3-asr-1.7b` (~4.5 GB) + `qwen3-forced-aligner-0.6b` (~1.8 GB)
+- File creati su PC139: `backends/lifelog_asr/server.py` (FastAPI :8087), `backends/lifelog_asr/asr_pipeline.py`, `aria_node_controller/backends/lifelog_asr.py`
+- `orchestrator.py` patchato: import, `_lifelog_asr_backend`, `model_logic_ids`, elif branch, `_process_lifelog_asr_task()`
+- `backends_manifest.json` aggiornato: entry `qwen3-asr-1.7b` porta 8087, env lifelog-asr, startup_wait 180s
+- **Coda Redis:** `aria:q:stt:local:qwen3-asr-1.7b:lifelog` (pattern standard ARIA)
+- **Doc ARIA creata:** `sviluppi/ARIA/docs/backends/lifelog-asr.md` (pipeline 3-modelli, confronto WER vs WhisperX, payload schema)
+- `ARIA-Service-Registry.md` aggiornato: backend, coda, env, modelli, health check
+
+**Lifelog2 — Stage B implementato:**
+- `services/pipeline/stage_b_preprocess.py` — consumer Redis `lifelog:stream:ingest` (XREADGROUP)
+- M4A → WAV 16kHz mono via ffmpeg, quality gate (duration, RMS), MinIO upload `normalized-audio/`, DB update, emit `lifelog:stream:asr`
+- Testato: 20 segmenti V1 processati con successo; 1 segmento M1 di test rimosso (missing_file)
+
+**Decisioni tecniche:**
+- Qwen3-ASR-1.7B scelto su WhisperX: WER IT 5.40% vs ~8-10%, VRAM minore, timestamps integrati
+- transformers==4.57.6 PINNATO (5.x degrada accuracy — issue #138)
+- pyannote.audio==4.0.1 PINNATO (4.0.2+ pinna torch==2.8.0 e rompe l'env cu128)
+
+---
+
+## [2026-05-07] dev | Lifelog2: MinIO bucket live + 20 segmenti V1 importati in pipeline V2
+
+**MinIO CT104:** bucket `lifelog` creato. Struttura: `raw-decrypted-temp/roberto/{YYYY}/{MM}/{DD}/`.
+**V1 import:** 20 .m4a da PC139 D:\LifeLogData\ → MinIO → CT105 lifelog_roberto (RawCapture+Segment) → Redis lifelog:stream:ingest.
+**Script:** `sviluppi/Lifelog2/scripts/v1_import.py`. Ground truth V1 disponibile per confronto ASR.
+**Prossimo:** Stage A pipeline worker (consumer Redis, conversione WAV, preprocessing).
+
+---
+
+## [2026-05-07] dev | Lifelog2: M1 API ingest live — device register, policy poll, segment upload, status, idempotency
+
+**Endpoint implementati e testati end-to-end contro CT105:**
+- `POST /api/v1/devices/register` — crea Device, token hashed SHA-256, disabilita altri device
+- `GET /api/v1/devices/me/policy` — Bearer auth, server_queue_depth live da DB
+- `POST /api/v1/uploads/segments` — multipart, checksum verify, RawCapture+Segment atomico, Redis emit best-effort
+- `GET /api/v1/uploads/segments/{idempotency_key}/status` — status pipeline con memory_atom_id
+- Idempotency 409: duplicate upload restituisce segment_id esistente
+
+**File creati:**
+- `core/config.py` — aggiunto database_url, redis_url, enrollment_secret per utente
+- `core/db.py` — async engine + session factory con lifespan
+- `api/deps.py` — get_db, Bearer auth → Device
+- `api/routers/devices.py`, `api/routers/uploads.py`
+- `api/app.py` — router wiring + lifespan
+
+**Test:** 11 pytest green + integration test live (device, upload, status, duplicate)
+**Stato DB:** 1 device, 1 raw_capture, 1 segment inseriti nel test (dati dev su CT105)
+
+## [2026-05-07] dev | Lifelog2: M1 DB live — lifelog_roberto su CT105, schema 14 tabelle applicato, pgvector attivo
+
+**Operazioni:**
+- `lifelog` user creato su CT105 Postgres con GRANT su schema public
+- `lifelog_roberto` DB creato con extension `vector`
+- `alembic upgrade head` completato: 14 tabelle + alembic_version su CT105
+- `.env` scritto con LIFELOG2_DATABASE_URL (gitignored)
+- CT203 rinviato: sviluppo M1/M2 avviene su CT190:8002 (già nel service catalog)
+
+## [2026-05-07] dev | Lifelog2: M1 SQLAlchemy models — 14 entità, Alembic migration 0001, pgvector, 11 test green
+
+**Prodotto:**
+- `src/backend/lifelog2/models/` — package SQLAlchemy 2.0 con 5 moduli (base, auth, pipeline, memory, derived)
+- 14 entità ORM: Device, RawCapture, Segment, SpeakerTurn, Place, Person, MemoryAtom, Episode, Day, Thread, Decision, ActionItem, UserProfileFact, MemoryConsolidationRecord
+- `alembic/` inizializzato con env.py async, `alembic/versions/0001_initial_schema.py` manuale pgvector-aware
+- Embedding: vector(1024) su MemoryAtom/Thread (mxbai-embed-large CT107), vector(192) su Person (SpeechBrain ARIA)
+- `tests/test_models.py` — 10 test, tutti green. `pytest` 11/11.
+- `pyproject.toml` aggiornato con `pgvector>=0.3`
+
+**Prossimo step:** CT203 approval + `lifelog_roberto` DB su CT105 per applicare migration 0001
+
+## [2026-05-07] dev | Lifelog2: M0 API contracts frozen — Android ingest, Redis Streams, ARIA contract
+
+## [2026-05-06] dev | Lifelog2: M0 architettura frozen — CT107 embedding service, memory model Z0-Z7, knowledge files
+
+**Decisioni cristallizzate:**
+- CT107 promosso da legacy a infra reale: embedding service Ollama mxbai-embed-large 1024d
+- DB Postgres separati per persona (lifelog_roberto, lifelog_paola) su CT105
+- pgvector: MemoryAtom/Thread vector(1024), Person voiceprint vector(192) via ARIA
+- Export bundle: pg_dump + mc mirror → USB portabile (nessun detach realtime)
+- V1 data inspected: 2482 memories, audio in chiaro — V2 cifra client-side da giorno 1
+- Redis namespace: `lifelog:stream:{stage}` con 12 stream per pipeline A-K
+
+**File modificati:**
+- `sviluppi/Lifelog2/knowledge/architecture.md` — riscritta completa
+- `sviluppi/Lifelog2/knowledge/memory-model.md` — riscritta completa (Z0-Z7, 13 entità, scoring 7d, retention, pipeline A-K)
+- `sviluppi/Lifelog2/knowledge/development-log.md` — entry decisioni M0
+- `NH-Mini/entities/systems/stack-lifelog2.md` — aggiornata con architettura frozen
+- `knowledge/containers/infrastructure-map.mdc` — CT107 promosso, CT105 aggiornato con lifelog DB
+
+## [2026-05-06] dev | Stratex: Intelligence module — RSS/YouTube scrapers, news feed dashboard, ItemDrawer
+
 ## [2026-05-06] dev | Stratex: Tax Center + Settings + Authelia auth
 
 **File modificati/creati:**
@@ -551,3 +688,88 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - Credenziali DB salvate in SOPS (`ct105.postgres`)
 - `.env` gitignored, `.env.example` committabile, `session.py` senza hardcoded
 - `psycopg2-binary` + `alembic` installati nel venv Stratex
+## [2026-05-06] ingest | Lifelog2 Project Context
+- Initialized Lifelog2 as NH-Mini project.
+- Updated service catalog with Stratex and Lifelog2 dev ports.
+- Disabled local Redis on LXC 190.
+## [2026-05-06] lint | Stratex Wiki Alignment
+- Synced stack-stratex.md with real infrastructure (DB on CT105).
+- Added sources/stratex-project-context.md.
+- Updated components (Authelia, Tax Center) and dev phase.
+## [2026-05-06] dev | ARIA PC 139: fix shutdown logic
+- Implementata 'Nuclear Option' in `orchestrator.py` per killare processi backend via WINDOWTITLE su Windows.
+- Aggiunta terminazione automatica della Dashboard (8089) nello `stop()` dell'orchestratore.
+- Pulito `main_tray.py` delegando la chiusura all'orchestratore per coerenza.
+## [2026-05-06] dev | ARIA PC 139: GPU Exclusivity & JIT Race Condition Fix
+- Implementata esclusività assoluta GPU: ogni avvio di backend locale killa proattivamente qualsiasi altro backend attivo (sia tracciato che orfano via WINDOWTITLE).
+- Introdotto flag `_starting` per gestire il warm-up dei modelli ed evitare istanziazioni multiple o kill prematuri durante il boot.
+- Sincronizzati `orchestrator.py` e `main_tray.py` su PC 139.
+## [2026-05-06] dev | ARIA Dashboard v2.0 - Async Engine & Infinite Scroll
+## [2026-05-06] dev | ARIA Dashboard v2.3 Pro & Shutdown Stability
+- Rifattorizzazione asincrona della Dashboard con Infinite Scrolling e Metrics Breakdown (Cloud/Local/Audio).
+- Implementazione Heartbeat a 5Hz e Live Task Tracking per monitoraggio in tempo reale dei job.
+- Risoluzione conflitti porta 8089 con Antigravity IDE (procedura di bind 0.0.0.0 e port forwarding).
+- Implementazione Shutdown Robusto in 5 fasi con os._exit(0) per prevenire processi zombie su Windows.
+
+---
+
+---
+
+## [2026-05-09] promote | Lifelog2 → CT203
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: Lifelog2
+- RT Node: CT203 (192.168.1.203)
+- Codice: rsync src/ → 192.168.1.203:/opt/Lifelog2/
+- Workaround: applicato 'rootpassword permitted' (prepare-lxc-proxmox.sh)
+
+---
+
+## [2026-05-09] promote | Lifelog2 → CT203
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: Lifelog2
+- RT Node: CT203 (192.168.1.203)
+- Codice: rsync src/ → 192.168.1.203:/opt/Lifelog2/
+
+---
+
+## [2026-05-09] promote | Lifelog2 → CT203
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: Lifelog2
+- RT Node: CT203 (192.168.1.203)
+- Codice: rsync src/ → 192.168.1.203:/opt/Lifelog2/
+
+---
+
+## [2026-05-09] promote | Lifelog2 → CT203
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: Lifelog2
+- RT Node: CT203 (192.168.1.203)
+- Codice: rsync src/ → 192.168.1.203:/opt/Lifelog2/
+
+---
+
+## [2026-05-09] ingest | security-audit-report
+- **Audit Sicurezza**: Scansione completa codebase e centralizzazione segreti in SOPS.
+- **Bonifica**: Pulizia password hardcoded in Stratex, DIAS e Lifelog2.
+- **Nuovo Concept**: [[security-audit-report]]
+## [2026-05-09] dev | Cinematic UI Refactor (Memory OS) su CT203
+- Migrazione dashboard su CT203:5173
+- Implementazione Design System 'Obsidian Depth' (ispirazione Apple TV+)
+- Refactor MemoryCard (Poster format) e Hero Cinematic
+- Overlay Sidebar con trigger globale z-9999
+- Fix Vite proxy per sincronizzazione API Backend
+## [2026-05-10] dev | Finalizzazione ARIA ASR Autonomous (MinIO Auth + Lang Mapping)
+## [2026-05-10] dev | Lifelog2 Pipeline Evolution
+- Refined Stage D into D1 (Voiceprint/Identity) and D2+D3 (Context-aware Enrichment via LLM).
+- Defined grouping rules to separate 'Personal' from 'Knowledge' content.
+- Updated Master Blueprint and Wiki entity.
+## [2026-05-11] dev | Lifelog2: Liquid Brain Architecture & Global Registry
+- **Architettura**: Definito paradigma Swap-In/Out per l'archivio utente (Guscio vs Cervello).
+- **Global Registry**: Progettazione `registry.db` su LXC 203 per Auth (JWT) e provisioning segreti (Salt).
+- **Ingest**: Introdotto modello Ingest Parallelo (24/7) e Analisi Seriale (On-Demand).
+- **App Android**: Audit completo e creazione documento di handoff per l'upgrade a v2.0 (Metadata JSON + Auth).
+- **Legacy Sync**: Verificato parsing GPS/Timestamp dai nomi file .m4a per retrocompatibilità.

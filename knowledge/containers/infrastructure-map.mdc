@@ -1,7 +1,7 @@
 # Infrastructure Map — Container Proxmox
 
 type: resource_declaration
-last_updated: 2026-04-24
+last_updated: 2026-05-11
 auto_source: state/inventory.json + discovery.py
 
 ## Infrastruttura Reale (SOT)
@@ -34,15 +34,31 @@ Tutto il resto è legacy/reference — vedi sezione sotto.
 
 ### CT201 — dias-rt 🟢 RUNTIME DIAS
 - **type**: applicazione (runtime)
-- **engine**: Python FastAPI + SvelteKit
+- **engine**: Python FastAPI + Svelte 5 (Vite)
 - **location**: ct201 (192.168.1.201)
-- **purpose**: DIAS Runtime — Dashboard SvelteKit + API Hub FastAPI (produzione)
+- **purpose**: DIAS Runtime — Dashboard Svelte 5 con Infinite Scroll (ottimizzata per 7000+ asset) + API Hub FastAPI.
 - **isolation_model**: instance
-- **ports**: 8000 (API Hub + Dashboard SvelteKit build embedded)
+- **ports**: 8000 (API Hub + Dashboard build)
 - **resources**: 4096MB RAM, 4 CPU, 20GB storage
 - **os**: Debian 12 (Standard)
 - **progetto**: DIAS (runtime)
 - **deployed**: 2026-03-07
+- **updated**: 2026-05-09 (Heartbeat 5s + Pause Consistency)
+
+### CT203 — lifelog-v2 🟢 RUNTIME LIFELOG
+- **type**: applicazione (runtime)
+- **engine**: Python FastAPI + Svelte 5 (Vite)
+- **location**: ct203 (192.168.1.203)
+- **purpose**: Lifelog2 Runtime — Dashboard Memory OS + API Hub. Ospita il **Global Registry** (`registry.db`) per Auth e Provisioning 24/7.
+- **architettura**: Liquid Brain (Swap-In/Out) — Guscio permanente per ingest parallelo.
+- **isolation_model**: instance
+- **ports**: 8002 (API), 5173 (Dashboard dev/preview)
+- **resources**: 4096MB RAM, 2 CPU, 20GB storage
+- **os**: Debian 12 (Standard)
+- **hostname**: lifelog-v2
+- **progetto**: Lifelog2 (sviluppi/Lifelog2/)
+- **deployed**: 2026-05-09
+- **workaround**: applicato 'rootpassword permitted' (prepare-lxc-proxmox.sh)
 
 ### CT202 — ct202-gateway 🌐 INTERNET GATEWAY
 - **type**: infrastructure
@@ -76,9 +92,23 @@ Tutto il resto è legacy/reference — vedi sezione sotto.
 - **ports**: 5432 (PostgreSQL)
 - **resources**: 4096MB RAM, 4 CPU, 50GB storage
 - **os**: Debian 12
-- **database**: `stratex` (Financial data), `neural_home` (General purpose)
-- **progetto**: Stratex (sviluppi/stratex/), NH-Mini (core)
+- **database**: `stratex` (Financial data), `neural_home` (General purpose), `lifelog_roberto` (Liquid Brain — Swap-In/Out abilitato), `lifelog_paola` (Liquid Brain — futuro)
+- **progetto**: Stratex (sviluppi/stratex/), NH-Mini (core), Lifelog2 (sviluppi/Lifelog2/)
 - **deployed**: 2026-05-04 (Stratex migration)
+- **nota**: pgvector usato a dimensioni diverse per progetto. Supporta il caricamento dinamico (cartucce) dal PC 139 via Session Manager.
+
+### CT107 — nhi-embeddings 🟣 EMBEDDING SERVICE
+- **type**: infrastruttura (inference CPU)
+- **engine**: Ollama
+- **location**: ct107 (192.168.1.107)
+- **purpose**: Embedding service dedicato — genera vettori semantici 1024d per Lifelog2 e potenzialmente altri progetti.
+- **isolation_model**: instance
+- **ports**: 11434 (Ollama API)
+- **models**: `mxbai-embed-large:latest` (1024d, primario), `nomic-embed-text:latest` (768d, fallback)
+- **resources**: CPU-only (non richiede GPU)
+- **os**: Debian 12
+- **progetto**: Lifelog2 (sviluppi/Lifelog2/) — pipeline stage G embedding
+- **nota**: Promosso da legacy a infra reale 2026-05-06. Ollama già installato e running. Voiceprint (192d SpeechBrain) rimane su ARIA PC139.
 
 ---
 
@@ -105,9 +135,15 @@ PC139 (ARIA GPU Worker)
   → Redis su CT120 (BRPOP/LPUSH job queue)
   → HTTP Asset Server locale porta 8082 per output
 
+CT107 (Embedding Service)
+  → Ollama mxbai-embed-large 1024d
+  → serve Lifelog2 pipeline stage G (embedding)
+  → endpoint HTTP su porta 11434
+
 CT105 (Postgres Hub)
   → serve `stratex` DB per progetto Stratex
   → serve `neural_home` per persistenza generica NH-Mini
+  → serve `lifelog_roberto` per Lifelog2 (pending creation)
 ```
 
 ---
@@ -122,12 +158,12 @@ come riferimento finché non servono le risorse. Non vanno considerati nell'arch
 | VM100 | vm-ubuntu | running | Primo sistema Proxmox — obsoleto, origine di tutto |
 | CT101 | chromadb-lxc | running | Vector DB — test iniziale, non integrato nell'architettura attuale |
 | CT103 | observability | running | Grafana + Prometheus — reference, non configurato per infra attuale |
-| CT104 | minio-lxc | running | Object storage S3 — test iniziale |
+| CT104 | minio-lxc | running | Object storage S3 — bucket `lifelog` per **Parallel Ingest** (Blind Staging) |
 | CT106 | WarRoom | stopped | Primo progetto pre-NH-Mini — da rifare con filosofia NH-Mini |
-| CT107 | nhi-embeddings | running | Embedding service — precedente stack NHI, da rivalutare |
+| CT107 | nhi-embeddings | running | ⬆️ Promosso a infra reale 2026-05-06 — vedi sezione sopra |
 | CT160 | NHI-CORE-v1.1 | running | Vecchia versione NH-Mini con dashboard — dashboard da portare su CT190, poi ritirare |
 | CT170 | nhi-backup | stopped | Backup NHI stack — precedente sistema |
-| CT200 | ct200 | stopped | Container dev/test generico |
+| CT202 | ct202-gateway | running | Internet gateway (nginx + ngrok) |
 
 **Nota per l'agent:** Quando pianifichi nuovi sviluppi, considera SOLO i container della sezione
 "Infrastruttura Reale". I container legacy non devono essere integrati in nuove architetture.

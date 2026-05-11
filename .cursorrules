@@ -71,6 +71,8 @@ CORE PRINCIPLES
 → PREFER minimal changes — non aggiungere complessità se non richiesta
 → ASK before creating infrastructure (container, servizi, file di knowledge)
 → CHECK core/incidents.mdc to learn from past assumption errors.
+→ **PIPELINE SUSPENSION**: Ogni comando di pausa deve essere atomico (finitura del task in corso) e basato su segnali Redis (`dias:project:{id}:paused`). L'orchestratore deve monitorare i worker ogni 5s per garantire reattività.
+
 
 AUTONOMY BOUNDARIES
 ✅ CAN: read files, search knowledge/, use credential_manager,
@@ -234,10 +236,14 @@ ERROR HANDLING
 → Dubbio su come procedere? Leggi knowledge/agent/agent-behavior-guidelines.mdc
 → Errore sconosciuto? Documenta in development-history e chiedi all'utente
 
+### ARIA Operations (Windows PC 139)
+
+- **Port 8089**: Always bind to `0.0.0.0` for dashboard access. In case of conflict with Antigravity IDE (on `127.0.0.1`), prefer changing the ARIA port to `8090` or disabling IDE port forwarding.
+- **Robust Shutdown**: Always use `os._exit(0)` in the main tray process after `icon.stop()` to ensure all orphaned library threads (Redis, Pystray) are terminated.
+- **Heartbeat**: Maintain 5s heartbeat interval for real-time dashboard responsiveness.
+
 META — COME EVOLVONO QUESTE REGOLE
 → Le .cursorrules sono il DNA operativo. Evolvono lentamente e deliberatamente.
-→ NON modificare .cursorrules autonomamente — richiede approvazione esplicita dell'utente
-→ Ogni modifica va documentata in development-history.mdc con categoria ARCHITECTURE
 → PRINCIPIO FONDAMENTALE: le regole puntano a meccanismi (script, file, protocolli),
    MAI a dati specifici (nomi servizi, IP, tecnologie). I meccanismi sono stabili; i dati cambiano.
 → Prima di proporre una modifica a .cursorrules, verifica che:
@@ -250,3 +256,10 @@ META — COME EVOLVONO QUESTE REGOLE
     MOTIVO: [perché — problema che risolve]
     IMPATTO: [cosa cambia nel comportamento agent]
     RIMUOVE/MODIFICA: [regole esistenti da aggiornare per evitare contraddizioni]"
+
+## Pattern Operativi: Blackwell ASR Compatibility
+
+1. **Audio Loading**: NON usare torchaudio.load() su Windows/Blackwell. Usa soundfile.read() per evitare crash di libtorchcodec.
+2. **HF Authentication**: Per modelli gated (Pyannote), usare login(token) globale all'inizio del server. Disabilitare HF_HUB_OFFLINE prima degli import.
+3. **Asset Management**: Forzare HF_HOME verso data\assets\models\huggingface.
+4. **Pyannote 4.x**: Accedere ai segmenti tramite output.speaker_diarization.

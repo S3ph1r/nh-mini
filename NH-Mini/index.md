@@ -27,6 +27,7 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[ct190-nh-mini]] | 190 | NH-Mini agent framework ⭐ | running |
 | [[ct201-dias-rt]] | 201 | DIAS runtime — dashboard + API | running |
 | [[ct202-gateway]] | 202 | Internet gateway (nginx + ngrok) | running |
+| [[ct203-lifelog]] | 203 | lifelog-v2 runtime — dashboard + API | active |
 
 ---
 
@@ -38,6 +39,8 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[entities/systems/stack-dias\|stack-dias]] | DIAS — pipeline audiobook cinematico (10 stadi, Sound-on-Demand v4.1) |
 | [[entities/systems/stack-nh-mini\|stack-nh-mini]] | NH-Mini — control plane CT190 (dashboard, service catalog, discovery daemon) |
 | [[entities/systems/stack-stratex\|stack-stratex]] | Stratex — Wealth Intelligence System (gestione patrimoniale, AI ibrida, RAG) |
+| [[entities/systems/stack-lifelog2\|stack-lifelog2]] | Lifelog2 — Personal memory operating layer (audio capture, RAG, memories) |
+| [[entities/services/service-asr-blackwell\|service-asr-blackwell]] | ASR Blackwell Service — Backend di trascrizione e biometria su PC 139 |
 
 ---
 
@@ -48,6 +51,7 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[concepts/dependency-map\|dependency-map]] | Mappa dipendenze tra container e stack |
 | [[concepts/nh-mini-philosophy\|nh-mini-philosophy]] | Filosofia e DNA operativo di NH-Mini |
 | [[concepts/telegram-push-remediation\|telegram-push-remediation]] | Sistema notifiche push e auto-riparazione interattiva (Fase 3) |
+| [[concepts/security-audit-report\|security-audit-report]] | Report audit sicurezza 2026-05-09 — centralizzazione SOPS e bonifica leak |
 | [[docs/smart-troubleshooting-design\|smart-troubleshooting-design]] | Studio: Analisi intelligente, Local vs Cloud e Privacy (Fase 4+) |
 | [[hard-triggers\|hard-triggers]] | `knowledge/agent/hard-triggers.mdc` — Protocolli operativi rigidi per l'agent |
 
@@ -60,6 +64,8 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[concepts/aria-redis-protocol\|aria-redis-protocol]] | Nomenclatura code Redis e schema payload (SOT) |
 | [[concepts/aria-task-lifecycle\|aria-task-lifecycle]] | Ciclo di vita di un task ARIA (stati e transizioni) |
 | [[concepts/aria-environments\|aria-environments]] | Architettura ambienti Python 3 livelli (Miniconda + conda envs) |
+| [[concepts/aria-asset-server\|aria-asset-server]] | Gestione repository asset multimediali e caching (New) |
+| [[concepts/aria-shutdown-protocol\|aria-shutdown-protocol]] | Sequenza di spegnimento safe per stack ARIA (New) |
 | [[concepts/aria-tts-backends\|aria-tts-backends]] | Fish S1-mini vs Qwen3-TTS — confronto, emotion markers, voice library |
 | [[concepts/aria-telemetry\|aria-telemetry]] | TelemetryDB SQLite — schema task_log, hook post_result, query analisi performance |
 | [[concepts/aria-gemini-503-pattern\|aria-gemini-503-pattern]] | Pattern 503 Gemini free tier — fasce orarie, backoff progressivo, finestre ottimali |
@@ -80,6 +86,8 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 ---
 
 ## Sources — Ingerite
+- [[sources/aria-asr-finalization|ARIA ASR Finalization & Autonomous Auth]]
+- [[sources/asr-blackwell-migration|ASR Blackwell Migration & Voiceprint 256d]]
 
 | Pagina | Sorgente raw | Data |
 |--------|-------------|------|
@@ -96,6 +104,7 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[sources/dias-blueprint\|dias-blueprint]] | `sviluppi/dias/docs/blueprint.md` (v7.0) | 2026-04-24 |
 | [[sources/dias-workflow-logic\|dias-workflow-logic]] | `sviluppi/dias/docs/dias-workflow-logic.md` (v10.0) | 2026-04-24 |
 | [[sources/dias-production-standard\|dias-production-standard]] | `sviluppi/dias/docs/production-standard.md` (v3.0) | 2026-04-24 |
+| [[sources/stack-aria-dashboard\|ARIA Dashboard v2.3 Pro]] | `sviluppi/ARIA/docs/dashboard-v2.3.md` | 2026-05-06 |
 | [[sources/dias-inventory\|dias-inventory]] | `sviluppi/dias/docs/dias-inventory.md` (v2.0) | 2026-04-24 |
 | [[sources/dias-aria-integration-master\|dias-aria-integration-master]] | `sviluppi/dias/docs/dias-aria-integration-master.md` | 2026-04-24 |
 | [[sources/dias-preproduction-guide\|dias-preproduction-guide]] | `sviluppi/dias/docs/preproduction-guide.md` | 2026-04-24 |
@@ -103,18 +112,22 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[sources/dias-prompt-evolution\|dias-prompt-evolution]] | `sviluppi/dias/docs/prompt-evolution.md` | 2026-04-24 |
 | [[sources/dias-voice-pipeline-quality\|dias-voice-pipeline-quality]] | `sviluppi/dias/docs/dias-voice-pipeline-quality.md` | 2026-04-29 |
 | [[sources/stratex-blueprint\|stratex-blueprint]] | `sviluppi/stratex/docs/blueprint.md` (v3.0) | 2026-05-04 |
+| [[sources/stratex-project-context\|stratex-project-context]] | `sviluppi/stratex/.project-context` | 2026-05-06 |
+| [[sources/lifelog2-project-context\|lifelog2-project-context]] | `sviluppi/Lifelog2/.project-context` | 2026-05-06 |
+| [[sources/lifelog-asr-backend\|lifelog-asr-backend]] | `sviluppi/ARIA/docs/backends/lifelog-asr.md` | 2026-05-07 |
+| [[sources/lifelog2-android-handoff\|lifelog2-android-handoff]] | `sviluppi/Lifelog2/docs/lifelog2_android_handoff.md` | 2026-05-11 |
 
 ---
 
 ## Statistiche Wiki
 
-- **Pagine totali:** 54
-- **Entities containers:** 9
-- **Entities systems:** 4 (ARIA, DIAS, NH-Mini, Stratex)
-- **Concepts:** 14
-- **Sources ingerite:** 20
+- **Pagine totali:** 58
+- **Entities containers:** 10
+- **Entities systems:** 5 (ARIA, DIAS, NH-Mini, Stratex, Lifelog2)
+- **Concepts:** 15
+- **Sources ingerite:** 24
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-06 (Stratex: Tax Center, Settings, Authelia forward-auth su CT202)
+- **Ultimo aggiornamento:** 2026-05-11 (Liquid Brain Architecture, Global Registry, Android App Handoff)
 
 ---
 
