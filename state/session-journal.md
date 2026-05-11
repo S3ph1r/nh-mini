@@ -1,3 +1,25 @@
+## [2026-05-11 17:30] END
+**Obiettivo sessione**: Global Registry implementation + CT203 deploy + Android handoff analysis.
+- **Completato**:
+  - Global Registry (`registry.db` SQLite) implementato su CT203 — package `registry/` con `models.py`, `db.py`, router `auth.py`
+  - Endpoint live: `POST /api/v1/auth/register`, `POST /api/v1/auth/login` — opaque hex token + bcrypt + encryption_salt
+  - `api/deps.py` refactored: `CurrentDevice` dataclass, helpers centralizzati (`_hash_token`, `_make_token`, `get_reg_db`), fire-and-forget last_seen_at
+  - CT203 systemd service (`lifelog2.service`) — uvicorn :8002, `PYTHONPATH` corretto, `EnvironmentFile`
+  - CT202 nginx: location `/lifelog/` → CT203:8002 con `client_max_body_size 50M`
+  - End-to-end verificato: `https://obliging-fitting-cheetah.ngrok-free.app/lifelog/health` → 200
+  - Utente test "matteo" registrato via curl + token verificato
+  - `/simplify` eseguito: fix type mismatch `user_id str vs uuid`, duplicate helpers rimossi, guard double-init `registry/db.py`, path fragile → env var
+  - `/doc lifelog2` completo: `architecture.md`, `api-contracts.md`, `development-log.md`, `NH-Mini/log.md`, `stack-lifelog2.md` aggiornati
+- **Incompleto**:
+  - Android app upgrade (Task A/B/C/D) — pending Android Studio agent
+  - `ALTER TABLE persons.voiceprint_embedding vector(192) → vector(256)` su CT105 — blocca M4 D1
+  - Script Session Management Liquid Brain (Swap-In/Swap-Out fisico)
+- **Mine**:
+  - ⚠️ CT203 gira Python 3.11.2 ma `pyproject.toml` dichiara `>=3.12` — da documentare/allineare
+  - ⚠️ `HF_HUB_OFFLINE` deve essere `false` per primo load modelli gated PC139
+
+---
+
 ## [2026-05-11 14:15] END
 **Obiettivo sessione**: Definizione architettura Liquid Brain e audit app Android.
 - **Completato**: 

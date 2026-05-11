@@ -3,7 +3,7 @@ title: "Stack — Lifelog2"
 type: entity
 tags: [stack, lifelog, memory, pipeline, embedding]
 sources: [lifelog2-project-context.md]
-updated: 2026-05-09 (Cinematic UI Refactor)
+updated: 2026-05-11 (Global Registry live, CT203 deploy, Android handoff)
 ---
 
 # Stack — Lifelog2
@@ -121,10 +121,14 @@ A (Ingest) → B (Preprocess - LXC 203) → C (ASR & Diarize - PC 139)
 
 Per garantire privacy totale e portabilità, Lifelog2 separa il sistema (Guscio) dai dati (Cervello).
 
-### 9.2 Global Registry (The Shell Layer)
-Situato stabilmente su **LXC 203**, il Global Registry (`registry.db`) è il database di sistema che non viene mai detaccato.
-- **Funzione**: Gestione Auth (JWT), Provisioning dei segreti (Encryption Salt) e mapping dei Device.
-- **Vantaggio**: Consente l'onboarding "Cloud-Like" e la ricezione dati 24/7 anche con archivio utente offline.
+### 9.2 Global Registry (The Shell Layer) — ✅ live 2026-05-11
+
+Situato stabilmente su **LXC 203**, il Global Registry (`registry.db` SQLite) è il database di sistema che non viene mai detaccato.
+- **Funzione**: Auth (token opaque hex + bcrypt), provisioning `encryption_salt` (per-user, fisso), mapping device.
+- **Endpoint live**: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`
+- **Token**: opaque hex 64 char, SHA-256 in DB, scadenza +1 anno. Revoca immediata per cancellazione riga.
+- **`encryption_salt`**: ritornato a ogni login — l'app lo usa per PBKDF2 → chiave AES-GCM locale.
+- **Path**: `/opt/Lifelog2/registry.db` (override via `LIFELOG2_REGISTRY_DB` env var)
 
 ### 9.3 Ingest Parallelo vs Analisi Seriale (Il Proiettore)
 - **Ingest (Always On)**: Ricezione audio cifrato da tutti i device autorizzati -> Staging su MinIO.

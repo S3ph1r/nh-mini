@@ -6,6 +6,30 @@ Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
 ---
 
+## [2026-05-11] dev | Lifelog2: Global Registry + CT203 Live + Android Handoff
+
+**Global Registry implementato e deployato:**
+- Nuovo package `registry/` — SQLite `registry.db` sempre online su CT203
+- `User` (username, bcrypt, encryption_salt) + `RegistryDevice` (token_hash, expires_at +1y)
+- Router `POST /api/v1/auth/register` e `POST /api/v1/auth/login` — token opaque hex, salt per-user fisso
+- `get_current_device` migrato da postgres a registry.db; `CurrentDevice` dataclass condiviso tra routers
+
+**CT203 live:**
+- systemd `lifelog2.service` creato e abilitato — uvicorn :8002
+- CT202 nginx: `location /lifelog/` → CT203:8002 aggiunta, nginx reloadato
+- Stack verificato end-to-end via ngrok: `obliging-fitting-cheetah.ngrok-free.app/lifelog/`
+
+**Android handoff:**
+- Audit gap app v1 vs contratti v2 — `ended_at` obbligatorio nel metadata upload (era omesso)
+- `docs/lifelog2_android_handoff.md` + `docs/lifelog2_backend_handoff.md` documentati
+- Flow onboarding: register→409→login (cascata senza schermata dedicata)
+
+**Cleanup (simplify):** dedupati `_hash_token`/`_make_token`/`get_reg_db`, type fix `user_id: str`, guard double-init, path env var.
+
+**Commit:** `01b0f99` (feat) + `4847762` (refactor) su repo Lifelog2. NH-Mini `58d013c`.
+
+---
+
 ## [2026-05-09] dev | Lifelog2: Memory Shell (SvelteKit + Tailwind 4) + CT 203 Setup
 
 **Frontend Genesis:**
