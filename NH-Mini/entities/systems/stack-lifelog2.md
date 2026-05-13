@@ -125,8 +125,9 @@ Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SP
 | M1 — Infrastructure + API Ingest | ✅ Done | CT105 DB live, MinIO bucket live, FastAPI su CT190:8002, 4 endpoint Android testati, 20 segmenti V1 in pipeline |
 | M2 — Pipeline Stage B (Preprocess) | ✅ Done | Consumer Redis `lifelog:stream:ingest`, ffmpeg WAV 16kHz, quality gate, MinIO `normalized-audio/`, emit `lifelog:stream:asr` (2026-05-07) |
 | M3 — Pipeline Stage C (ASR) | ✅ Done | Refactored 2026-05-12: `capture_class` (personal/mixed/ambient/unknown), user-first voiceprint matching, drain loop fix, legacy user_id compat. |
-| M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | Blueprint v1 cristallizzato. Worker Stage D implementato con prompt esternalizzati (config.json + versioning). AriaLLMClient aggiornato (qwen3-14b-q4km, messages format). E2E test superato: 21s, MemoryAtom qualità alta. |
-| M5 — Episode/Day Grouping | Pending | Aggregazione temporale, Day digest, Thread/Saga |
+| M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | Blueprint v1 cristallizzato. Worker Stage D implementato con prompt esternalizzati (config.json + versioning). AriaLLMClient (qwen3-14b-q4km, timeout 600s, greedy batch count=100). E2E test: 21 segmenti, MemoryAtom qualità alta (~17-21s/seg warm). |
+| M4.5 — Stage E (Embedding + WAV cleanup) | ✅ Done 2026-05-13 | mxbai-embed-large 1024d via CT107, `memory_atoms.embedding` aggiornato, WAV MinIO eliminato, pipeline_status="consolidated". Fast Pipeline A→E operativa. |
+| M5 — Episode/Day Grouping | Pending | Stage F (grouping), Stage G (day digest), Worker Detective (ogni 6 seg) — architettura Level 2 definita, implementazione futura |
 | M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico |
 | M7 — Frontend SvelteKit | 🔧 In test | **Cinematic UI Refactor completo**. Dashboard accessibile su CT203:5173. Navigazione overlay ok. |
 

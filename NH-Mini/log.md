@@ -4,6 +4,16 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-13] dev | Lifelog2: Stage D+E operativi + E2E pipeline A→E testata + /doc sync
+
+- Stage D LLM enrichment (qwen3-14b-q4km) + Stage E embedding (mxbai 1024d) implementati e testati.
+- Fast Pipeline A→E formalizzata (greedy workers, Level 1). Async Workers Level 2 definiti (Detective, F, G).
+- ARIA: backend LLM (qwen3-14b-q4km @ 8090, llama-server.exe b9119 sm_120) operativo su PC139.
+- /doc Lifelog2: `architecture.md`, `development-log.md` aggiornati. Redis Streams table corretta.
+- /doc ARIA: `aria-state-of-gaps.md` (A0-3 resolved), `ARIA-Service-Registry.md` (LLM backend + coda).
+- `stack-lifelog2.md`: M4.5 Stage E added, M5 architettura Level 2 descritta.
+- Redis cleanup: 2 callback orfane `aria:result:llm:*` eliminate.
+
 ---
 
 ## [2026-05-12] dev | Lifelog2: Stage C refactor + voiceprint quality 1.0 + identity resolution design
