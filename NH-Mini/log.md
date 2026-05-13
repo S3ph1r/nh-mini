@@ -833,3 +833,11 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - **ARIA backend qwen3-14b**: `launcher.py`, `lifelog_llm.py` (health /health, reasoning_content, /no_think), `backends_manifest.json` (porta 8090), `install_lifelog_llm.ps1`.
 - **E2E test superato**: segmento 3599a424 (AI + mental health, Italian, 5 min) — MemoryAtom di alta qualità in 21s, 447 token, confidence 0.85.
 - **Wiki aggiornata**: [[stack-lifelog2]] (M4 ✅, pipeline, identity resolution 3 livelli), [[stack-aria]] (qwen3-14b-q4km aggiunto).
+
+## [2026-05-13] dev | Lifelog2 Fast Pipeline formalizzata — Stage D greedy + Stage E implementato
+
+- **Architettura consolidata**: Fast Pipeline = A→B→C→D→E per ogni segmento. Worker greedy (count=100). Level 2 (Detective, F, G, Retroactive) completamente asincroni.
+- **Stage D refactor**: count=1→100 (greedy batch), passa `normalized_audio_key` a Stage E, fix typo pipeline_status.
+- **Stage E nuovo**: consumer `lifelog:stream:embed`, embedding mxbai-embed-large via CT107, WAV delete da MinIO, `pipeline_status="consolidated"`.
+- **config.py**: aggiunti `ollama_url` e `ollama_embed_model` (override via env).
+- **Confine pipeline**: dopo Stage E il ricordo è autosufficiente — testo, voiceprint 256d, MemoryAtom, embedding 1024d. I worker Level 2 leggono questi dati senza bisogno di riaprire audio.
