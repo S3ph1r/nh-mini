@@ -3,7 +3,7 @@ title: "ARIA — Adaptive Resource for Inference and AI"
 type: entity
 tags: [sistema, aria, gpu, tts, stt, llm, redis, windows]
 sources: [aria-project-context.md, aria-blueprint.md, aria-api-contract.md]
-updated: 2026-05-09
+updated: 2026-05-13
 ---
 
 # ARIA — Adaptive Resource for Inference and AI
@@ -59,6 +59,7 @@ GUI configurazione: `settings_gui.py` (customtkinter)
 | Cloud Gemini | `gemini-flash-lite-latest` | — | cloud | ✅ Routing attivo |
 | ACE-Step Music | `acestep-1.5-xl-sft` | 8084 | ~8 GB | ✅ Per DIAS D2 |
 | Lifelog ASR | `qwen3-asr-1.7b` | 8087 | ~9 GB | ✅ Operativo (Blackwell) |
+| Lifelog LLM | `qwen3-14b-q4km` | 8090 | ~9 GB | ✅ Operativo — llama-server.exe b9119 (CUDA 13.1 sm_120) |
 
 ### HTTP Asset Server
 

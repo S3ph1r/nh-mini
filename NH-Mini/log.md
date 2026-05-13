@@ -6,6 +6,32 @@ Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
 ---
 
+## [2026-05-12] dev | Lifelog2: Stage C refactor + voiceprint quality 1.0 + identity resolution design
+
+**Stage C — `stage_c_asr.py` refactored:**
+- `_classify_and_resolve()` sostituisce `_resolve_speaker_persons()` — nessun `Person(unknown)` in Stage C (deferred to Stage D)
+- `capture_class` (personal/mixed/ambient/unknown) calcolato per ogni segment e scritto su `Segment.capture_class`
+- User-first voiceprint matching: l'utente viene cercato per primo, poi le altre persone note
+- Drain loop bug fix: `break` nel `for _stream, entries` non usciva dal `while True` — fix con list comprehension + check `if not msgs: break`
+- Legacy `user_id` compat: Lifelog v1 usava string "roberto" — ora catch `ValueError` e skip self-match
+- Migration `0003_segment_capture_class.py` applicata su CT203
+
+**Voiceprint enrollment:**
+- 4 campioni M4A legacy recuperati da PC139 `D:\LifeLogData\user_data\` via SCP
+- Script one-shot `/tmp/enroll_legacy_vp.py`: decrypt → WAV → ARIA → weighted average → Person update
+- Roberto: voiceprint_quality 0.40 (2 campioni) → **1.00 (6 campioni)**
+
+**Stage B + voiceprint_worker:**
+- Stesso drain loop fix applicato a entrambi i worker
+
+**Identity Resolution Design:**
+- `docs/lifelog2-identity-resolution-design.md` creato — design completo
+- Stack certezza 0–3: Unknown → Candidato LLM → Confermato utente → Enrolled
+- Migration 0004 pianificata (identity_level, confirmed_at, confirmed_by, disambiguation_tag, identity_candidates JSONB)
+- Piano 6 fasi post-Stage D, stima 4-6 sessioni
+
+**Wiki:** `sources/lifelog2-identity-resolution.md` creato, `stack-lifelog2.md` aggiornato, `index.md` aggiornato.
+
 ## [2026-05-11] dev | Lifelog2: Global Registry + CT203 Live + Android Handoff
 
 **Global Registry implementato e deployato:**
@@ -797,3 +823,13 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - **Ingest**: Introdotto modello Ingest Parallelo (24/7) e Analisi Seriale (On-Demand).
 - **App Android**: Audit completo e creazione documento di handoff per l'upgrade a v2.0 (Metadata JSON + Auth).
 - **Legacy Sync**: Verificato parsing GPS/Timestamp dai nomi file .m4a per retrocompatibilità.
+
+## [2026-05-13] dev | Lifelog2 Stage D + ARIA qwen3-14b-q4km — E2E completo
+
+- **Stage D Blueprint v1**: cristallizzato `Lifelog2/docs/lifelog-stage-d-blueprint-v1.md` — pipeline per segmento, timing (21s warm), modalità streaming/batch, worker detective, retroactive indexer.
+- **Prompt versioning**: creati `prompts/config.json`, `prompts/stage_d_enrich_v1.txt`, `prompts/stage_d_detective_v1.txt`. Nessun prompt hardcoded in codice.
+- **AriaLLMClient aggiornato**: modello `qwen3-14b-q4km`, queue `aria:q:llm:local:qwen3-14b-q4km:lifelog`, messages format con system prompt, thinking=False.
+- **Stage D worker**: `stage_d_enrichment.py` riscritto — carica prompt da file, usa MemoryAtom schema v1 (event_type, speaker_turns_annotated, temporal_refs, confidence in entities_json).
+- **ARIA backend qwen3-14b**: `launcher.py`, `lifelog_llm.py` (health /health, reasoning_content, /no_think), `backends_manifest.json` (porta 8090), `install_lifelog_llm.ps1`.
+- **E2E test superato**: segmento 3599a424 (AI + mental health, Italian, 5 min) — MemoryAtom di alta qualità in 21s, 447 token, confidence 0.85.
+- **Wiki aggiornata**: [[stack-lifelog2]] (M4 ✅, pipeline, identity resolution 3 livelli), [[stack-aria]] (qwen3-14b-q4km aggiunto).

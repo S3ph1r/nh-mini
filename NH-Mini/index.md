@@ -116,18 +116,20 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[sources/lifelog2-project-context\|lifelog2-project-context]] | `sviluppi/Lifelog2/.project-context` | 2026-05-06 |
 | [[sources/lifelog-asr-backend\|lifelog-asr-backend]] | `sviluppi/ARIA/docs/backends/lifelog-asr.md` | 2026-05-07 |
 | [[sources/lifelog2-android-handoff\|lifelog2-android-handoff]] | `sviluppi/Lifelog2/docs/lifelog2_android_handoff.md` | 2026-05-11 |
+| [[sources/lifelog2-identity-resolution\|lifelog2-identity-resolution]] | `sviluppi/Lifelog2/docs/lifelog2-identity-resolution-design.md` | 2026-05-12 |
+| [[sources/lifelog-stage-d-blueprint\|lifelog-stage-d-blueprint]] | `sviluppi/Lifelog2/docs/lifelog-stage-d-blueprint-v1.md` | 2026-05-13 |
 
 ---
 
 ## Statistiche Wiki
 
-- **Pagine totali:** 58
+- **Pagine totali:** 59
 - **Entities containers:** 10
 - **Entities systems:** 5 (ARIA, DIAS, NH-Mini, Stratex, Lifelog2)
 - **Concepts:** 15
-- **Sources ingerite:** 24
+- **Sources ingerite:** 25
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-11 (Liquid Brain Architecture, Global Registry, Android App Handoff)
+- **Ultimo aggiornamento:** 2026-05-12 (Stage C refactor, voiceprint quality 1.0, identity resolution design)
 
 ---
 

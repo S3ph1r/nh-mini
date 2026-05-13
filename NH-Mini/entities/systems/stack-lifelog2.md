@@ -1,9 +1,9 @@
 ---
 title: "Stack — Lifelog2"
 type: entity
-tags: [stack, lifelog, memory, pipeline, embedding]
-sources: [lifelog2-project-context.md]
-updated: 2026-05-11 (Global Registry live, CT203 deploy, Android handoff)
+tags: [stack, lifelog, memory, pipeline, embedding, identity]
+sources: [lifelog2-project-context.md, lifelog2-identity-resolution.md]
+updated: 2026-05-13
 ---
 
 # Stack — Lifelog2
@@ -23,7 +23,7 @@ Android App (AES-GCM client-side)
   → CT105 Postgres (SOT — DB separati per persona)
   → CT104 MinIO (blob: audio cifrato, transcript, immagini)
   → CT107 Embedding Service (Ollama mxbai-embed-large 1024d)
-  → PC139 ARIA (ASR, diarizzazione, voiceprint 192d, LLM enrichment)
+  → PC139 ARIA (ASR, diarizzazione, voiceprint 256d, LLM enrichment qwen3-14b)
   → CT190 NH-Mini (control plane, dev center)
 ```
 
@@ -64,7 +64,7 @@ L'interfaccia di Lifelog2 è stata evoluta da un modello glassmorphism generico 
 
 - **MemoryAtom.embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
 - **Thread.topic_embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
-- **Person.voiceprint_embedding**: `vector(256)` — Pyannote ResNet34 via ARIA PC139 (M4)
+- **Person.voiceprint_embedding**: `vector(256)` — Qwen3-ASR embedding via ARIA PC139 (voiceprint_quality=1.0 su 6 campioni per Roberto)
 
 CT107 promosso da legacy a infra reale: LXC always-on, CPU, Ollama con mxbai-embed-large già installato.
 
@@ -80,12 +80,34 @@ Questo garantisce che il server NH-Mini sia un "guscio vuoto" senza dati persona
 
 ## Pipeline (A–G)
 
-A (Ingest) → B (Preprocess - LXC 203) → C (ASR & Diarize - PC 139) 
-→ D1 (Identity/Voiceprint - LXC 203/PC 139) 
-→ D2+D3 (Classification & Enrichment - PC 139 LLM)
-→ E (Text Embedding - LXC 107) 
-→ F (Grouping/Episodes - LXC 203) 
+```
+A (Ingest Android M4A) 
+→ B (Preprocess WAV 16kHz — LXC 203)
+→ C (ASR + Diarize + Voiceprint 256d — PC 139 qwen3-asr-1.7b)
+→ D (MemoryAtom LLM — PC 139 qwen3-14b-q4km)  ← Stage D v1 completo
+→ E (Text Embedding 1024d — LXC 107 mxbai)
+→ F (Grouping/Episodes — LXC 203)
 → G (Retention/Oblivion)
+```
+
+### Stage D — Enrichment Architecture
+
+Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SPEAKER_XX`) fino a Stage E.
+
+- **Input**: transcript + speaker_turns (da Stage C via MinIO)
+- **Task ARIA**: queue `aria:q:llm:local:qwen3-14b-q4km:lifelog`
+- **Output MemoryAtom**: summary, event_type, topics, entities, speaker_turns_annotated (role_inferred), temporal_refs, confidence
+- **Prompt versioning**: `prompts/config.json` → `prompts/stage_d_enrich_v{n}.txt` (nessun prompt hardcoded)
+- **Timing warm**: ~55s totali (LLM load + inferenza), ~21s se già carico
+- **Timing cold**: ~155-200s (ASR già scarico → LLM load + inferenza)
+
+### Identity Resolution (3 livelli)
+
+| Livello | Nome | Modalità | GPU |
+|---------|------|----------|-----|
+| RT (Stage D) | Speaker anonimi | MemoryAtom con SPEAKER_XX | LLM warm |
+| Worker Detective | Inferenza identità da discourse | LLM solo (no ASR) — max 8 segmenti/call, ogni ora | LLM cold |
+| Retroactive Indexer | Cosine similarity voiceprint 256d | CPU pura, scipy — < 5s su 1000+ segmenti | No GPU |
 
 ### Logica di Raggruppamento (Grouping)
 - **Continuità**: Gap < 10 min + stesso GPS.
@@ -102,8 +124,8 @@ A (Ingest) → B (Preprocess - LXC 203) → C (ASR & Diarize - PC 139)
 | M0 — Foundation/Product Spec | ✅ Done | Blueprint, memory model, API contracts frozen (2026-05-07) |
 | M1 — Infrastructure + API Ingest | ✅ Done | CT105 DB live, MinIO bucket live, FastAPI su CT190:8002, 4 endpoint Android testati, 20 segmenti V1 in pipeline |
 | M2 — Pipeline Stage B (Preprocess) | ✅ Done | Consumer Redis `lifelog:stream:ingest`, ffmpeg WAV 16kHz, quality gate, MinIO `normalized-audio/`, emit `lifelog:stream:asr` (2026-05-07) |
-| M3 — Pipeline Stage C (ASR) | ✅ Done | Worker `stage_c_asr.py` operativo. Trascrizione Qwen3-ASR e Diarizzazione Pyannote validate su Blackwell (2026-05-10). |
-| M4 — Stage D (Voiceprint + Enrichment) | 🔧 In test | D1 (Identity via SpeechBrain 192d) e D2+D3 (Context-aware Enrichment via Aria LLM) in fase di implementazione. |
+| M3 — Pipeline Stage C (ASR) | ✅ Done | Refactored 2026-05-12: `capture_class` (personal/mixed/ambient/unknown), user-first voiceprint matching, drain loop fix, legacy user_id compat. |
+| M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | Blueprint v1 cristallizzato. Worker Stage D implementato con prompt esternalizzati (config.json + versioning). AriaLLMClient aggiornato (qwen3-14b-q4km, messages format). E2E test superato: 21s, MemoryAtom qualità alta. |
 | M5 — Episode/Day Grouping | Pending | Aggregazione temporale, Day digest, Thread/Saga |
 | M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico |
 | M7 — Frontend SvelteKit | 🔧 In test | **Cinematic UI Refactor completo**. Dashboard accessibile su CT203:5173. Navigazione overlay ok. |
@@ -146,6 +168,47 @@ Lifelog2 utilizza ARIA come motore di inferenza primario per:
 - **Voiceprint**: Embedding 256d per l'identità biografica.
 - **LLM**: Sintesi narrativa degli episodi.
 
+## Identity Resolution System
+
+Principio fondante: **una persona sbagliata è peggio di una persona sconosciuta.**
+
+Lo stack di certezza si applica a ogni `Person` riconosciuta dal sistema:
+
+| Livello | Nome | Trigger | Comportamento |
+|---------|------|---------|---------------|
+| 0 | Unknown | Voce nuova, nessun match | `Person(unknown-UUID)`, display `Sconosciuto A3F2` |
+| 1 | Candidato LLM | LLM estrae nome da trascrizione | Solo `identity_candidates` JSONB — mai `first_name` |
+| 2 | Confermato utente | Azione esplicita UI | `confirmed_by="user"` + back-propagation SpeakerTurn |
+| 3 | Enrolled | Registrazione voiceprint intenzionale | Certezza assoluta, back-propagation immediata |
+
+**Regola assoluta**: nessun processo automatico (LLM, euristica, cosine similarity) può transitare da Livello 1 a Livello 2.
+
+### Migration 0004 (pianificata, post-Stage D)
+
+```sql
+ALTER TABLE persons ADD COLUMN identity_level       SMALLINT DEFAULT 0;
+ALTER TABLE persons ADD COLUMN confirmed_at         TIMESTAMP WITH TIME ZONE;
+ALTER TABLE persons ADD COLUMN confirmed_by         VARCHAR(64);
+ALTER TABLE persons ADD COLUMN disambiguation_tag   VARCHAR(64);
+ALTER TABLE persons ADD COLUMN identity_candidates  JSONB;
+```
+
+### Back-Propagation
+
+Attivata SOLO su `identity_level >= 2`. Aggiorna:
+- `SpeakerTurn.person_id` (tutti i turn con cosine ≥ 0.80 verso il voiceprint confermato)
+- `MemoryAtom.entities_json` (sostituisce "Sconosciuto A3F2" con il nome)
+- **MAI** `MemoryAtom.summary` o `title` (audit trail — le analisi restano fedeli al momento)
+
+### Omonimi
+
+Due "Marco" nel DB sono sempre distinti da `person_id` diversi e voiceprint diversi.
+Il campo `disambiguation_tag` ("collega", "amico") è solo presentazionale.
+
+**Design completo**: [[sources/lifelog2-identity-resolution|lifelog2-identity-resolution-design.md]]
+
+---
+
 ## Link Correlati
 
 - [[stack-nh-mini]]
@@ -153,3 +216,4 @@ Lifelog2 utilizza ARIA come motore di inferenza primario per:
 - [[ct105-postgres]]
 - [[ct120-redis]]
 - [[sources/lifelog2-project-context|lifelog2-project-context]]
+- [[sources/lifelog2-identity-resolution|lifelog2-identity-resolution]]
