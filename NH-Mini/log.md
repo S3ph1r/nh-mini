@@ -4,6 +4,35 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-15] dev | Lifelog2: Stage F 4-pass sliding window + bug prefilter fix + Stage D v4
+
+- **Stage F implementato** (4-pass: temporal pre-filter → LLM boundary → split → synthesis). Prompts versioned: `stage_f_boundary_v1.txt`, `stage_f_split_v1.txt`, `stage_f_episode_v1.txt`.
+- **Bug `_temporal_prefilter` fixato**: `current_end` non si aggiornava all'apertura di un nuovo gruppo temporale → 17 gruppi invece di 8. Fix: `current_end = row["ended_at"]` nel branch `break`.
+- **Stage D v4**: regola monologue vs podcast/broadcast aggiunta. Tono educativo/informativo a speaker unico → `podcast`, non `monologue`. Importance MAX 0.5 per media.
+- **Alembic 0004**: `episode_id` su `memory_atoms`, `capture_class` su `episodes`. Applicata su CT203.
+- **Risultato Stage F su 19 atoms**: 8 gruppi temporali → 12 episodi scritti (vs 18 errati di prima).
+- **AtomRef**: sub-atom references (`from_turn`, `to_turn`) per episodi che tagliano a metà un atom.
+- **Running episode summary**: contesto compresso max 180 token mantenuto tra le call LLM sliding window.
+
+## [2026-05-14] dev | Lifelog2: WhisperX large-v3 integrato in ARIA + E2E A→E validata + /doc sync
+
+- WhisperX large-v3 sostituisce Qwen3-ASR-1.7B come backend STT primario di Lifelog2 (ARIA porta 8091, env `lifelog-whisperx`).
+- Fix orchestratore ARIA: `model_logic_ids` aggiornato, `threading.RLock`, handler `LifelogWhisperXBackend` deployato.
+- Pipeline A→E misurata: **~91s warm** su 299s audio (3.3× realtime). Bottleneck: GPU switch 35s (71% Stage D).
+- Headroom Level 2: ~209s liberi per segmento → ~17 chiamate LLM warm nel budget. Worker L2 (Detective, F, G): solo blueprint, zero codice.
+- /doc: `aria-state-of-gaps.md` (A0-4 resolved), `ARIA-blueprint.md` (§4 backends STT+LLM), `Lifelog2/knowledge/development-log.md`, `architecture.md`, `api-contracts.md` aggiornati.
+
+---
+
+## [2026-05-13] dev | Wiki Sync: overview.md + service_catalog (ARIA LLM) + infra-map
+
+- `overview.md` aggiornata: CT203 live, CT105/107 promossi, roadmap Lifelog2 A→E.
+- `core/service_catalog.py`: aggiunto backend `lifelog_llm` (port 8090) su ARIA PC139.
+- `knowledge/containers/infrastructure-map.mdc`: allineato con nuovi backend e date.
+- Stato sistema verificato: 10 container running, core infrastructure stabile.
+
+---
+
 ## [2026-05-13] dev | Lifelog2: Stage D+E operativi + E2E pipeline A→E testata + /doc sync
 
 - Stage D LLM enrichment (qwen3-14b-q4km) + Stage E embedding (mxbai 1024d) implementati e testati.
@@ -843,6 +872,36 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - **ARIA backend qwen3-14b**: `launcher.py`, `lifelog_llm.py` (health /health, reasoning_content, /no_think), `backends_manifest.json` (porta 8090), `install_lifelog_llm.ps1`.
 - **E2E test superato**: segmento 3599a424 (AI + mental health, Italian, 5 min) — MemoryAtom di alta qualità in 21s, 447 token, confidence 0.85.
 - **Wiki aggiornata**: [[stack-lifelog2]] (M4 ✅, pipeline, identity resolution 3 livelli), [[stack-aria]] (qwen3-14b-q4km aggiunto).
+
+## [2026-05-14] dev | Lifelog2: WhisperX large-v3 integrato in ARIA + E2E A→E validato
+
+**WhisperX backend ARIA completo:**
+- `backends/lifelog_whisperx/server.py` (FastAPI :8091, float16 Blackwell-safe, soundfile bypass ffmpeg)
+- `aria_node_controller/backends/lifelog_whisperx.py` (LifelogWhisperXBackend handler class)
+- `aria_node_controller/config/backends_manifest.json`: entry `whisperx-large-v3` porta 8091, env lifelog-whisperx, startup_wait 150s
+- `orchestrator.py`: aggiunto `whisperx-large-v3` a `model_logic_ids` (era mancante → fix critico), `_process_asr_task` routing per model_id, import LifelogWhisperXBackend
+- `stage_c_asr.py`: coda → `aria:q:stt:local:whisperx-large-v3:lifelog`, model_id → `whisperx-large-v3`
+- Docs: `sviluppi/ARIA/docs/backends/lifelog-whisperx.md` (nuovo), `ARIA-Service-Registry.md` aggiornato
+
+**Bug fix ARIA shutdown hang (threading.Lock → RLock):**
+- `_ensure_single()` teneva `self._lock` (Lock non-reentrant) e chiamava `_kill_proc()` che acquisiva stesso lock → deadlock
+- Fix: `self._lock = threading.RLock()` + taskkill timeout=5 + pre-join `_run_loop`
+
+**E2E test A→E con WhisperX (segmento 14cc6f03, 299.6s audio):**
+- Stage B: 0.4s (decrypt + WAV normalize)
+- Stage C → WhisperX: 16.2s (1120 chars, 1 turn, lang=it)
+- Stage D → qwen3-14b-q4km: ~12s (MemoryAtom `dfdfb622`, importance=0.40, retention=summarized)
+- Stage E: embedding 1024d consolidato
+- Total A→E: ~1m32s
+
+**Confronto WhisperX vs qwen3-asr-1.7b (stesso audio):**
+- qwen3-asr: 3987 chars, 35 turn, pesanti hallucinations (testo su legal AI inventato, ripetizioni multiple)
+- WhisperX: 1120 chars, 1 turn, trascrizione corretta (conversazione auto elettrica, freno motore)
+- WhisperX nettamente superiore su audio bassa qualità (SNR=6.1, speech=27%)
+
+**Output salvati:** `/tmp/baseline_outputs/` (qwen3asr + whisperx transcript JSON + memory atom)
+
+---
 
 ## [2026-05-13] dev | Lifelog2 Fast Pipeline formalizzata — Stage D greedy + Stage E implementato
 

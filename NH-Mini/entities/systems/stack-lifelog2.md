@@ -3,7 +3,7 @@ title: "Stack — Lifelog2"
 type: entity
 tags: [stack, lifelog, memory, pipeline, embedding, identity]
 sources: [lifelog2-project-context.md, lifelog2-identity-resolution.md]
-updated: 2026-05-13
+updated: 2026-05-15
 ---
 
 # Stack — Lifelog2
@@ -109,9 +109,40 @@ Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SP
 | Worker Detective | Inferenza identità da discourse | LLM solo (no ASR) — max 8 segmenti/call, ogni ora | LLM cold |
 | Retroactive Indexer | Cosine similarity voiceprint 256d | CPU pura, scipy — < 5s su 1000+ segmenti | No GPU |
 
-### Logica di Raggruppamento (Grouping)
-- **Continuità**: Gap < 10 min + stesso GPS.
-- **Isolamento Genere**: Il passaggio tra "Personal" e "Knowledge" (es. fine conversazione -> inizio podcast) forza la creazione di un nuovo gruppo/episodio, anche se temporalmente contiguo.
+### Stage F — Episode Grouping (4-Pass Sliding Window)
+
+La continuità temporale da sola non è sufficiente a definire un episodio. Stage F usa un'architettura a 4 pass con LLM semantico.
+
+**Pass 1 — Temporal Pre-filter (no LLM)**
+- Gap > `AUTO_BREAK_MINUTES` (60 min) tra capture consecutive → rottura automatica, nessuna chiamata LLM
+- Produce `candidate_groups`: liste di atom temporalmente adiacenti
+
+**Pass 2 — Sliding Window LLM Boundary Detection**
+- Ogni atom viene valutato rispetto all'episodio corrente via LLM (qwen3-14b)
+- Input: `running_episode_summary` (max 180 token, compresso) + metadata del nuovo atom (~200-300 token)
+- Output: `continue | break_before | break_within` + `updated_episode_summary`
+- Segnali di rottura (priorità decrescente): cambio `event_type` (forte), GPS > 1km (forte), set persone disjoint (forte), gap > 30min (medio), cambio topic (medio), cambio `capture_class` (debole — inaffidabile su telefonate)
+- Continuità forte garantita: `monologue + personal + gap < 15min` → sempre `continue`
+- Prompt: `stage_f_boundary_v1.txt` (versioned)
+
+**Pass 3 — Precise Split (solo se `break_within`)**
+- Attivato solo quando la transizione avviene *dentro* un atom
+- Legge il trascritto completo da MinIO, trova il turn index esatto
+- Output: `AtomRef(from_turn, to_turn)` per sub-atom references
+- Prompt: `stage_f_split_v1.txt` (versioned)
+
+**Pass 4 — Episode Synthesis**
+- Atom singolo: riusa `title`/`summary` esistente
+- Multi-atom: LLM genera `title` (max 8 parole) + `narrative_summary` (3-5 frasi)
+- Prompt: `stage_f_episode_v1.txt` (versioned)
+
+**AtomRef dataclass**: `memory_id, row, from_turn, to_turn, is_partial` — permette referenze sub-atom (dal minuto X al minuto Y dell'atom N).
+
+**Cutoff**: atom con `ended_at < NOW() - 10min` — l'ultimo episodio rimane "aperto" per estensione al run successivo.
+
+**Bug storico risolto (2026-05-15)**: `_temporal_prefilter` non aggiornava `current_end` all'apertura di un nuovo gruppo → tutti i gap venivano calcolati rispetto al primo atom → 17 gruppi invece di 8.
+
+**Capture-class elevation**: `personal > mixed > ambient > unknown` — l'episodio prende la classe dominante tra i suoi atom.
 
 ## Retention Classes
 
@@ -124,10 +155,10 @@ Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SP
 | M0 — Foundation/Product Spec | ✅ Done | Blueprint, memory model, API contracts frozen (2026-05-07) |
 | M1 — Infrastructure + API Ingest | ✅ Done | CT105 DB live, MinIO bucket live, FastAPI su CT190:8002, 4 endpoint Android testati, 20 segmenti V1 in pipeline |
 | M2 — Pipeline Stage B (Preprocess) | ✅ Done | Consumer Redis `lifelog:stream:ingest`, ffmpeg WAV 16kHz, quality gate, MinIO `normalized-audio/`, emit `lifelog:stream:asr` (2026-05-07) |
-| M3 — Pipeline Stage C (ASR) | ✅ Done | Refactored 2026-05-12: `capture_class` (personal/mixed/ambient/unknown), user-first voiceprint matching, drain loop fix, legacy user_id compat. |
-| M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | Blueprint v1 cristallizzato. Worker Stage D implementato con prompt esternalizzati (config.json + versioning). AriaLLMClient (qwen3-14b-q4km, timeout 600s, greedy batch count=100). E2E test: 21 segmenti, MemoryAtom qualità alta (~17-21s/seg warm). |
+| M3 — Pipeline Stage C (ASR) | ✅ Done | Refactored 2026-05-12: `capture_class`, user-first voiceprint, drain loop fix. **2026-05-14: WhisperX large-v3 (porta 8091) come backend primario** — sostituisce Qwen3-ASR-1.7B (standby). Timing Stage C: ~24s warm (vs ~55s). Pipeline A→E: 91s totali su 299s audio (3.3× realtime). |
+| M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | Prompt v4 aggiunto 2026-05-15: regola critica monologue vs podcast/broadcast (tono educativo/informativo → `podcast`, non `monologue`; importance MAX 0.5 per media). 2 atom misclassificati identificati (`0a4bf747`, `be8217d1`) — da rielaborare. |
 | M4.5 — Stage E (Embedding + WAV cleanup) | ✅ Done 2026-05-13 | mxbai-embed-large 1024d via CT107, `memory_atoms.embedding` aggiornato, WAV MinIO eliminato, pipeline_status="consolidated". Fast Pipeline A→E operativa. |
-| M5 — Episode/Day Grouping | Pending | Stage F (grouping), Stage G (day digest), Worker Detective (ogni 6 seg) — architettura Level 2 definita, implementazione futura |
+| M5 — Episode/Day Grouping | 🔧 In progress | Stage F **live** 2026-05-15 — 4-pass sliding window, 8 gruppi → 12 episodi su 19 atom, bug prefilter fixato. Stage G, Worker Detective pendenti. |
 | M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico |
 | M7 — Frontend SvelteKit | 🔧 In test | **Cinematic UI Refactor completo**. Dashboard accessibile su CT203:5173. Navigazione overlay ok. |
 
