@@ -4,6 +4,133 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-16] dev | ARIA FLUX.2-klein-4B backend + Lifelog2 Stage G cover generation
+
+**Stack implementato**
+- `envs/flux-aria`: conda env Python 3.11 + PyTorch 2.7.0+cu128 + diffusers 0.39.0.dev0 (Flux2KleinPipeline live) + optimum-quanto 0.2.7 + transformers 5.8.1
+- `backends/flux_imagegen/server.py`: FastAPI port 8092, Flux2KleinPipeline + Qwen3-4B text encoder INT8 (optimum-quanto, 7.5 GB → 3.75 GB VRAM) + transformer BF16 (~11 GB totale RTX 5060 Ti 16 GB)
+- `backends_manifest.json`: entry `flux2-klein-4b` (port 8092, env=flux-aria, startup_wait=240)
+- `aria_node_controller/backends/flux_imagegen.py`: FluxImageGenBackend HTTP adapter → localhost:8092
+- `orchestrator.py`: `_process_flux_task()` + dispatch su `model_type=imagegen` + model_logic_ids aggiornato
+- **Modello scaricato**: `data/assets/models/flux2-klein-4b/` (~15.8 GB — text_encoder 8 GB, transformer 7.75 GB, VAE 168 MB)
+
+**Lifelog2 Stage G**
+- `alembic/0006`: ADD `visual_prompt TEXT` a `episodes`
+- `models/memory.py`: campo `visual_prompt` su Episode
+- `prompts/stage_f_episode_v2.txt`: Pass 4 ora genera anche `visual_prompt` (20-40 parole inglese, stile flat minimalista)
+- `core/aria_imagegen.py`: AriaImageGenClient (Redis queue `aria:q:imagegen:local:flux2-klein-4b:lifelog`)
+- `stage_g_covers.py`: worker batch, processa episodi con visual_prompt ma senza cover_image_key
+- `orchestrator.py` Lifelog2: `_covers_loop()` + `run_covers` command, interval=60min, startup delay=90min
+
+**Architettura GPU swap**
+- 1 swap totale: Stage F (Qwen3-14B warm) genera visual_prompt; Stage G swappa su FLUX
+- Greedy batch: tutti gli episodi senza copertina in una sessione → minimizza swap frequency
+
+**Test end-to-end (2026-05-16 07:00)**
+- FLUX server avviato su PC 139, caricamento completo in 192s (quantizzazione INT8 63.6s)
+- VRAM allocata: **12.8 GB** su 16 GB (3.2 GB headroom)
+- 2 generazioni test OK: 12.6s (JIT cold), 6.4s (warm), 6.4s (stable)
+- PNG 512×512 verificati in MinIO `aria-warehouse/lifelog-covers/` (bucket policy public GET impostata)
+- URL diretto: `http://192.168.1.104:9000/aria-warehouse/lifelog-covers/test-episode-001.png` ✅
+
+## [2026-05-16] dev | Lifelog2: Frontend Views B2–B7 + Background palette + Transcript endpoint
+
+**Background & palette**
+- `bg.jpg` (529KB, AI-generated) come sfondo globale su `html` element (workaround `overflow:hidden` SvelteKit)
+- Gradiente scuro su `body` come overlay semitrasparente
+- `glass`, `glass-sidebar`, `glass-card` opacity alzate (~0.65–0.82) per leggibilità su bg image
+- `--color-text-3` alzato da `0.55` a `0.72`, `--color-text-2` da `0.80` a `0.90`
+- `--color-surface-*` opacity alzate a `0.50–0.70`
+
+**B2 — Day View** (`/day/[date]`)
+- Redirect automatico da `/day` a data odierna (timezone Europe/Rome)
+- Episodi espandibili (click header), atom row cliccabili con snippet + topic chips
+- Header sticky con stats (episodi, atoms, durata, action items, decisioni)
+- Navigazione prev/next giorno
+- `has_transcript` flag su atom — mostra link "◎ Trascrizione →" se presente
+
+**B3 — Map View** (`/map`)
+- Leaflet dinamico (import in `onMount`), CartoDB Dark Matter tiles
+- CircleMarker colorati per retention, dimensione per importance_score
+- Detail panel slide-in (click marker), filtro periodo 30g/3m/1a/tutto
+- `GET /dashboard/map?days=N` — join MemoryAtom + RawCapture su GPS
+
+**B4 — Sagas View** (`/sagas`)
+- Library di tutti gli episodi, raggruppati per data_label, filtrabili per capture_class + tag
+- Load-more pagination (limit 30), importanza bar per episodio
+- `GET /dashboard/sagas?limit&offset&capture_class&tag`
+
+**B5 — People View** (`/people`)
+- Directory persone da tabella `persons`, badge identity_level (0–3)
+- Avatar con initials, indicator voiceprint dot se enrolled
+- Conteggio episodi per persona (tally Python su `episodes.person_ids` JSONB)
+- Filtro per livello (enrolled/confirmed/candidati/anonimi)
+- Card espandibile con first_seen/last_seen/confidence/candidates JSON
+- `GET /dashboard/people`
+
+**B6 — Timeline View** (`/timeline`)
+- Linea del tempo verticale con spine SVG, raggruppata per mese/anno
+- Dot colorato per capture_class dell'episodio, importance bar
+- Tutti gli episodi in una fetch (limit 500), buildGroups in frontend
+- Link a `/day/{date_key}` per ogni episodio
+
+**B7 — Transcript View** (`/transcript/[id]`)
+- Legge `raw_transcript_key` da MemoryAtom, scarica JSON da MinIO
+- Vista turni speaker (`Voce A`, `Voce B`, …) con timestamp mm:ss
+- Vista testo completo toggle
+- Filtro per singolo speaker
+- Sidebar: riassunto, topics, action_items, decisioni, stats
+- `GET /dashboard/transcript/{atom_id}`
+
+## [2026-05-16] dev | Lifelog2: Identity Resolution — Migration 0005 + Worker Detective + raw_transcript_key
+
+**A1 — raw_transcript_key su MemoryAtom**
+- Campo `raw_transcript_key VARCHAR(512)` aggiunto al modello `MemoryAtom`
+- Popolato in Stage D con la chiave MinIO del transcript JSON raw
+- Formato: `transcripts/raw/{user_id}/{year}/{month}/{day}/{segment_id}.json`
+- Necessario per Stage F Pass 3 (split intra-atom) e per la Transcript View
+
+**A2 — Migration 0005 (Identity Resolution fields)**
+- 5 nuove colonne su `persons`: `identity_level SMALLINT DEFAULT 0`, `confirmed_at`, `confirmed_by`, `disambiguation_tag`, `identity_candidates JSONB`
+- Index su `identity_level`
+- Backfill: `WHERE relationship_type='self' AND voiceprint_embedding IS NOT NULL` → level=3, confirmed_by='enrollment'
+- Roberto Guareschi: level=3 (enrolled), voiceprint_quality=0.6, confermato manualmente
+- `Person` model aggiornato con `SmallInteger` + 5 nuovi campi Mapped
+
+**A3 — Worker Detective**
+- Subprocess dell'orchestrator (come Stage F), delay 120s startup, ciclo 15min
+- Legge ultimi 8 atom (Redis checkpoint `lifelog:detective:last_atom_ts`)
+- Chiama LLM qwen3-14b: estrae nomi di persone dai transcript, produce `identity_candidates` JSONB
+- Mai scrive `first_name`/`last_name` — solo `identity_candidates` (level=1)
+- Dedup via JSONB `NOT (identity_candidates @> :dedup_check::jsonb)`
+- Trigger manuale: `{"cmd": "run_detective"}` via Redis
+- Telemetria: `record_stage("detective", "batch", "ok", elapsed_s, extra={atoms, candidates})`
+
+## [2026-05-15] dev | Lifelog2: Control Plane v2 — Telemetria SQLite + Pipeline Dashboard + CT203 timezone fix
+
+- `core/telemetry.py` — SQLite writer 5 tabelle (upload_events, pipeline_events, grouping_runs, service_events, snapshot)
+- Stage B/C/D/E/F instrumentati con timing `time.perf_counter()` + write telemetry
+- `api/routers/telemetry.py` — 6 endpoint `/telemetry/*`
+- `api/routers/orchestrator.py` riscritto — `/status` (Redis+Postgres reale), `/logs` (merge worker log file)
+- `pipeline/+page.svelte` — Control Plane v2: Workers, Streams, DB Stats, Telemetria, Log Terminal
+- CT203 timezone fixata a `Europe/Rome (CEST)` via bypass D-Bus (timedatectl bloccato)
+- Backfill telemetria da log file: 163 upload, 165 Stage B, 34 C, 39 D/E, 2 grouping runs
+
+## [2026-05-15] lint | Lifelog2 — 5 issues fixed
+
+- **stack-lifelog2.md**: rimosso "pending approval" da CT203 (live 2026-05-09); aggiornato diagramma pipeline C (WhisperX primary) e D (v5, non "v1 completo").
+- **service-asr-blackwell.md**: aggiunto WhisperX large-v3 come primary Lifelog2 backend (2026-05-14); Qwen3-ASR-1.7B degradato a standby.
+- **sources/lifelog2-project-context.md**: rimosso "pending approval" da CT203.
+- **concepts/lifelog2_dev-pattern.md**: aggiornato Stage A/B/C → B–E + orchestrator; era orfano. Aggiunto in `index.md`.
+
+## [2026-05-15] dev | Lifelog2: Orchestrator Stage F + Stage D v5 (action_items/decisions) + Stage B metrics fix
+
+- **Orchestratore integrato con Stage F**: Stage F gira come `asyncio.create_task` parallelo al loop B→E. Ogni 30min (`GROUPING_INTERVAL_S`), primo run dopo 60s startup delay. `asyncio.Event` per trigger manuale via Redis `{"cmd": "run_grouping"}`. Status API aggiornata con campo `grouping`.
+- **Stage D v5**: aggiunge `action_items` e `decisions` agli output del MemoryAtom. Regole: solo task concreti, no media passivo, max 5 ciascuno. `_NOISE_PHRASES` frozenset filtra risposte noise LLM. `_parse_str_list()` helper condiviso.
+- **Rerun Stage D su 19 atom**: script `scripts/rerun_stage_d_enrich.py` — lettura blob MinIO, LLM call, update solo action_items/decisions. 7/19 atom hanno dati non vuoti. Nota: path MinIO usa device UUID, non user_id; query usa `memory_atom_id.is_not(None)` (non pipeline_status).
+- **Stage B metrics-on-discard fix**: `_reject()` ora persiste rms_db/snr_db/speech_ratio/duration_seconds anche sui segmenti scartati. Prima aveva NULL in DB. Tutti i call site aggiornati.
+- **Wiki**: `stack-lifelog2.md` aggiornata con Orchestrator section, Stage D v5 details, Stage B fix note, milestone M4/M5 aggiornati.
+
 ## [2026-05-15] dev | Lifelog2: Stage F 4-pass sliding window + bug prefilter fix + Stage D v4
 
 - **Stage F implementato** (4-pass: temporal pre-filter → LLM boundary → split → synthesis). Prompts versioned: `stage_f_boundary_v1.txt`, `stage_f_split_v1.txt`, `stage_f_episode_v1.txt`.
