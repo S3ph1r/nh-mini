@@ -4,6 +4,31 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-17] dev | FLUX no-MinIO pipeline completa + Git ARIA allineato + Stage G aggiornato
+
+**Stato finale sessione:**
+- **Git ARIA** (commit `9ed374a`, master PC 139 = origin): FLUX no-MinIO pipeline commissionata, WhisperX commits inclusi, push OK a `S3ph1r/ARIA`.
+- **Git Lifelog2** (commit `cd069c9`, main CT203): `stage_g_covers.py` aggiornato.
+
+**Architettura FLUX definitiva (no MinIO per immagini):**
+- `backends/flux_imagegen/server.py`: salva JPEG in `ARIA_OUTPUT_DIR`, serve via asset server (port 8082), espone `DELETE /output/{filename}` per cleanup.
+- `aria_node_controller/backends/flux_imagegen.py`: ritorna `job_id` + `image_url = http://{local_ip}:8082/{job_id}.jpeg`; `local_ip` passato dall'orchestratore.
+- `stage_g_covers.py` (CT203): scarica da asset server, uploada in MinIO lifelog bucket (`covers/{date}/{ep_id}.jpeg`), chiama `DELETE http://192.168.1.139:8092/output/{job_id}.jpeg` per cleanup ARIA.
+
+**ARIA richiede riavvio** per attivare:
+- `orchestrator.py`: `ModelProcessManager.__init__` ora ha `self.local_ip = get_node_ip()` → `_health_check` bypassa Firebase Studio port-forward.
+- `backends_manifest.json`: `startup_wait` Qwen3-14B = 600s.
+
+**Stato Lifelog2 (14 episodi, 0 cover):** pipeline pronta per E2E. FLUX non ancora testato in produzione — repair script per 11 episodi senza visual_prompt da ri-avviare dopo restart ARIA.
+
+## [2026-05-17] dev | ARIA health-check fix — Firebase Studio port conflict
+
+- **Bug root cause**: Firebase Studio (Antigravity IDE Google), connesso via Remote SSH a LXC 190, fa port-forwarding automatico dei port 8090/8091/8093 su `127.0.0.1` del PC 139. L'orchestratore ARIA health-checkava `localhost:8090` e riceveva risposta da Firebase Studio invece di `llama-server` → timeout → loop infinito di riavvii Qwen3-14B.
+- **Fix** (`orchestrator.py`, `_health_check`): `health_url.replace("localhost", self.local_ip)` — usa IP esterno (`192.168.1.139`) al posto di `localhost`, il traffico bypassa il loopback tunnel. `backends_manifest.json` invariato.
+- **Problema scope**: `_health_check` è metodo di `ModelProcessManager`, non `NodeOrchestrator` — `self.local_ip` non esisteva. Fix: aggiunto `self.local_ip = get_node_ip()` in `ModelProcessManager.__init__`.
+- **startup_wait Qwen3-14B**: 120s → 600s (il modello richiede ~10 min per caricarsi in VRAM).
+- **Documentazione**: [[ARIA-Service-Registry]] aggiornato (Note Operative, Health URLs, FLUX backend); questo log; session-journal.
+
 ## [2026-05-16] dev | ARIA FLUX.2-klein-4B backend + Lifelog2 Stage G cover generation
 
 **Stack implementato**

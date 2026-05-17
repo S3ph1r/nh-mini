@@ -39,7 +39,7 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[entities/systems/stack-dias\|stack-dias]] | DIAS — pipeline audiobook cinematico (10 stadi, Sound-on-Demand v4.1) |
 | [[entities/systems/stack-nh-mini\|stack-nh-mini]] | NH-Mini — control plane CT190 (dashboard, service catalog, discovery daemon) |
 | [[entities/systems/stack-stratex\|stack-stratex]] | Stratex — Wealth Intelligence System (gestione patrimoniale, AI ibrida, RAG) |
-| [[entities/systems/stack-lifelog2\|stack-lifelog2]] | Lifelog2 — Personal memory operating layer (audio capture, RAG, memories) |
+| [[entities/systems/stack-lifelog2\|stack-lifelog2]] | Lifelog2 — Personal memory OS (pipeline A→F+Detective, 8 viste frontend, identity resolution) |
 | [[entities/services/service-asr-blackwell\|service-asr-blackwell]] | ASR Blackwell Service — Backend di trascrizione e biometria su PC 139 |
 
 ---
@@ -61,6 +61,7 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 
 | Pagina | Descrizione |
 |--------|-------------|
+| [[concepts/lifelog2_dev-pattern\|lifelog2_dev-pattern]] | Pattern dev Lifelog2 — orchestrator B→E+Detective, Stage F, API, MinIO, Redis, frontend workflow |
 | [[concepts/aria-redis-protocol\|aria-redis-protocol]] | Nomenclatura code Redis e schema payload (SOT) |
 | [[concepts/aria-task-lifecycle\|aria-task-lifecycle]] | Ciclo di vita di un task ARIA (stati e transizioni) |
 | [[concepts/aria-environments\|aria-environments]] | Architettura ambienti Python 3 livelli (Miniconda + conda envs) |
@@ -123,13 +124,13 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 
 ## Statistiche Wiki
 
-- **Pagine totali:** 59
+- **Pagine totali:** 60
 - **Entities containers:** 10
 - **Entities systems:** 5 (ARIA, DIAS, NH-Mini, Stratex, Lifelog2)
-- **Concepts:** 15
+- **Concepts:** 16
 - **Sources ingerite:** 25
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-12 (Stage C refactor, voiceprint quality 1.0, identity resolution design)
+- **Ultimo aggiornamento:** 2026-05-17 (ARIA FLUX no-MinIO pipeline + health-check fix + Stage G CT203)
 
 ---
 
