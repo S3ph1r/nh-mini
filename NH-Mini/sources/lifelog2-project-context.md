@@ -16,7 +16,7 @@ updated: 2026-05-06
 
 - **Obiettivo**: Layer operativo per la memoria personale (Android audio capture → structured memories/RAG).
 - **Stack**: FastAPI (backend), SvelteKit (frontend), Postgres + pgvector, Redis Streams, MinIO.
-- **Infrastruttura**: Sviluppo su LXC 190, runtime previsto su `ct203-lifelog` (pending approval).
+- **Infrastruttura**: Sviluppo su LXC 190, runtime su `ct203-lifelog` (🟢 live 2026-05-09).
 - **Integrazione**: Usa ARIA (PC139) per l'inferenza tramite il catalogo servizi di NH-Mini.
 
 ## Note di integrazione

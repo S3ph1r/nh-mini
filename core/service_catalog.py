@@ -71,7 +71,9 @@ STATIC_CATALOG: dict[str, dict] = {
             "fish_tts": ":8080",
             "voice_cloning": ":8081",
             "asset_server": ":8082",
-            "lifelog_asr": ":8087",
+            "lifelog_asr": ":8087",  # Qwen3-ASR-1.7B — standby (sostituito da whisperx)
+            "lifelog_whisperx": ":8091",  # WhisperX large-v3 — ASR primario Lifelog2 (2026-05-14)
+            "lifelog_llm": ":8090",
         },
         "os": "Windows 11",
         "notes": "On-demand. Comunica via Redis, non richiede SSH. SOT codice: PC139.",

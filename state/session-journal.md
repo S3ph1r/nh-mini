@@ -1,3 +1,270 @@
+## [2026-05-22 16:02] START — Allineamento e prosecuzione dopo sessione intermedia
+
+**Obiettivo:**
+- Analizzare il lavoro svolto dall'agente intermedio nella sessione del 2026-05-22 (Intelligence Layer Z7, Profile Builder Strato 1+2, addendum, status roadmap, ecc.).
+- Verificare la corretta documentazione e allineamento di NH-Mini e Lifelog2.
+- Concordare con l'utente i passi successivi tra le priorità P1 e P2 individuate nel file `lifelog2-status-roadmap.md` (es. creazione indice HNSW, abilitazione timer Profile Builder, o implementazione Tier B social circle / Strato V LLM validation).
+
+**Grounding:**
+- Verificata la presenza e il contenuto dei file di documentazione `lifelog2-status-roadmap.md` e `lifelog2-intelligence-addendum-v1.md` in `sviluppi/Lifelog2/docs/`.
+- Verificato l'accesso SSH diretto e lo stato dei repository git da CT190, confermando che il codice è allineato ed i relativi file sono nello stato documentato nell'END dell'agente precedente.
+- Verificato il contesto attivo in `workspace/active_config.json` come `Lifelog2`.
+
+---
+
+## [2026-05-22] END — Lifelog2 Intelligence Layer Z7 + /doc /lint /finalize
+
+**Completato:**
+- **Profile Builder Worker (Strato 1+2):** `worker_profile_builder.py` — zero LLM, SQL puro. Strato 1: decisions/action_items/first-person opinion → UserProfileFact. Strato 2: topics, media habits, ora picco, social circle. Corroborazione assintotica (`min(0.95, old + 0.08×(1−old))`), decay settimanale (×0.97, floor 0.05). Systemd timer domenica 04:00. Redis idempotenza.
+- **Systemd units:** `lifelog2-profile-builder.service/timer` + `lifelog2-cleanup-audio.service/timer` in `deploy/`. Non ancora abilitati su CT203.
+- **Intelligence Addendum §8 ricostruito:** spec teorica → documentazione operativa. §8.12 Cerchia sociale Tier B (clustering voiceprint anonimi, soglia 0.65). §8.13 Strato V (LLM validation pass gray-zone, batch 6-8/call, verdetti valid/invalid/third_party/context_limited).
+- **Full audit codebase + docs:** report completo Z0–Z7, pipeline A→G, workers, identity, search, frontend.
+- **`lifelog2-status-roadmap.md`:** nuovo documento living — 10 sezioni ✅/🟡/🔲, roadmap P1→P5 checklist, visual bar. Referenziato nel master blueprint.
+- **`/doc lifelog2`:** `knowledge/architecture.md` (worker_profile_builder, prompt v10, Profile Builder section, Async Workers), `knowledge/memory-model.md` (Person voiceprint 192d→256d fix, UserProfileFact Profile Builder detail), `knowledge/development-log.md` (entry completa).
+- **Wiki NH-Mini aggiornata:** `stack-lifelog2.md` (prompt v10, Stage D v10 description, /profile view, M8 milestone, Profile Builder in pipeline), `ct203-lifelog.md` (2 nuovi timer in services table, deploy log 2026-05-22).
+- **Lint:** 47/47 ✅, 0 warnings, 0 errors.
+
+**Incompleto:**
+- Profile Builder timer non ancora abilitato su CT203 (P1 roadmap — richiede ok esplicito utente per `systemctl enable`).
+- M4A cleanup timer non ancora abilitato (istruzione esplicita: non abilitare autonomamente).
+- Re-enrollment storico ancora pending (richiede ARIA restart + script producer/consumer).
+- HNSW index mancante su `memory_atoms.embedding` (P1 roadmap — 1 migration, sblocca search).
+
+**Mine per il prossimo agent:**
+- **P1:** `systemctl enable lifelog2-profile-builder.timer` su CT203 (dopo ok Roberto).
+- **P1:** `CREATE INDEX USING hnsw` su `memory_atoms.embedding` — 1 migration, sblocca tutta la search vettoriale.
+- **P2:** Cerchia sociale Tier B (clustering voiceprint anonimi) → `docs/lifelog2-intelligence-addendum-v1.md §8.12`.
+- **P2:** Strato V LLM validation pass → `docs/lifelog2-intelligence-addendum-v1.md §8.13` + migration `validated_at`.
+- Consultare `sviluppi/Lifelog2/docs/lifelog2-status-roadmap.md` come checklist aggiornata all'inizio della prossima sessione.
+
+---
+
+## [2026-05-20 18:00] END — Lifelog2 Stage B CAMCORDER + Voiceprint + /doc + cleanup
+
+**Completato:**
+- **Stage B CAMCORDER fix**: soglie quality gate differenziate per `audio_source` — CAMCORDER/ambient usa RMS -65dBFS, SNR -30dB, speech_ratio 0.0. Segmenti ambient non più scartati.
+- **Rejected M4A in MinIO**: `_reject()` salva l'M4A in `quality-rejected/{persona}/{YMD}/{segment_id}.m4a` con metadata. Recuperabili per analisi o re-injection.
+- **WAV lifecycle corretto**: Stage C erroneo reverted — Stage E è il solo owner della WAV deletion.
+- **Voiceprint Roberto re-enrollment**: clip 30s da offset 23.2s (senza silenzio), embedding 256d ResNet34. Match: 25/7650 turns (top: 0.981). Audio in `voiceprints/enrollment_optimized/roberto_30s.m4a`.
+- **`rematch_voiceprint.py`**: script standalone personal/mixed/ambient con `--threshold` + `--dry-run`. Deployato su CT203.
+- **`/doc lifelog`**: `knowledge/architecture.md`, `knowledge/development-log.md` aggiornati. `ct203-lifelog.md`, `log.md`, `index.md` wiki NH-Mini aggiornati. `history_manager.py` con 4 entry.
+- **Cleanup repo**: script temp eliminati (root + scripts/ + scratch/). Script utili archiviati con descrizione in `scripts/`.
+
+**Incompleto:**
+- Re-injection dei segmenti CAMCORDER salvati in `quality-rejected/` (script injector non ancora scritto). Attendi ok utente.
+- Enrollment voiceprint Paola/Matteo (E2) — futuro.
+
+**Mine per il prossimo agent:**
+- Script injector per `quality-rejected/`: scorrere MinIO, costruire payload Redis identico a `uploads.py`, pubblicare su `lifelog:stream:asr`. Chiedere ok a Roberto prima.
+- RD-1 Stage D v8 (`media_source`), RD-2 `richness_score`, RD-3 voiceprint_sample_key — da pianificare.
+- Milestone M8 `/ask` RAG o M9 `/vault` oblivion — chiedere a Roberto quale priorità.
+
+---
+
+## [2026-05-20 15:11] TASK — SSH Access Fix + Lifelog2 Audit Completo
+
+**Completato:**
+- Fix accesso SSH diretto CT190 → CT105/CT104/CT107 via `pct exec` su Proxmox (chiave pubblica CT190 iniettata). Tutti e 3 i container ora accessibili direttamente.
+- Audit telemetria CT203 (`telemetry.db`): 2 upload oggi (MIC, 282s + 202s), entrambi scartati Stage B `low_snr` (snr_db=-2.1 e -0.7 dB).
+- Audit Postgres CT105 (`lifelog_roberto`): 1301 raw_captures, 1110 memory_atoms, 787 episodes, 1 person, 0 action_items, 0 decisions.
+- Audit MinIO CT104 (`lifelog` bucket): 250 raw-encrypted (1.5GB), 1608 covers, 1473 audio/archive (2.3GB), 1110 transcripts.
+- Profilo utente: Roberto Guareschi, `person_id=4ca22a97`, `identity_level=3`, `voiceprint_quality=1.0`, vettore 192d SpeechBrain.
+- Verifica SOPS: 14 namespace registrati (proxmox.main, ssh.aria_gaming_pc, ct105.postgres, lifelog.db ecc.). Decryption fallisce per `~/.age.key` non trovato in sessioni SSH non-interattive.
+- Workspace switchato su Lifelog2 (via SSH su CT190, symlink corretto).
+
+**Issue aperti:**
+- SOPS decryption non funziona da script SSH non-interattivi: aggiungere `SOPS_AGE_KEY_FILE=/root/.age.key` ai systemd unit.
+- 2 segmenti oggi scartati low_snr: normale se registrazione in background con rumore ambiente.
+
+**Mine per il prossimo agent:**
+- Prossimo step sviluppo: scegliere tra M8 (/ask + pgvector semantic search) o M9 (/vault + oblivion scheduler).
+- Script audit riutilizzabili in `scripts/`: `fix_ssh_access.sh`, `lifelog_full_audit.sh`, `lifelog_pg_minio_audit.sh`.
+
+## [2026-05-17 10:56] END — Lifelog2 Memory Atom Covers & Fallback UI
+
+**Completato:**
+- **Integrazione `visual_prompt` in Stage D**: la pipeline veloce (Qwen3) ora estrae correttamente il prompt cinematografico per ogni Memory Atom generato e lo salva in `MemoryAtom.visual_prompt`.
+- **Risoluzione blocco DB CT105**: superato timeout `psql` eseguendo le query via `pct exec 105 -- docker exec postgres`. La migrazione `ALTER TABLE memory_atoms` era già applicata.
+- **Worker Stage G (Batch Covers)**: aggiornato per interrogare in parallelo Episodi E Memory Atoms mancanti di cover. Tutte le richieste sono accodate alla pipeline batch di FLUX.2.
+- **API Dashboard (`dashboard.py`)**: introdotto endpoint `/api/dashboard/cover/atom/{memory_id}`.
+- **Fallback UI Cover**: modificata la query di fetch Atoms per estrarre entrambe le chiavi (Atomo e Episodio). Costruzione intelligente del `cover_url` con priorità alla cover atomica e fallback automatico sulla cover dell'episodio.
+- **Frontend Svelte**: semplificati i componenti `FilmstripRail` e `EpisodeMembersPreview` per consumare una singola stringa `cover_url` pre-calcolata.
+- Modifiche deployate su CT203 e worker riavviato.
+- Lint passato (45/45 ✅).
+- Hard Triggers eseguiti: `/doc lifelog2`, `/finalize`.
+
+**Incompleto:**
+- Script di riparazione (`stage_f_grouping`) per gli episodi storici orfani di `visual_prompt` (fermo a 11 episodi) ancora da eseguire.
+- Generazione covers pendente: il nuovo `stage_g_covers.py` sta accodando ma le cover effettive dipendono dall'esecuzione su ARIA PC139.
+
+**Mine per il prossimo agent:**
+- **Script Riparazione Prompt Storici**: accedere a CT203 (`ssh root@192.168.1.203`) e lanciare la rigenerazione (`python3 -m lifelog2.services.pipeline.stage_f_grouping`) per chiudere il backlog.
+- **Verifica UI Copertine**: caricare la dashboard e accertarsi che i singoli atomi presentino le loro copertine via via che Stage G e FLUX.2 su PC139 finiscono i batch.
+
+## [2026-05-17 10:55] TASK — Memory Atom Covers implementation
+- Modificato `stage_g_covers.py` per estrarre sia `episodes` sia `memory_atoms` senza cover e inviarli alla generazione batch.
+- Aggiunto fallback intelligente in `dashboard.py`: estratti entrambi i cover_key. Se atom ha cover_key usa `/api/dashboard/cover/atom/{memory_id}`, altrimenti fallback su `/api/dashboard/cover/{episode_id}`.
+- Aggiornato frontend Svelte (`FilmstripRail.svelte`, `EpisodeMembersPreview.svelte`) per ricevere direttamente il `cover_url`.
+- Modifiche deployate su CT203 e backend riavviato.
+
+## [2026-05-17 10:45] END — Lifelog2 Stage G + ARIA backends + doc/lint/finalize
+
+**Completato:**
+- **Stage G covers in orchestratore**: `_covers_loop` trigger-only, parte dopo Stage F rc=0 o Redis cmd `{"cmd":"run_covers"}`. Deployato su CT203, restartato, operativo. Git Lifelog2 allineato dev+RT a `4715397`.
+- **ARIA backends 0.0.0.0**: tutti i backend FastAPI su PC139 migrati da `127.0.0.1` a `0.0.0.0`. FLUX server: aggiunto `DELETE /output/{filename}`. Git ARIA `ca25b05` su origin.
+- **aria_imagegen.py**: `output_key` param, fix `output` dict, `minio_url→image_url` fallback.
+- **stage_f_episode_v2.txt**: visual_prompt upgrade — cinematografico 40-60 parole.
+- **worker_detective.py**: bugfix `ma.start_time` invece di `s.started_at`.
+- **nh-lint.py**: fix case-insensitive project lookup (era `lifelog2` vs `Lifelog2`).
+- **/doc lifelog2**: `knowledge/architecture.md`, `api-contracts.md`, `development-log.md` aggiornati.
+- **/doc aria**: `ARIA-Service-Registry.md` (coda imagegen, env flux-aria, DELETE pattern), `aria-state-of-gaps.md` (A0-5 resolved, A0-6 resolved), `ARIA-blueprint.md` (contratto imagegen reale).
+- **/doc nh-mini**: `ct203-lifelog.md` (servizi + orchestratore), `lifelog2_dev-pattern.md` (Stage G), `index.md` (timestamp).
+- **lint 44/44 ✅** (lifelog2 49/49, aria 49/49).
+
+**Incompleto:**
+- Repair script per 11 episodi senza `visual_prompt` — da eseguire manualmente su CT203.
+- ARIA `backends/acestep` submodule: `aria_wrapper_server.py` cambiato localmente (0.0.0.0) ma non committato nel submodule git.
+
+**Mine per il prossimo agent:**
+- Repair visual_prompt: `ssh root@192.168.1.203 "cd /opt/Lifelog2/src/backend && source /opt/Lifelog2/.env && python3 -m lifelog2.services.pipeline.stage_f_grouping"` — Stage F rigenera i prompt mancanti, poi Stage G genera le cover.
+- `backends/acestep` submodule: se serve aggiornarlo, clonare il submodule repo separatamente, applicare la fix `--host 0.0.0.0`, fare PR nel submodule.
+- Dashboard copertine: verificare che le cover già generate (12 episodi) appaiano nella dashboard dopo il prossimo Stage F run.
+
+## [2026-05-17] END — ARIA health-check fix + Firebase Studio port conflict
+
+**Problema risolto**: Firebase Studio (Antigravity IDE Google), quando aperto su PC 192.168.1.139 con Remote SSH attivo verso LXC 190, fa port-forwarding automatico dai port 8090/8091/8093 di LXC 190 verso `127.0.0.1` sul PC. L'orchestratore ARIA health-checkava `localhost:8090` → riceveva risposta da Firebase Studio invece di `llama-server` → timeout → loop infinito di riavvii di Qwen3-14B.
+
+**Fix in `orchestrator.py`** (`_health_check`, riga ~231):
+- Prima: `url = self.MODEL_CONFIGS[model_id]["health_url"]` (usava `localhost`)
+- Dopo: `url = self.MODEL_CONFIGS[model_id]["health_url"].replace("localhost", self.local_ip)` (usa IP esterno `192.168.1.139`)
+- `self.local_ip` risolto all'avvio via `get_node_ip()` — `backends_manifest.json` rimane con `localhost`, nessun hardcoding.
+
+**Altri fix di sessione (già documentati in sessioni precedenti ma completati)**:
+- `startup_wait` Qwen3-14B: 120s → 600s (caricamento modello ~10 min)
+- `stage_f_episode_v2.txt`: template `visual_prompt` riscritto stile cinematografico
+- `flux_imagegen/server.py`: aggiunto salvataggio PNG locale + endpoint DELETE
+- `stage_g_covers.py`: cleanup file locale ARIA dopo download MinIO
+
+**Stato Lifelog2 pipeline**:
+- 14 episodi totali: 3 con visual_prompt (cinematografici, buona qualità), 11 senza
+- 0 cover_image generate (pipeline in pausa)
+- Segmenti: 378 discarded, 36 consolidated; Memory atoms: 36
+- Repair script interrotto durante la sessione — da ri-eseguire nella prossima sessione
+
+**Stato git ARIA**:
+- PC 139 e LXC 190 hanno il repo `aria.git` divergente da commit `6c0046e`
+- PC 139: 3 commit WhisperX in più + 3 file uncommitted (`orchestrator.py`, `backends_manifest.json`, `flux_imagegen/server.py`)
+- LXC 190: 1 commit `47dd3e4 feat(flux): local JPEG output pattern` non presente su PC 139
+- NH-Mini: modifiche non committate (da allineare)
+
+**Documentazione aggiornata**:
+- `sviluppi/ARIA/docs/ARIA-Service-Registry.md`: Note Operative (Firebase Studio conflict + startup_wait 600s), Health Check URLs aggiornati, FLUX.2-klein-4B aggiunto
+- `NH-Mini/log.md`: entry dev 2026-05-17
+- `state/session-journal.md`: questa entry
+
+---
+
+## [01:51] END — 2026-05-16 Lifelog2: Frontend Views B4–B7 + Backend API + Wiki sync
+
+**Completato:**
+- **Background fix**: immagine `/bg.jpg` spostata da `body` a `html` — SvelteKit wrapper ha `overflow:hidden` che rompe `background-attachment:fixed` silenziosamente.
+- **Palette legibilità**: glassmorphism opacità alzate (glass 0.45→0.72, sidebar 0.40→0.82, card 0.35→0.68), text-2 0.80→0.90, text-3 0.55→0.72.
+- **Vista B4 Sagas**: filtri capture_class + tag search, paginazione load-more, accent bar colorata per tipo.
+- **Vista B5 People**: identity level pills, avatar initials, voiceprint dot, expand detail con first/last seen.
+- **Vista B6 Timeline**: spine verticale con dot colorati, raggruppamento mese/giorno, dati da `/api/dashboard/sagas`.
+- **Vista B7 Transcript**: speaker turns + full-text toggle, filtro per speaker, sidebar con summary/topics/action_items, dati da MinIO via `/api/dashboard/transcript/{id}`.
+- **Day view aggiornata**: campo `has_transcript` + link "◎ Trascrizione →" su atom espanso.
+- **Backend dashboard.py**: endpoint `/sagas`, `/people`, `/transcript/{id}` — fix asyncpg `::text[]` con Python tally, fix `atom.topics` dict/list ambiguity.
+- **Wiki sync**: log.md, stack-lifelog2.md (Milestones M5/M7, Migration 0005 ✅, Frontend Views table, API Endpoints table), lifelog2_dev-pattern.md (full rewrite), index.md, development-history.mdc (5 entry).
+
+**Incompleto:**
+- 2 atom misclassificati (`0a4bf747`, `be8217d1`) ancora da rielaborare con Stage D v5.
+
+**Mine per il prossimo agent:**
+- Viste non ancora costruite: B8 Ask/RAG, B9 Vault (presenti in sidebar ma nessun codice).
+- `raw_transcript_key` NULL su alcuni atom — Stage D non lo popola per tutti i segment; necessario per Stage F Pass 3.
+- Worker Detective e Stage G: zero righe di codice, blueprint chiaro, headroom 209s disponibile.
+
+---
+
+## [19:45] END — 2026-05-15 Lifelog2: Control Plane v2 + /doc + /finalize
+
+**Completato:**
+- **Telemetria SQLite**: `core/telemetry.py` — 5 tabelle, auto-init, thread-safe via `asyncio.to_thread()`. Backfill da log file: 163 upload, 165 Stage B, 34 C, 39 D/E, 2 grouping runs.
+- **Worker instrumentation**: Stage B/C/D/E/F con `time.perf_counter()` + `record_stage()`/`record_grouping()`.
+- **API Telemetria**: 6 endpoint `/telemetry/*` (summary, stages, recent, uploads/recent, grouping, daily).
+- **Orchestrator API riscritta**: `/status` con dati Redis reali (`XINFO STREAM`) + Postgres query diretta. `/logs` che legge e mergia `/tmp/lifelog2-workers/stage_*.log`.
+- **Pipeline Dashboard v2**: `/pipeline` con 5 sezioni (Workers, Streams, DB Stats, Telemetria, Log Terminal). Bug Svelte 5 `{@const}` risolto due volte — regola: figlio immediato di blocco, mai di tag HTML.
+- **CT203 timezone**: fixato a `Europe/Rome (CEST)` via bypass D-Bus.
+- **/doc lifelog2**: `development-log.md`, `architecture.md`, `api-contracts.md`, `stack-lifelog2.md` aggiornati.
+- **nh-lint**: 45/45 ✅
+
+**Incompleto:**
+- 2 atom misclassificati (`0a4bf747`, `be8217d1`) da rielaborare con Stage D v5.
+- `raw_transcript_key` NULL su MemoryAtom — Stage F Pass 3 ne ha bisogno.
+
+**Mine per il prossimo agent:**
+- Stage F Pass 3 (split within-atom) richiede `raw_transcript_key` nel MemoryAtom — aggiungere in Stage D o E.
+- Worker Detective e Stage G: zero righe di codice, blueprint chiaro, headroom 209s disponibile.
+
+## [05:26] END — 2026-05-15 Lifelog2: orchestrator Stage F + Stage D v5 + Stage B fix + /doc + /lint
+
+**Completato:**
+- Orchestratore Lifelog2: Stage F integrato come `asyncio.create_task` parallelo al loop B→E sequential greedy. Ogni 30min, trigger manuale via Redis `{"cmd": "run_grouping"}`. Status API aggiornata con campo `grouping`.
+- Stage D v5: `action_items` e `decisions` aggiunti all'output MemoryAtom. `_NOISE_PHRASES` frozenset filter. `_parse_str_list()` helper condiviso. Rerun script su 19 atom — 7/19 con dati non vuoti.
+- Stage B metrics-on-discard fix: `_reject()` ora scrive rms_db/snr_db/speech_ratio/duration_seconds anche su segment scartati.
+- /doc lifelog2: `stack-lifelog2.md` aggiornata con orchestrator section, Stage D v5, Stage B fix, milestone M4/M5.
+- /lint lifelog2: 5 issue fixati (CT203 "pending approval" stale, Qwen3-ASR come primary stale, lifelog2_dev-pattern orfano, ecc).
+- nh-lint: 45/45 passed.
+
+**Incompleto:**
+- 2 atom misclassificati (`0a4bf747`, `be8217d1`) da rielaborare con Stage D v5 (podcast classificati come monologue).
+- `raw_transcript_key` NULL su MemoryAtom — Stage D non lo popola; necessario per Stage F Pass 3.
+
+**Mine per il prossimo agent:**
+- Stage F pass 3 (split within-atom) richiede `raw_transcript_key` in MemoryAtom — verificare se va aggiunto in Stage D o E.
+- Worker Detective e Stage G non ancora implementati — headroom 209s disponibile, blueprint chiaro.
+
+## [2026-05-14 19:30] START — WhisperX E2E + /doc nh-mini, aria, lifelog2
+
+**Obiettivo:** Cristallizzare sessione 2026-05-14. WhisperX large-v3 integrato come ASR primario per Lifelog2. Pipeline A→E misurata end-to-end. Analisi headroom Level 2. /doc su tutti e tre i progetti.
+
+**Grounding:** sessione continuata dopo compaction context — tutti i deploy già fatti. Pipeline A→E verificata con segment `14cc6f03-...` (299s audio, 91s totali warm).
+
+---
+
+## [2026-05-14 19:00] TASK — WhisperX E2E + timing pipeline + headroom Level 2
+
+**Completato nella sessione:**
+
+- WhisperX large-v3 integrato come backend STT primario su ARIA PC139 (`lifelog-whisperx` env, porta 8091, FastAPI).
+- `model_logic_ids` fix in `orchestrator.py` (riga 668): `"whisperx-large-v3"` aggiunto. Senza questa lista ARIA è cieca alle code Redis del modello.
+- `threading.RLock` fix (riga 171 orchestrator): shutdown deadlock risolto (`_ensure_single()` + `_kill_proc()` tenevano stesso Lock → deadlock → fix con RLock).
+- `backends/lifelog_whisperx.py` (handler class `LifelogWhisperXBackend`) deployato su PC139 — era mancante, causava `_BACKENDS_AVAILABLE = False` → tutti i backend Python = None.
+- `backends_manifest.json` aggiornato: entry `whisperx-large-v3`, porta 8091, env `lifelog-whisperx`, `startup_wait=150`.
+- Stage C (`stage_c_asr.py` su CT203) aggiornato: `ARIA_QUEUE_KEY = "aria:q:stt:local:whisperx-large-v3:lifelog"`.
+- E2E test con audio AES-GCM cifrato: A→E completata in **~91s** su segmento 299s (3.3× realtime warm).
+
+**Timing misurato:**
+- Stage B (decrypt+WAV): ~1s
+- Stage C (WhisperX): ~24s (16s inferenza + overhead ARIA)
+- Stage D (GPU switch 35s + qwen3-14b ~12s): ~49s — il bottleneck è il GPU switch, non il modello
+- Stage E (mxbai embed + WAV delete): ~3s
+- **Totale warm: ~91s su 299s audio**
+
+**Analisi headroom Level 2:**
+- Finestra libera: 300s - 91s = **~209s** per analisi asincrone
+- LLM già warm dopo Stage D → ogni chiamata Level 2 ~12s → **~17 chiamate LLM/segmento** nel budget
+- Greedy batch (BatchOptimizer regola binaria: stay if ≥1 task in coda) protegge la warmness: se Level 2 task arrivano subito dopo D, LLM non switcha mai
+- Level 2/3 workers (Detective, Stage F, Stage G, Retroactive Indexer): **zero righe di codice** — solo blueprint. Prossimo step di sviluppo naturale.
+
+## [2026-05-14 19:30] END
+**Completato:** /doc nh-mini, /doc aria, /doc lifelog2 — tutti i file di knowledge allineati con sessione 2026-05-14. Log.md, development-log.md, architecture.md, api-contracts.md, ARIA blueprint, aria-state-of-gaps aggiornati.
+**Incompleto:** nulla di critico.
+**Mine:** Level 2 workers (Detective, Stage F/G) da implementare — headroom disponibile e architettura chiara.
+
+---
+
 ## [2026-05-11 17:30] END
 **Obiettivo sessione**: Global Registry implementation + CT203 deploy + Android handoff analysis.
 - **Completato**:

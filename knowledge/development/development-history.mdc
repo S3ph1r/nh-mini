@@ -699,3 +699,355 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-05-13 - Stage D LLM enrichment + Stage E embedding worker ...
+```json
+{
+  "timestamp": "2026-05-13T17:21:42.808500+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2",
+  "change": "Stage D LLM enrichment + Stage E embedding worker operativi. Fast Pipeline A→E testata E2E (21 segmenti). Stage C refactor: capture_class (personal/mixed/ambient/unknown), identity resolution deferred to Stage D. ARIA: qwen3-14b-q4km backend @ 8090 (llama-server.exe b9119, sm_120, RTX 5060 Ti).",
+  "reason": "Completamento pipeline veloce Lifelog2 Livello 1. Ogni segmento audio ora produce un MemoryAtom con embedding 1024d consolidato nel DB.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-14 - WhisperX large-v3 integrato come backend STT prima...
+```json
+{
+  "timestamp": "2026-05-14T17:55:38.723751+00:00",
+  "category": "FEATURE",
+  "component": "ARIA/lifelog_whisperx",
+  "change": "WhisperX large-v3 integrato come backend STT primario per Lifelog2 (porta 8091, env lifelog-whisperx). Sostituisce Qwen3-ASR-1.7B (ora standby su :8087). Fix model_logic_ids + threading.RLock + handler class deployment.",
+  "reason": "Qualità ASR superiore su audio bassa qualità (SNR=6.1): WhisperX 210 parole corrette vs Qwen3-ASR 677 parole con hallucinations. Pipeline A→E: 91s warm su 299s audio (3.3× realtime).",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-14 - Fix threading.RLock (shutdown deadlock), model_log...
+```json
+{
+  "timestamp": "2026-05-14T17:55:55.026003+00:00",
+  "category": "BUGFIX",
+  "component": "ARIA/orchestrator",
+  "change": "Fix threading.RLock (shutdown deadlock), model_logic_ids hardcoded list pattern documentato, _BACKENDS_AVAILABLE import guard documentata come gotcha critica.",
+  "reason": "Deadlock al shutdown: _ensure_single() + _kill_proc() tenevano stesso threading.Lock. model_logic_ids mancante causava ARIA cieca alle code Redis dei nuovi modelli.",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-15 - Stage F integrato nell'orchestrator come asyncio t...
+```json
+{
+  "timestamp": "2026-05-15T03:26:49.683077+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/Orchestrator",
+  "change": "Stage F integrato nell'orchestrator come asyncio task parallelo (ogni 30min, trigger Redis run_grouping)",
+  "reason": "Stage F (episode grouping) deve girare periodicamente senza bloccare il loop B→E sequential greedy",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-15 - Prompt v5: aggiunge action_items e decisions al Me...
+```json
+{
+  "timestamp": "2026-05-15T03:26:56.816945+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/StageD",
+  "change": "Prompt v5: aggiunge action_items e decisions al MemoryAtom. _NOISE_PHRASES filter, _parse_str_list() helper. Rerun su 19 atom esistenti (7/19 con dati non vuoti)",
+  "reason": "action_items e decisions erano assenti dall'analisi LLM — necessari per query operative sulla memoria",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-15 - _reject() ora persiste quality metrics (rms_db, sn...
+```json
+{
+  "timestamp": "2026-05-15T03:27:03.697683+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/StageB",
+  "change": "_reject() ora persiste quality metrics (rms_db, snr_db, speech_ratio, duration_seconds) anche sui segment scartati. Prima erano NULL in DB",
+  "reason": "Metriche NULL impedivano analisi post-hoc sullo scarto e audit della qualità audio",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-05-15 - Control Plane v2: telemetria SQLite (5 tabelle), w...
+```json
+{
+  "timestamp": "2026-05-15T19:22:27.727696+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/Control Plane",
+  "change": "Control Plane v2: telemetria SQLite (5 tabelle), worker instrumentation B/C/D/E/F, /telemetry/* API (6 endpoint), /orchestrator/status reale (Redis+Postgres), /orchestrator/logs, pipeline dashboard SvelteKit con 5 sezioni",
+  "reason": "Visibilità completa del processing in produzione — rate discard Stage B 83%, timing per stage, log terminal real-time",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-15 - CT203 timezone fixata a Europe/Rome (CEST UTC+2) v...
+```json
+{
+  "timestamp": "2026-05-15T19:22:56.230213+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/CT203",
+  "change": "CT203 timezone fixata a Europe/Rome (CEST UTC+2) via ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime — timedatectl D-Bus bloccato (org.freedesktop.timedate1 timeout 25s)",
+  "reason": "Log timestamp CT203 sfasati rispetto al resto del sistema (tutti in UTC+2)",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-05-16 - raw_transcript_key su MemoryAtom
+```json
+{
+  "timestamp": "2026-05-16T00:00:00Z",
+  "category": "FEATURE",
+  "component": "Lifelog2/StageD + MemoryAtom",
+  "change": "Campo raw_transcript_key VARCHAR(512) aggiunto a MemoryAtom. Stage D lo popola con il path MinIO del transcript JSON raw (speaker_turns inclusi). Necessario per Stage F Pass 3 (split intra-atom) e per la Transcript View frontend.",
+  "reason": "Collegare il MemoryAtom al suo transcript originale senza ri-fetchare da Redis (TTL scaduto) — MinIO è persistente",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-16 - Migration 0005: Identity Resolution fields su persons
+```json
+{
+  "timestamp": "2026-05-16T00:10:00Z",
+  "category": "FEATURE",
+  "component": "Lifelog2/DB + persons model",
+  "change": "5 nuove colonne su persons: identity_level SMALLINT(0-3), confirmed_at, confirmed_by, disambiguation_tag, identity_candidates JSONB. Index su identity_level. Backfill: self+voiceprint → level=3. Roberto Guareschi: enrolled, quality=0.6.",
+  "reason": "Formalizzare lo stack di certezza identità (unknown→candidate→confirmed→enrolled) nel DB invece che solo in memoria",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-16 - Worker Detective: identity inference LLM
+```json
+{
+  "timestamp": "2026-05-16T00:20:00Z",
+  "category": "FEATURE",
+  "component": "Lifelog2/Orchestrator + worker_detective.py",
+  "change": "Worker Detective come subprocess orchestrator: ogni 15min legge ultimi 8 atom via Redis checkpoint (lifelog:detective:last_atom_ts), chiama qwen3-14b per estrarre nomi da discourse, scrive identity_candidates JSONB su persons (level=1). Mai modifica first_name/last_name. Trigger manuale via Redis cmd run_detective.",
+  "reason": "Primo livello di identity inference automatica — identifica candidati senza certezza, pronto per conferma utente",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-16 - Frontend Views B2-B7 + sfondo bg.jpg + palette
+```json
+{
+  "timestamp": "2026-05-16T01:00:00Z",
+  "category": "FEATURE",
+  "component": "Lifelog2/Frontend SvelteKit",
+  "change": "6 nuove viste: Day (/day/[date] — episodi+atom con nav), Map (/map — Leaflet GPS), People (/people — directory identità), Sagas (/sagas — library episodi), Timeline (/timeline — spine verticale mese/giorno), Transcript (/transcript/[id] — speaker turns da MinIO). Sfondo bg.jpg su html element (fixed). Glass opacity 0.65-0.82. --color-text-3 da 0.55 a 0.72.",
+  "reason": "Dashboard completa per navigare tutti i livelli di memoria: atom, episodio, persona, luogo, trascrizione",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-16 - Dashboard API endpoints: sagas, people, transcript
+```json
+{
+  "timestamp": "2026-05-16T01:10:00Z",
+  "category": "FEATURE",
+  "component": "Lifelog2/API dashboard.py",
+  "change": "3 nuovi endpoint in /dashboard/: GET /sagas (paginato, filtro capture_class+tag, atom_count aggregato), GET /people (persons + episode_count tally Python, identity stats), GET /transcript/{atom_id} (legge MinIO via raw_transcript_key, formatta speaker_turns con etichette Voce A/B/...).",
+  "reason": "Backend per le 3 nuove viste frontend — ogni vista ha il suo endpoint dedicato",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-15 - Implementate viste B4 Sagas, B5 People, B6 Timelin...
+```json
+{
+  "timestamp": "2026-05-15T23:51:23.345117+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/frontend",
+  "change": "Implementate viste B4 Sagas, B5 People, B6 Timeline, B7 Transcript in SvelteKit + fix background html element (SvelteKit overflow:hidden + fixed workaround)",
+  "reason": "Completamento dashboard 8 viste — navigazione episodi, identità persone, timeline verticale, lettura trascrizioni con speaker turns da MinIO",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-15 - Dashboard API: aggiunti endpoint /sagas (filtri ca...
+```json
+{
+  "timestamp": "2026-05-15T23:51:29.462070+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/backend",
+  "change": "Dashboard API: aggiunti endpoint /sagas (filtri capture_class+tag, paginazione), /people (identity levels, episode count), /transcript/{id} (MinIO reader, speaker_turns → Voce A/B/C)",
+  "reason": "Supporto alle nuove viste frontend — dati episodi, persone con voiceprint, trascrizioni full-text",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-17 - Stage G covers worker integrato nell'orchestratore...
+```json
+{
+  "timestamp": "2026-05-17T06:49:52.596396+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/orchestrator",
+  "change": "Stage G covers worker integrato nell'orchestratore come _covers_loop trigger-only (da Stage F rc=0 o Redis cmd)",
+  "reason": "Cover generation deve partire solo dopo Stage F — ARIA gestisce autonomamente il GPU switch FLUX↔LLM",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-17 - aria_imagegen: output dict fix + minio_url fallbac...
+```json
+{
+  "timestamp": "2026-05-17T06:50:04.048214+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/aria_imagegen+worker_detective",
+  "change": "aria_imagegen: output dict fix + minio_url fallback + output_key param. worker_detective: ma.start_time invece di s.started_at (colonna inesistente)",
+  "reason": "Bug latenti scoperti durante integrazione Stage G in produzione",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-05-17 - Tutti i backend ARIA su PC139 migrati da 127.0.0.1...
+```json
+{
+  "timestamp": "2026-05-17T06:50:13.702728+00:00",
+  "category": "FEATURE",
+  "component": "ARIA/backends",
+  "change": "Tutti i backend ARIA su PC139 migrati da 127.0.0.1 a 0.0.0.0 (FLUX, WhisperX, ASR, AudioCraft, AceStep). FLUX server: aggiunto DELETE /output/{filename}",
+  "reason": "Backend bound a 127.0.0.1 erano irraggiungibili dall'IP esterno 192.168.1.139 dopo la fix health-check Firebase Studio",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-17 - Generazione batch copertine per Memory Atom e fall...
+```json
+{
+  "timestamp": "2026-05-17T08:54:59.880292+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2",
+  "change": "Generazione batch copertine per Memory Atom e fallback automatico UI",
+  "reason": "Migliorare UX garantendo copertura visiva anche durante l'attesa del processing FLUX.2 su ARIA",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-20 - CAMCORDER/ambient audio source quality gate con so...
+```json
+{
+  "timestamp": "2026-05-20T15:34:53.122131+00:00",
+  "category": "BUGFIX",
+  "component": "Stage B (stage_b_preprocess.py)",
+  "change": "CAMCORDER/ambient audio source quality gate con soglie differenziate (RMS -65dBFS, SNR -30dB, speech_ratio 0.0 per CAMCORDER/DEFAULT; -45dBFS/+3dB/0.10 per VOICE_RECOGNITION)",
+  "reason": "Roberto registra in modalità CAMCORDER — segmenti ambient con SNR basso venivano scartati da Stage B non raggiungendo mai Stage C/D/E",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-20 - Rejected M4A ora salvati in MinIO quality-rejected...
+```json
+{
+  "timestamp": "2026-05-20T15:35:05.127692+00:00",
+  "category": "FEATURE",
+  "component": "Stage B (stage_b_preprocess.py)",
+  "change": "Rejected M4A ora salvati in MinIO quality-rejected/{persona}/{YMD}/{segment_id}.m4a con metadata discard-reason prima dell'eliminazione locale",
+  "reason": "Conservare i segmenti scartati per analisi qualità registrazione e futuro oblivion scheduler",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-20 - Nuovo script standalone per reclassificare capture...
+```json
+{
+  "timestamp": "2026-05-20T15:35:05.155939+00:00",
+  "category": "FEATURE",
+  "component": "scripts/rematch_voiceprint.py",
+  "change": "Nuovo script standalone per reclassificare capture_class (personal/mixed/ambient) ricalcolando cosine similarity tra speaker_turns.voiceprint_embedding e Person.voiceprint_embedding",
+  "reason": "Dopo re-enrollment voiceprint o cambio soglia, è necessario rivalutare tutti i segmenti storici senza riprocessare la pipeline",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-20 - Revert errore: eliminazione WAV da Stage C rimossa...
+```json
+{
+  "timestamp": "2026-05-20T15:35:05.183919+00:00",
+  "category": "BUGFIX",
+  "component": "Stage C (stage_c_asr.py)",
+  "change": "Revert errore: eliminazione WAV da Stage C rimossa. Stage E è l'unico owner della WAV deletion (dopo embedding mxbai 1024d)",
+  "reason": "WAV deve essere accessibile via presigned URL durante Stage C→D; Stage E è il punto corretto dopo l'ultimo uso",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-21 - Audio playback per speaker turn: endpoint GET /api...
+```json
+{
+  "timestamp": "2026-05-21T19:22:36.103298+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/frontend/transcript",
+  "change": "Audio playback per speaker turn: endpoint GET /api/dashboard/segment/{id}/audio-clip (MP3 streaming + dynaudnorm)",
+  "reason": "Necessità di ascoltare i turn diarizzati nella vista transcript; risolti 5 bug root-cause chain (far-field audio, browser timeout, Svelte5 $state Proxy, WebM/Opus OpusHead, Chrome media buffer)",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "68add51"
+}
+```
+
+### 2026-05-22 - Reverse geocoding Nominatim in Stage F + backfill ...
+```json
+{
+  "timestamp": "2026-05-22T09:31:41.475174+00:00",
+  "category": "FEATURE",
+  "component": "lifelog2/geocoding",
+  "change": "Reverse geocoding Nominatim in Stage F + backfill script + PlaceRef dataclass",
+  "reason": "Episodi e memory_atoms ora hanno place_ids/location_id per vista Map e contesto geografico",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-22 - GPS filename parser fallback in uploads.py — segme...
+```json
+{
+  "timestamp": "2026-05-22T09:31:41.503627+00:00",
+  "category": "FEATURE",
+  "component": "lifelog2/uploads",
+  "change": "GPS filename parser fallback in uploads.py — segment_YYMMDDHHMMSS_LAT_LON.m4a.enc",
+  "reason": "App Android codifica GPS nel filename; metadata JSON a volte non lo include",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-05-22 - Re-enrollment ResNet293 1175 segmenti + multi-segm...
+```json
+{
+  "timestamp": "2026-05-22T09:31:41.532276+00:00",
+  "category": "FEATURE",
+  "component": "lifelog2/voiceprint",
+  "change": "Re-enrollment ResNet293 1175 segmenti + multi-segment centroid + person_id/capture_class update",
+  "reason": "Enrollment singolo-segmento copriva solo 25 turns su 7650; centroid su 17 segmenti copre 582 turns",
+  "author": "agent",
+  "impact": "high"
+}
+```

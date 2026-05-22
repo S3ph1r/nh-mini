@@ -87,6 +87,24 @@ workspace/current_project
 secrets/*.unencrypted.yaml
 store_gemini_api_key.py
 
+# Script di audit/debug one-shot (possono contenere credenziali hardcoded)
+scripts/lifelog_audit*.py
+scripts/lifelog_audit*.sh
+scripts/lifelog_*.sh
+scripts/check_sops_creds.py
+scripts/correct_final.sh
+scripts/final_queries.sh
+scripts/fix_ssh_access.sh
+
+# Fix/debug scripts one-shot nella root
+fix_*.py
+list_minio*.py
+wipe_*.py
+count_minio.py
+update_journal.py
+finalize_journal.py
+scratch/
+
 # Audio/media temporanei
 *.wav
 *.mp3

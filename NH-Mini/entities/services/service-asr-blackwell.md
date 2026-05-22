@@ -12,7 +12,8 @@ Servizio ASR di produzione ottimizzato per GPU Blackwell (`sm_120`), ospitato su
 
 ## Stack Tecnologico
 
-- **Model**: Qwen3-ASR-1.7B (Local, BF16).
+- **Model (Lifelog2 primary, 2026-05-14+)**: WhisperX large-v3 (porta 8091, env `lifelog-whisperx`). Timing Stage C: ~24s warm su 299s audio.
+- **Model (standby)**: Qwen3-ASR-1.7B (Local, BF16) — porta 8087, queue `aria:q:stt:local:qwen3-asr-1.7b:lifelog`.
 - **Diarization**: Pyannote 4.0.1 (API DiarizeOutput).
 - **Embedding**: ResNet34 (wespeaker-voxceleb-resnet34-LM) -> **256 dimensioni**.
 - **Audio Loading**: Soundfile (bypass Torchaudio `libtorchcodec` crash).

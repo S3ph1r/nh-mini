@@ -1,7 +1,7 @@
 # Infrastructure Map — Container Proxmox
 
 type: resource_declaration
-last_updated: 2026-05-11
+last_updated: 2026-05-13
 auto_source: state/inventory.json + discovery.py
 
 ## Infrastruttura Reale (SOT)
@@ -76,10 +76,10 @@ Tutto il resto è legacy/reference — vedi sezione sotto.
 - **type**: compute node esterno
 - **engine**: NVIDIA RTX 5060 Ti 16GB VRAM + 32GB RAM
 - **location**: 192.168.1.139 (Windows 11)
-- **purpose**: ARIA Node Controller — esecuzione inferenza AI su GPU, TTS, ACE-Step
+- **purpose**: ARIA Node Controller — esecuzione inferenza AI su GPU, TTS, ACE-Step, ASR, LLM
 - **OS**: Windows 11
 - **connectivity**: stessa subnet, comunica con CT120 via Redis (BRPOP/LPUSH)
-- **ports**: 8080 (Fish TTS API), 8081 (Voice Cloning API), 8082 (HTTP Asset Server)
+- **ports**: 8080 (Fish TTS API), 8081 (Voice Cloning API), 8082 (HTTP Asset Server), 8087 (Qwen3-ASR standby), 8090 (LLM qwen3-14b), 8091 (WhisperX large-v3 — ASR primario Lifelog2 da 2026-05-14)
 - **progetto**: ARIA (sviluppi/ARIA/) — SOT del codice è PC139, mirror su CT190
 - **workflow**: Develop/test su PC139 → commit/push da PC139 → git pull su CT190
 

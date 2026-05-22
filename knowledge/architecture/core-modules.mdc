@@ -107,6 +107,8 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 | `prepare-lxc-proxmox.sh` | Prepara LXC su Proxmox | Bootstrap |
 | `setup_ct202_gateway.sh` | Setup container CT202 gateway | Deploy gateway |
 | `nh-secrets-sync.py` | Sincronizza secrets SOPS tra nodi | Manutenzione |
+| `check_sops_creds.py` *(2026-05-21)* | Verifica disponibilità namespace SOPS + SSH reach per tutti i nodi. Mostra solo chiavi, **mai valori** | `python3 scripts/check_sops_creds.py` |
+| `lifelog_audit.py` *(2026-05-21)* | Audit Lifelog2: telemetry.db, Postgres row counts, MinIO object counts — report diagnostico da CT190 | `python3 scripts/lifelog_audit.py` |
 
 ## web/ — Dashboard NH-Mini (aggiunto 2026-04-24)
 

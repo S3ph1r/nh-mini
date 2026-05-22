@@ -260,7 +260,16 @@ def check_scripts_reference(result: LintResult):
 
 def check_project_knowledge_index(project_name: str, result: LintResult):
     """Verifica ogni entry KNOWLEDGE_INDEX del .project-context del progetto specificato."""
-    project_dir = ROOT / "sviluppi" / project_name
+    sviluppi = ROOT / "sviluppi"
+    # Case-insensitive lookup: cerca la directory il cui nome corrisponde (case-insensitive)
+    project_dir = None
+    if sviluppi.exists():
+        for d in sviluppi.iterdir():
+            if d.is_dir() and d.name.lower() == project_name.lower():
+                project_dir = d
+                break
+    if project_dir is None:
+        project_dir = sviluppi / project_name  # fallback per il messaggio di errore
     ctx_path = project_dir / ".project-context"
 
     if not project_dir.exists():

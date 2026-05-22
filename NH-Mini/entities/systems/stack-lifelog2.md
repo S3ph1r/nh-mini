@@ -3,7 +3,7 @@ title: "Stack — Lifelog2"
 type: entity
 tags: [stack, lifelog, memory, pipeline, embedding, identity]
 sources: [lifelog2-project-context.md, lifelog2-identity-resolution.md]
-updated: 2026-05-16
+updated: 2026-05-22
 ---
 
 # Stack — Lifelog2
@@ -67,7 +67,7 @@ L'interfaccia di Lifelog2 è stata evoluta da un modello glassmorphism generico 
 
 - **MemoryAtom.embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
 - **Thread.topic_embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
-- **Person.voiceprint_embedding**: `vector(256)` — Qwen3-ASR embedding via ARIA PC139 (voiceprint_quality=1.0 su 6 campioni per Roberto)
+- **Person.voiceprint_embedding**: `vector(256)` — WeSpeakerResNet293 embedding via ARIA PC139. Roberto: **multi-segment centroid** (17 segmenti, norm=1.000, max_sim=0.9371). 582 speaker_turns assegnati con cosine ≥ 0.72.
 
 CT107 promosso da legacy a infra reale: LXC always-on, CPU, Ollama con mxbai-embed-large già installato.
 
@@ -87,26 +87,29 @@ Questo garantisce che il server NH-Mini sia un "guscio vuoto" senza dati persona
 A (Ingest Android M4A) 
 → B (Preprocess WAV 16kHz — LXC 203)
 → C (ASR + Diarize + Voiceprint 256d — PC 139 WhisperX large-v3 [primary] / Qwen3-ASR-1.7b [standby])
-→ D (MemoryAtom LLM — PC 139 qwen3-14b-q4km, prompt v5)
+→ D (MemoryAtom LLM — PC 139 qwen3-14b-q4km, prompt v10: capture_class-aware + sentiment + transcript_quality)
 → E (Text Embedding 1024d — LXC 107 mxbai)
 → F (Grouping/Episodes + visual_prompt LLM — LXC 203)
 → G (Episode Cover Generation — PC 139 FLUX.2-klein-4B)
 → H (Retention/Oblivion — futuro)
+
+[Worker indipendente]
+→ Profile Builder (domenica 04:00, Strato 1+2 zero-LLM → UserProfileFact Z7)
 ```
 
 ### Stage D — Enrichment Architecture
 
 Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SPEAKER_XX`) fino a Stage E.
 
-- **Input**: transcript + speaker_turns (da Stage C via MinIO)
+- **Input**: transcript + speaker_turns + `capture_class` (da Stage C via MinIO + Segment DB)
 - **Task ARIA**: queue `aria:q:llm:local:qwen3-14b-q4km:lifelog`
-- **Output MemoryAtom**: summary, event_type, topics, entities, speaker_turns_annotated, temporal_refs, confidence, `action_items` (v5+), `decisions` (v5+)
+- **Output MemoryAtom**: summary, topics, entities, decisions, action_items, sentiment, transcript_quality
 - **Prompt versioning**: `prompts/config.json` → `prompts/stage_d_enrich_v{n}.txt` (nessun prompt hardcoded)
-- **Prompt v5** (2026-05-15): aggiunge `action_items` e `decisions` (array). Regole: solo task concreti, no vaghi intenti, no contenuto media passivo se non commentato dall'utente, max 5 ciascuno, lingua matched.
-- **Noise filter**: `_NOISE_PHRASES` frozenset — filtra risposte LLM tipo "nessuna decisione esplicita" che entrano come stringhe nell'array.
-- **`_parse_str_list()`**: helper condiviso per topics, action_items, decisions — normalizza str e list, applica noise filter.
-- **Timing warm**: ~55s totali (LLM load + inferenza), ~21s se già carico
-- **Timing cold**: ~155-200s (ASR già scarico → LLM load + inferenza)
+- **Prompt v10** (corrente): `capture_class` passato come ground truth — `ambient` → `action_items=[]`, `decisions=[]` assoluto. Aggiunge `sentiment` (positive/negative/neutral/mixed) e `transcript_quality` (0.0–1.0, gate ephemeral < 0.20). Scoring tier per capture_class: ambient ≤ 0.50, mixed 0.30–0.70, personal 0.40–0.90.
+- **Noise filter**: `_NOISE_PHRASES` frozenset — filtra risposte LLM tipo "nessuna decisione esplicita".
+- **`_parse_str_list()`**: normalizza str/list, applica noise filter per topics, action_items, decisions.
+- **Timing warm**: ~49s totali (35s GPU switch + 12s inferenza)
+- **Timing cold**: ~155-200s (LLM non in VRAM)
 
 ### Identity Resolution (3 livelli)
 
@@ -147,6 +150,8 @@ La continuità temporale da sola non è sufficiente a definire un episodio. Stag
 **AtomRef dataclass**: `memory_id, row, from_turn, to_turn, is_partial` — permette referenze sub-atom (dal minuto X al minuto Y dell'atom N).
 
 **Cutoff**: atom con `ended_at < NOW() - 10min` — l'ultimo episodio rimane "aperto" per estensione al run successivo.
+
+**Geocoding (2026-05-22)**: Stage F geocodifica automaticamente ogni episodio creato. Calcola lat/lon media delle raw_captures degli atom → chiama `find_or_create_place()` → aggiorna `episodes.place_ids` (JSONB) + `memory_atoms.location_id`. Backfill script `scripts/backfill_geocoding.py` per episodi esistenti. Nominatim OSM, 200m merge radius, 1 req/s rate limit.
 
 **Bug storico risolto (2026-05-15)**: `_temporal_prefilter` non aggiornava `current_end` all'apertura di un nuovo gruppo → tutti i gap venivano calcolati rispetto al primo atom → 17 gruppi invece di 8.
 
@@ -218,11 +223,12 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 | M1 — Infrastructure + API Ingest | ✅ Done | CT105 DB live, MinIO bucket live, FastAPI su CT190:8002, 4 endpoint Android testati, 20 segmenti V1 in pipeline |
 | M2 — Pipeline Stage B (Preprocess) | ✅ Done | Consumer Redis `lifelog:stream:ingest`, ffmpeg WAV 16kHz, quality gate, MinIO `normalized-audio/`, emit `lifelog:stream:asr` (2026-05-07) |
 | M3 — Pipeline Stage C (ASR) | ✅ Done | Refactored 2026-05-12: `capture_class`, user-first voiceprint, drain loop fix. **2026-05-14: WhisperX large-v3 (porta 8091) come backend primario** — sostituisce Qwen3-ASR-1.7B (standby). Timing Stage C: ~24s warm (vs ~55s). Pipeline A→E: 91s totali su 299s audio (3.3× realtime). |
-| M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | **Prompt v5** (2026-05-15): aggiunge `action_items` + `decisions` con noise filter `_NOISE_PHRASES`. v4 (2026-05-15): regola critica monologue vs podcast/broadcast. 2 atom misclassificati (`0a4bf747`, `be8217d1`) — da rielaborare con v5. Rerun su 19 atom completato: 7/19 hanno action_items/decisions non vuoti. |
+| M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | **Prompt v10** (corrente, 2026-05-22): capture_class-aware + sentiment + transcript_quality + scoring tier. v8 (2026-05-20): prime versioni capture_class-aware. v5 (2026-05-15): action_items + decisions. Noise filter `_NOISE_PHRASES`. |
 | M4.5 — Stage E (Embedding + WAV cleanup) | ✅ Done 2026-05-13 | mxbai-embed-large 1024d via CT107, `memory_atoms.embedding` aggiornato, WAV MinIO eliminato, pipeline_status="consolidated". Fast Pipeline A→E operativa. |
 | M5 — Episode/Day Grouping | ✅ Done | Stage F **live** 2026-05-15 — 4-pass sliding window, 8 gruppi → 12 episodi su 19 atom, bug prefilter fixato. **Orchestratore integrato** — Stage F ogni 30min, trigger `run_grouping`. **Worker Detective** live 2026-05-16 — identity inference LLM ogni 15min, Redis checkpoint. **Stage G live 2026-05-16** — cover generation FLUX.2-klein-4B, ogni 60min, trigger `run_covers`. |
 | M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico |
-| M7 — Frontend SvelteKit | 🔧 In progress | **Cinematic UI** live su CT203:5173. **Control Plane v2** (2026-05-15): telemetria, pipeline dashboard. **Views B2–B7** (2026-05-16): Day, Map, People, Sagas, Timeline, Transcript. Sfondo bg.jpg + palette glassmorphism. |
+| M7 — Frontend SvelteKit | ✅ Done | **Cinematic UI** live su CT203:5173. Views: Dashboard, Day, Map, People, Sagas, Timeline, Transcript, Pipeline, Tasks, Profile. Audio playback MP3 su transcript. Sfondo bg.jpg + oklch. |
+| M8 — Intelligence Layer Z7 | 🔧 In progress | **Profile Builder Strato 1+2 live** (2026-05-22). Strato V + Cerchia Tier B + HNSW index: P2 roadmap. `lifelog2-status-roadmap.md` come checklist periodica. |
 
 ## Frontend Views (CT203:5173)
 
@@ -230,12 +236,14 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 |------|-------|-------------|
 | Dashboard | `/` | Hero episode, filmstrip rail, bande episodi multi-giorno |
 | Day | `/day/[date]` | Episodi + atom del giorno, nav prev/next, link transcript |
+| Tasks | `/tasks` | Tracciamento action items e decisioni estratte dai ricordi |
 | Map | `/map` | Leaflet CircleMarker GPS, filtro periodo, detail panel |
 | People | `/people` | Directory persone, identity badge, voiceprint dot, filtro livello |
 | Sagas | `/sagas` | Library episodi filtrabili per classe + tag, load-more |
 | Timeline | `/timeline` | Linea verticale mese/giorno, spine SVG, dot colorati per classe |
-| Transcript | `/transcript/[id]` | Speaker turns colorati, full text, sidebar metadata |
+| Transcript | `/transcript/[id]` | Speaker turns colorati, full text, sidebar metadata, audio playback MP3 |
 | Pipeline | `/pipeline` | Control Plane v2 — Workers, Streams, DB, Telemetria, Logs |
+| Profile | `/profile` | UserProfileFact viewer — fatti estratti dal Profile Builder, confidenza, categorie |
 
 **Design system**: sfondo `bg.jpg` su elemento `html` (fixed, bypass SvelteKit overflow), gradiente darkening su `body`. Glass surfaces opacity 0.65–0.82. `--color-text-3: oklch(0.72)` (era 0.55).
 
@@ -251,6 +259,7 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 | `/dashboard/transcript/{atom_id}` | GET | Transcript MinIO con speaker_turns formattati |
 | `/dashboard/recent` | GET | Atom recenti |
 | `/dashboard/today` | GET | Alias per data odierna |
+| `/dashboard/profile` | GET | UserProfileFact — lista fatti con confidenza, categoria, evidence |
 
 **Transcript pipeline**: `raw_transcript_key` (MinIO path) su `MemoryAtom` → endpoint legge JSON con `speaker_turns: [{speaker, start_ms, end_ms, text}]` → frontend mappa `SPEAKER_00→Voce A`.
 
@@ -321,7 +330,7 @@ UPDATE persons SET identity_level=3, confirmed_by='enrollment', confirmed_at=NOW
 WHERE relationship_type='self' AND voiceprint_embedding IS NOT NULL;
 ```
 
-Roberto Guareschi: `identity_level=3` (enrolled), `voiceprint_quality=0.6`.
+Roberto Guareschi: `identity_level=3` (enrolled). Voiceprint: multi-segment centroid, 17 segmenti, 582 speaker_turns con cosine ≥ 0.72 assegnati (`person_id` + `capture_class`: 92 segmenti ambient→mixed, 1 ambient→personal).
 
 ### Back-Propagation
 

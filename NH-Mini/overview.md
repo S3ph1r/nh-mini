@@ -3,7 +3,7 @@ title: "NH-Mini Homelab — Overview"
 type: overview
 tags: [homelab, proxmox, overview, architettura]
 sources: [infrastructure-map.md]
-updated: 2026-04-24
+updated: 2026-05-13
 ---
 
 # NH-Mini Homelab — Overview
@@ -16,72 +16,51 @@ Homelab basato su **Proxmox PVE 9.1.1** (MiniPC Ryzen5, 32GB RAM, 1TB) su subnet
 
 | VMID | Nome | Ruolo | IP | Status |
 |------|------|-------|----|--------|
-| 190 | **NH-Mini ⭐** | Dev center + Control plane (questo) | 192.168.1.190 | 🟢 running |
-| 120 | ct120-redis | **Redis Universal State Bus** condiviso (DIAS, ARIA, Stratex) | 192.168.1.120 | 🟢 running |
-| 201 | dias-rt | DIAS Dashboard + API Hub (runtime) | 192.168.1.201 | 🟢 running |
+| 190 | **NH-Mini ⭐** | Dev center + Control plane | 192.168.1.190 | 🟢 running |
+| 120 | ct120-redis | **Redis Universal State Bus** (Shared Hub) | 192.168.1.120 | 🟢 running |
+| 201 | dias-rt | DIAS Runtime (Dashboard + API) | 192.168.1.201 | 🟢 running |
+| 203 | lifelog-v2 | **Lifelog2 Runtime (Liquid Brain Shell)** | 192.168.1.203 | 🟢 running |
 | 202 | ct202-gateway | Internet gateway (nginx + ngrok) | 192.168.1.202 | 🟢 running |
-| — | **PC Gaming** | ARIA Node Controller (RTX 5060 Ti 16GB) | 192.168.1.139 | on-demand |
-
-**CT190 ospita:** `sviluppi/dias/`, `sviluppi/ARIA/` e tutti i futuri progetti in sviluppo.
+| 105 | postgres-lxc | **Postgres Hub** (Stratex, Lifelog2, Core) | 192.168.1.105 | 🟢 running |
+| 107 | nhi-embeddings | **Embedding Service** (Ollama mxbai 1024d) | 192.168.1.107 | 🟢 running |
+| — | **PC Gaming** | ARIA Node Controller (RTX 5060 Ti) | 192.168.1.139 | 🟢 running |
 
 ## Architettura a Strati
 
 ```
-[Internet] → CT202 (nginx+ngrok) → [RT LXC per progetto]
-                                          ↓
-                                   Redis su CT120
-                                          ↓
-                                PC139 (ARIA GPU inference)
+[Internet] → CT202 (nginx+ngrok) → [RT LXC per progetto (CT201, CT203)]
+                                           ↓
+                                    Redis su CT120
+                                           ↓
+                                 PC139 (ARIA GPU inference)
+                                           ↓
+                                 CT105 (Postgres) / CT107 (Embedding)
 
 CT190 (NH-Mini) → SSH → Proxmox → gestisce tutti i container
-CT190 → git pull/push → tutti i progetti
+CT190 → git pull/push → tutti i progetti in sviluppi/
 ```
 
 ## Progetti Attivi
 
-| Progetto | Dev | Runtime | Inferenza |
-|---------|-----|---------|----------|
-| [[stack-dias\|DIAS]] | CT190 (`sviluppi/dias/`) | CT201 | Gemini API (via ARIA) |
-| [[stack-aria\|ARIA]] | PC139 (Win11, SOT) + CT190 (mirror) | PC139 | RTX 5060 Ti locale |
-| [[stack-lifelog2\|Lifelog2]] | CT190 (`sviluppi/Lifelog2/`, API su :8002) | `ct203` (plan) | ARIA PC139 (ASR, embed CT107) |
+| Progetto | Fase | Runtime | Inferenza |
+|---------|------|---------|----------|
+| [[stack-dias\|DIAS]] | Produzione | CT201 | Gemini / Qwen3-TTS (ARIA) |
+| [[stack-aria\|ARIA]] | Supporto Core | PC139 | RTX 5060 Ti (TTS, ASR, LLM) |
+| [[stack-lifelog2\|Lifelog2]] | **Live / Fast Pipeline** | CT203 | ARIA (ASR, LLM) + CT107 (Embed) |
+| [[stack-stratex\|Stratex]] | Produzione (Stasi) | CT190/CT202 | Local DB (CT105) |
 
 ## Roadmap NH-Mini
 
-- `2026-04-24` — Refactor avviato: CT190 diventa control plane unificato
-- **In costruzione**: NH-Mini Dashboard (FastAPI + warroom UI) su CT190:8080
-- **In costruzione**: Discovery daemon (auto-refresh `state/inventory.json` ogni ora)
-- **In costruzione**: Service catalog (agent conosce i servizi disponibili a runtime)
-- **Pianificato**: Workflow project lifecycle (create → dev → promote → RT LXC)
-- **Studio Architetturale**: [[docs/smart-troubleshooting-design\|Smart Troubleshooting Design (Fase 4)]] — analisi locale vs cloud, privacy e sanificazione.
+- `2026-05-01` — Fase 1-3 Evoluzione: Telegram Push, Journaling, Hard Triggers.
+- `2026-05-09` — Promozione Lifelog2 a CT203 (Runtime live).
+- `2026-05-13` — **Lifelog2 Fast Pipeline A→E** operativa end-to-end.
+- **In corso**: Async Workers Level 2 per Lifelog2 (Detective, Context building).
+- **Pianificato**: Consolidamento Dashboard NH-Mini (unificazione monitoraggio ARIA/DIAS).
 
-## Container Legacy / Reference
+## Evoluzione Recente
 
-I seguenti container esistono come riferimento della fase sperimentale e non fanno parte dell'architettura attuale. Verranno eliminati quando serviranno le risorse.
-
-| VMID | Nome | Note |
-|------|------|------|
-| VM100 | vm-ubuntu | Primo sistema Proxmox — obsoleto |
-| CT101 | chromadb | Test vector DB — da ridistribuire se serve |
-| CT103 | observability | Grafana reference — non configurato per infra attuale |
-| CT104 | minio | Test object storage |
-| CT105 | postgres | Test DB relazionale |
-| CT106 | WarRoom | Progetto pre-NH-Mini — da rifare con filosofia NH-Mini |
-| CT107 | nhi-embeddings | Stack NHI precedente |
-| CT160 | NHI-CORE-v1.1 | Vecchia versione NH-Mini con dashboard — in dismissione |
-| CT170 | nhi-backup | Backup stack precedente |
-| CT200 | ct200 | Container dev/test generico |
-
-## Principi Infrastrutturali
-
-- Container: unprivileged, nesting=1, bridge vmbr0
-- Credenziali: SOPS+Age — mai hardcoded
-- SSH key-based da CT190 a Proxmox (192.168.1.2)
-- ARIA su PC139 è caso speciale: Win11 + GPU, pattern SOT descritto in [[entities/systems/stack-aria]]
-
-## Evoluzione
-
-- `2026-02-16` — Migrazione SOPS+Age per secrets
-- `2026-02-18` — CT120 dias-brain deployed
-- `2026-03-07` — CT201 dias-rt deployed
-- `2026-04-20` — CT202 internet gateway deployed
-- `2026-04-24` — Wiki LLM inizializzato, refactor NH-Mini come control plane avviato
+- `2026-05-01` — Implementato sistema notifiche interattive via Telegram.
+- `2026-05-04` — Migrazione Stratex su Postgres CT105.
+- `2026-05-06` — Promozione CT107 (Ollama) a infrastruttura reale.
+- `2026-05-11` — CT203 Live con Global Registry per Lifelog2.
+- `2026-05-13` — Attivato backend LLM Qwen3-14b su PC139 per arricchimento memorie.
