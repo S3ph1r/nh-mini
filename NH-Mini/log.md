@@ -4,6 +4,22 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-22] dev | Lifelog2 Z4 Day Digest & Temporal Aggregation
+
+- **Day Digest Worker Backend**: Creato e testato con successo il worker `worker_day_digest.py` per l'aggregazione temporale giornaliera. Estrae in modo ottimizzato episodi, ricordi (atomi sparsi), persone viste, luoghi e argomenti deduplicati per una determinata data (fuso orario Europe/Rome). Interroga il modello Qwen3 su ARIA per produrre un diario narrativo, eventi chiave, open loops e un arco emotivo/di focus giornaliero in italiano strutturato in JSON, che viene memorizzato in modo efficiente tramite PostgreSQL `ON CONFLICT` con casting `jsonb` sicuro.
+- **FastAPI /day Routing**: Modificato e verificato l'endpoint `/day/{date}` nel backend FastAPI (`dashboard.py`) per integrare fluidamente il payload del digest sotto la chiave `"digest"`, servendo sia i dati della timeline che il riassunto narrativo strutturato.
+- **Svelte 5 Premium UI Layout**: Aggiornata l'interfaccia utente in `src/frontend/src/routes/day/[date]/+page.svelte` per integrare una vista glassmorphic cinematica di altissimo pregio estetico (OkLCH palettes, micro-animazioni). Mostra la sintesi narrativa quotidiana, gli eventi chiave, gli open loops evidenziati in stile "warning" e metachip interattivi per persone, luoghi e tag del giorno. Risolti ed eliminati tutti gli errori di compilazione e tipizzazione TypeScript del frontend tramite `svelte-check`.
+- **Systemd Pipeline & Deployment**: Sviluppati i file di servizio systemd e i timer (`lifelog2-day-digest.service` e `lifelog2-day-digest.timer`) pianificati per l'esecuzione automatica del worker ogni notte alle 01:00 AM Europe/Rome su CT203.
+- **Wiki e Documentazione**: Aggiornato [[log.md]] per tracciare lo sviluppo.
+
+## [2026-05-22] dev | Lifelog2 RAG Chat, HNSW Vector Index & validated_at migration
+
+- **Search Engine Foundation**: Migrazione `0012_hnsw_and_validated_at` applicata a database (CT105) con successo sia in Dev che in Runtime. Creato l'indice HNSW su `memory_atoms.embedding` (distanza coseno, 1024d) e aggiunta la colonna `validated_at` su `user_profile_facts`.
+- **Backend RAG FastAPI**: Implementato l'endpoint `/api/dashboard/rag` che esegue l'embedding semantico tramite Ollama (`mxbai-embed-large`), interroga il database tramite pgvector cosine distance, compila il contesto semantico e formula una risposta RAG strutturata in JSON chiamando Qwen3 su ARIA via `AriaLLMClient`.
+- **Frontend RAG Chat UI**: Sviluppata una magnifica vista di ricerca semantica `/search` in Svelte 5 (sintassi runes `$state`, `$derived`, `$effect`) con interfaccia chat cinematica premium, skeleton loader per il retrieval, parser interattivo di citazioni (`[1]`, `[2]`), e un pannello laterale per ispezionare gli atomi di provenienza citati collegandoli direttamente al visualizzatore di trascrizioni.
+- **Infrastruttura & Lifecycle**: Integrato e abilitato nativamente a runtime il timer di pulizia audio settimanale `lifelog2-cleanup-audio.timer` su CT203. Tutti i servizi principali (`lifelog2`, `lifelog2-orchestrator`, `lifelog2-voiceprint`, `lifelog2-ui`) sono stati riavviati con successo e risultano attivi e stabili.
+- **Wiki e Documentazione**: Aggiornato [[log.md]] per tracciare lo sviluppo.
+
 ## [2026-05-22] dev | Lifelog2 status roadmap + audit completo codebase
 
 - **Audit completo**: scansione di tutta la codebase Lifelog2 (src/, docs/, deploy/, scripts/, migrations, prompts, frontend routes/components) + confronto con master blueprint e addendum intelligence.

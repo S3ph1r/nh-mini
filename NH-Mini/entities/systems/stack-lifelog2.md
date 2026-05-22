@@ -93,9 +93,11 @@ A (Ingest Android M4A)
 → G (Episode Cover Generation — PC 139 FLUX.2-klein-4B)
 → H (Retention/Oblivion — futuro)
 
-[Worker indipendente]
+[Worker indipendenti]
+→ Day Digest & Temporal Aggregation (giornaliero 01:00, Qwen3 su ARIA → Day Z4)
 → Profile Builder (domenica 04:00, Strato 1+2 zero-LLM → UserProfileFact Z7)
 ```
+
 
 ### Stage D — Enrichment Architecture
 
@@ -177,7 +179,23 @@ Worker batch: trova episodi con `visual_prompt IS NOT NULL AND cover_image_key I
 
 **GPU Swap Architecture:** Stage F (Qwen3-14B warm) genera visual_prompt nella stessa sessione. Stage G swappa su FLUX. 1 swap GPU totale per entrambe le operazioni.
 
+### Z4 Day Digest & Temporal Aggregation (2026-05-22)
+
+Un worker periodico (`worker_day_digest.py`) esegue l'aggregazione giornaliera a livello di zoom Z4, sintetizzando l'intera giornata dell'utente.
+
+- **Estrazione dei dati (Europe/Rome)**: Estrae tutti gli `Episodes` e `MemoryAtoms` registrati per una data specifica. I metadati temporali vengono convertiti in base alla timezone di Roma, mentre le interrogazioni al database Postgres avvengono in UTC per coerenza infrastrutturale.
+- **Aggregazione Metadati**: Estrae persone incontrate (tramite join su `speaker_turns`), luoghi fisici e semantici visitati (tramite `places` geocodificati) e argomenti deduplicati del giorno.
+- **Generazione LLM (Aria Qwen3)**: Costruisce un prompt testuale unificato e interroga Qwen3 per produrre:
+  - `daily_digest`: Paragrafo narrativo in italiano fluido e intimo.
+  - `key_events`: Fino a 4 eventi chiave sintetici e precisi.
+  - `open_loops`: Task in sospeso, promesse o argomenti rimasti aperti.
+  - `mood_arc`: Breve sintesi dell'andamento dell'umore e del focus emotivo.
+- **Salvataggio Postgres**: Esegue l'upsert sicuro nella tabella `days` tramite casting standardizzato `CAST(:key_events AS jsonb)` per evitare conflitti SQLAlchemy raw SQL.
+- **Pianificazione**: Servizio systemd `lifelog2-day-digest.service` e relativo timer `lifelog2-day-digest.timer` configurati a runtime su **LXC 203** per girare ogni notte all'**01:00 AM (Europe/Rome)** con modalità catch-up automatica (`--days N`).
+- **Cinematic UI (Svelte 5 runes)**: Visualizzazione in cima alla route `/day/[date]` con una scheda premium glassmorphic, vignette dark, chip interattivi per persone/luoghi e warning box colorati per evidenziare visivamente gli open loops.
+
 ### Control Plane v2 (2026-05-15)
+
 
 **Telemetry SQLite** (`/opt/Lifelog2/data/telemetry.db`) — statistiche pipeline persistenti. 5 tabelle: `upload_events`, `pipeline_events`, `grouping_runs`, `service_events`, `snapshot`. Worker B/C/D/E/F instrumentati con `time.perf_counter()`.
 
