@@ -2,6 +2,7 @@
 
 Catalogo master di tutte le pagine wiki. Aggiornato ad ogni ingest.  
 Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
+_Ultimo aggiornamento: 2026-05-22_
 
 ---
 
@@ -119,18 +120,19 @@ Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
 | [[sources/lifelog2-android-handoff\|lifelog2-android-handoff]] | `sviluppi/Lifelog2/docs/lifelog2_android_handoff.md` | 2026-05-11 |
 | [[sources/lifelog2-identity-resolution\|lifelog2-identity-resolution]] | `sviluppi/Lifelog2/docs/lifelog2-identity-resolution-design.md` | 2026-05-12 |
 | [[sources/lifelog-stage-d-blueprint\|lifelog-stage-d-blueprint]] | `sviluppi/Lifelog2/docs/lifelog-stage-d-blueprint-v1.md` | 2026-05-13 |
+| [[sources/lifelog2-status-roadmap\|lifelog2-status-roadmap]] | `sviluppi/Lifelog2/docs/lifelog2-status-roadmap.md` | 2026-05-22 |
 
 ---
 
 ## Statistiche Wiki
 
-- **Pagine totali:** 60
+- **Pagine totali:** 61
 - **Entities containers:** 10
 - **Entities systems:** 5 (ARIA, DIAS, NH-Mini, Stratex, Lifelog2)
 - **Concepts:** 16
-- **Sources ingerite:** 25
+- **Sources ingerite:** 26
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-17 (ARIA FLUX no-MinIO pipeline + health-check fix + Stage G CT203)
+- **Ultimo aggiornamento:** 2026-05-22 (lifelog2-status-roadmap — audit completo codebase + tasklist P1→P5)
 
 ---
 

@@ -4,6 +4,65 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-22] dev | Lifelog2 status roadmap + audit completo codebase
+
+- **Audit completo**: scansione di tutta la codebase Lifelog2 (src/, docs/, deploy/, scripts/, migrations, prompts, frontend routes/components) + confronto con master blueprint e addendum intelligence.
+- **Documento creato**: `docs/lifelog2-status-roadmap.md` — stato feature-by-feature su 10 aree (pipeline A→H, workers, intelligence layer, identity, livelli Z0–Z7, search/RAG, frontend, infra, roadmap P1→P5).
+- **Blueprint aggiornato**: `lifelog-2.0-master-blueprint-v1.md` — aggiunta sezione "Documenti di riferimento operativo" con puntatori a tasklist, addendum, identity design, dashboard spec.
+- **Gap principali emersi**: HNSW index mancante (embedding ci sono, sequential scan), Day Digest worker (Z4) inesistente, Thread worker (Z6) inesistente, Search/RAG non iniziato, M4A cleanup e Profile Builder timer non ancora abilitati su CT203, Stage H (oblivion) non iniziato, Liquid Brain non iniziato.
+- **Wiki aggiornato**: index.md + log.md.
+
+## [2026-05-22] dev | Lifelog2 voiceprint re-enrollment massivo + geocoding Nominatim
+
+- **Re-enrollment 1175 segmenti**: producer su LXC 203, M4A→WAV via ffmpeg, push queue `aria:q:voiceprint:local:whisperx-large-v3:lifelog`, BRPOP callback, aggiornamento `speaker_turns.voiceprint_embedding`. Completato 0 errori in ~2.8h.
+- **Multi-segment centroid Roberto**: media di 17 centroidi L2-normalizzati → L2-normalize → norm=1.000, 256d. Soglia 0.72: 582 turns matched (max_sim=0.9371). Precedente enrollment singolo segmento (25 match) superato.
+- **Campioni manuale**: 154 WAV clip estratti e copiati su `D:\download\voiceprintsamples\` su ARIA PC. Verificati a campione dall'utente — tutti corretti.
+- **person_id + capture_class**: 582 turns `person_id` → Roberto UUID; 93 segmenti promossi (92 ambient→mixed, 1 ambient→personal).
+- **Fix ARIA git**: `aria_node_controller/backends/lifelog_whisperx.py` aggiunto routing `voiceprint_only` (stash pop perso in rebase); `backends/lifelog_whisperx/server.py` endpoint `/voiceprint` restituisce `{"status": "done", "output": {...}}`. Commit `84f6d92`, SCPed su PC139.
+- **Geocoding implementato** (`src/backend/lifelog2/core/geocoding.py`): `find_or_create_place()` con `PlaceRef` dataclass, Nominatim OSM, merge radius 200m, rate limit 1 req/s.
+- **Stage F integrato**: geocodifica automatica dopo creazione episodio → `episodes.place_ids` + `memory_atoms.location_id`.
+- **Backfill script** (`scripts/backfill_geocoding.py`): 3 episodi geocodificati → "Via Louis Armstrong, Montanara" (44.7725, 10.3142). Commit `927ec73`.
+- **Pending**: parsing GPS da filename M4A (formato sconosciuto, utente deve fornire esempio); `episodes.end_time` bug (= processing time invece di recording end).
+
+## [2026-05-21] dev | Lifelog2 audio playback — 5 bug chain, dynaudnorm, MP3 streaming
+
+- **Endpoint `GET /api/dashboard/segment/{id}/audio-clip`**: stream MP3 per speaker turn, TTFB ~60ms via `asyncio.create_subprocess_exec` + `dynaudnorm=g=15:f=500:r=0.9` (far-field normalization).
+- **5 root cause chain risolti**: (1) far-field silenzioso −33dBFS → dynaudnorm; (2) browser timeout su clip lunghi → streaming subprocess; (3) Svelte 5 `$state` Proxy su HTMLAudioElement → TypeError silenzioso; (4) WebM/Opus OpusHead EBML incompleto in pipe → switch a MP3; (5) Chrome buffer interno stantio → `new Audio()` + cache-buster `?_t=`.
+- **Gotcha documentato**: mai wrappare HTMLMediaElement in `$state` Svelte 5.
+- **knowledge aggiornato**: `architecture.md`, `api-contracts.md`, `development-log.md` (Lifelog2).
+- **history_manager**: entry FEATURE aggiunta (commit `68add51`).
+
+## [2026-05-20] dev | Lifelog2 Stage B CAMCORDER fix + voiceprint ottimizzato + rematch script
+
+- **Stage B fix**: soglie quality gate differenziate per `audio_source` (CAMCORDER/ambient vs VOICE_RECOGNITION). I segmenti ambient non vengono più scartati per SNR basso.
+- **Rejected M4A**: `_reject()` ora salva l'M4A in MinIO `quality-rejected/` prima di eliminarlo. Conservati per analisi qualità e oblivion scheduler futuro.
+- **WAV lifecycle**: chiarito che Stage E è l'unico owner della WAV deletion (reverto errore su Stage C).
+- **Voiceprint Roberto**: re-enrollment con clip 30s ottimizzato (offset 23.2s, senza silenzio). Match 25/7650 turns (top score 0.981). Audio in `voiceprints/enrollment_optimized/roberto_30s.m4a`.
+- **Script `rematch_voiceprint.py`**: classificazione personal/mixed/ambient con `--threshold` e `--dry-run`. Deployato su CT203.
+- **Wiki aggiornata**: `architecture.md`, `development-log.md`, `ct203-lifelog.md`.
+
+## [2026-05-20] doc | audit lifelog2 — allineamento dev-runtime & verifica stato
+- **Infrastruttura**: Verificato lo stato dei 4 servizi systemd attivi su LXC 203 (`lifelog2`, `lifelog2-ui`, `lifelog2-orchestrator`, `lifelog2-voiceprint`), tutti attivi e operativi.
+- **Git Alignment**: Verificato il perfetto allineamento tra LXC 190 (dev) e LXC 203 (runtime) sul commit `330b864` (`feat(ui): /tasks page + stats popover + sidebar Tasks link`).
+- **Wiki Update**: Aggiornato [[stack-lifelog2]] inserendo la nuova vista `/tasks` nelle tabelle e allineando lo stato dello sviluppo (M7: Frontend).
+- **Gap Analysis**: Identificate le aree mancanti da completare per le prossime milestone: RAG / Ask Search (`/ask` e relative API), Vault/Retention (`/vault`), e Month View (`/month`).
+
+## [2026-05-17] dev | Lifelog2 Memory Atom Covers & Fallback UI
+
+## [2026-05-17] doc | /doc aria — FLUX backend + 0.0.0.0 fix + imagegen gaps
+
+- **docs/ARIA-Service-Registry.md**: aggiunta coda `aria:q:imagegen:local:flux2-klein-4b:lifelog`, env `flux-aria`, sezione FLUX endpoint + DELETE pattern + nota 0.0.0.0 fix.
+- **docs/aria-state-of-gaps.md**: gap A0-5 (no imagegen backend → resolved 2026-05-16), gap A0-6 (backends 127.0.0.1 → resolved 2026-05-17).
+- **docs/ARIA-blueprint.md**: sezione Image Generation aggiornata con contratto reale FLUX.2-klein-4B (payload, callback output, DELETE cleanup pattern).
+
+## [2026-05-17] doc | /doc lifelog2 — Stage G orchestratore + git alignment + ARIA 0.0.0.0
+
+- **knowledge/architecture.md**: aggiornato package tree (stage_g_covers.py, orchestrator.py, worker_detective.py), tabella Level 2 (Stage G covers trigger-only), sezione Stage G flow e orchestratore async loops.
+- **knowledge/api-contracts.md**: Sezione 4 ARIA Contract riscritta con contratti reali (ASR HTTP, LLM HTTP, FLUX Redis queue). Redis commands manuali per trigger stage. Campo `covers` in orchestrator status JSON.
+- **knowledge/development-log.md**: entry 2026-05-17 (Stage G orchestratore, aria_imagegen fix, visual_prompt upgrade, detective bugfix, ARIA 0.0.0.0, git alignment).
+- **NH-Mini/log.md**: questa entry.
+- **Pagine wiki toccate**: [[ct203-lifelog]], [[service-asr-blackwell]]
+
 ## [2026-05-17] dev | FLUX no-MinIO pipeline completa + Git ARIA allineato + Stage G aggiornato
 
 **Stato finale sessione:**
