@@ -4,13 +4,23 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-22] dev | Lifelog2 Strato V — LLM Validation Pass (Profile Intelligence)
+
+- **Prompt creato**: `src/backend/lifelog2/prompts/stage_z7_profile_validator_v1.txt` — istruisce Qwen3 su ARIA a classificare fatti di profilo in 5 verdetti (`valid`, `invalid`, `third_party`, `context_limited`, `partial`) con output JSON strutturato.
+- **Worker creato**: `src/backend/lifelog2/services/pipeline/worker_profile_validator.py` — seleziona fatti `user_confirmed=false` con confidenza in gray-zone `[0.40, 0.75]` e `validated_at IS NULL`, li elabora in batch da 8 tramite `AriaLLMClient` (Qwen3-14B-q4km), applica le azioni di validazione (flagging, prefix `[TERZO]`, aggiornamento confidenza) e registra l'audit in `memory_consolidation_records`.
+- **UI aggiornata**: `src/frontend/src/routes/profile/+page.svelte` — classe `.is-flagged` attivata se `sensitivity='flagged'` o `confidence ≤ 0.05`, con desaturazione elegante (opacity 0.55, bordo rosso-ruggine, hover restore) per differenziare visivamente i fatti invalidati.
+- **Deploy RT**: commit `4104f1a` su `S3ph1r/Lifelog2:main`, pull e test E2E su CT203 con ARIA libera. Full-scan iniziale completato (3 fatti validati, tutti `valid`). Timeout corretto da 120s → 600s per compatibilità con pipeline occupata.
+- **Bug fix**: casting JSONB nell'audit log cambiato da `:after::jsonb` a `CAST(:after AS JSONB)` (incompatibilità con asyncpg/SQLAlchemy parametrizzato).
+- **Pagine toccate**: [[stack-lifelog2]], [[log.md]]
+
 ## [2026-05-22] dev | Lifelog2 Z4 Day Digest & Temporal Aggregation
 
 - **Day Digest Worker Backend**: Creato e testato con successo il worker `worker_day_digest.py` per l'aggregazione temporale giornaliera. Estrae in modo ottimizzato episodi, ricordi (atomi sparsi), persone viste, luoghi e argomenti deduplicati per una determinata data (fuso orario Europe/Rome). Interroga il modello Qwen3 su ARIA per produrre un diario narrativo, eventi chiave, open loops e un arco emotivo/di focus giornaliero in italiano strutturato in JSON, che viene memorizzato in modo efficiente tramite PostgreSQL `ON CONFLICT` con casting `jsonb` sicuro.
 - **FastAPI /day Routing**: Modificato e verificato l'endpoint `/day/{date}` nel backend FastAPI (`dashboard.py`) per integrare fluidamente il payload del digest sotto la chiave `"digest"`, servendo sia i dati della timeline che il riassunto narrativo strutturato.
 - **Svelte 5 Premium UI Layout**: Aggiornata l'interfaccia utente in `src/frontend/src/routes/day/[date]/+page.svelte` per integrare una vista glassmorphic cinematica di altissimo pregio estetico (OkLCH palettes, micro-animazioni). Mostra la sintesi narrativa quotidiana, gli eventi chiave, gli open loops evidenziati in stile "warning" e metachip interattivi per persone, luoghi e tag del giorno. Risolti ed eliminati tutti gli errori di compilazione e tipizzazione TypeScript del frontend tramite `svelte-check`.
 - **Systemd Pipeline & Deployment**: Sviluppati i file di servizio systemd e i timer (`lifelog2-day-digest.service` e `lifelog2-day-digest.timer`) pianificati per l'esecuzione automatica del worker ogni notte alle 01:00 AM Europe/Rome su CT203.
-- **Wiki e Documentazione**: Aggiornato [[log.md]] per tracciare lo sviluppo.
+- **Personal vs. Ambient Segmentation**: Evoluzione del prompt di Day Digest (`stage_z4_day_digest_v2.txt`) e del worker `worker_day_digest.py` per segmentare ricordi ed episodi quotidiani in base alla proprietà `capture_class` (personal, mixed, unknown per vita attiva vs ambient per media passivi). Il worker produce ora due narrative e due liste di eventi distinte in JSON, memorizzate in modo retrocompatibile in Postgres. La dashboard FastAPI (`dashboard.py`) gestisce il parsing e il fallback per i dati legacy, e l'interfaccia Svelte 5 renderizza separatamente la sezione "Sottofondo Ambientale & Media" in una scheda glassmorphic desaturata e visivamente differenziata rispetto all'attività principale.
+- **Wiki e Documentazione**: Aggiornato [[log.md]] e [[entities/systems/stack-lifelog2|stack-lifelog2.md]] per tracciare lo sviluppo e l'evoluzione della segmentazione.
 
 ## [2026-05-22] dev | Lifelog2 RAG Chat, HNSW Vector Index & validated_at migration
 
