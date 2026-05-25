@@ -1,3 +1,14 @@
+## [2026-05-25 23:25] END
+
+**Completato:**
+- **Fase 3/4/5 Identity Review UI & API E2E**: Sviluppati gli endpoint FastAPI `/people/{id}/confirm`, `/people/{id}/reject` e `/people/{id}/update` in `dashboard.py`.
+- **Back-Propagation Biometrica PGVector**: Integrato con successo il ricalcolo nativo in PostgreSQL tramite pgvector nella route di conferma, utilizzando il matching biometrico coseno $\ge 0.72$ (distanza coseno $\le 0.28$) per riassociare retroattivamente i turni di voce orfani.
+- **Interfaccia Svelte 5 Premium**: Riscritta interamente l'area dei candidati di `/people/+page.svelte` in Svelte 5 con tipizzazione TypeScript robusta (`Candidate[]`). Integrato il form Frosted-glass con prevenzione del bubbling degli eventi click (che causava il collasso involontario delle card), menù a tendina di relazioni e tag di disambiguazione.
+- **E2E Validation Success**: Eseguito il test di promozione su `CT203` (RT). Il trigger ha promosso con successo l'interlocutore anonimo `"Roberto Guareschi"` marcando a `null` i candidati, impostando `identity_level = 2` e allineando istantaneamente il DB.
+- **Git Sync**: Stage, commit e push eseguiti per `S3ph1r/nh-mini` (commit `3be38d1`) e `S3ph1r/Lifelog2` (commit `d6a4fe9`).
+
+---
+
 ## [2026-05-25 22:15] END
 
 **Completato:**

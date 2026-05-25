@@ -4,6 +4,14 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-25] dev | Lifelog2 Stage L2 Identity Review UI & API E2E Success
+
+- **Backend Mutation Endpoints**: Sviluppate le API di mutazione delle persone in `dashboard.py`: `/people/{person_id}/confirm` (promozione a livello 2, assegnazione relazioni/disambiguation e cancellazione candidati), `/people/{person_id}/reject` (rifiuto selettivo dei candidati) e `/people/{person_id}/update` (modifica anagrafiche e tag esistenti).
+- **PGVector Biometric Back-Propagation**: Integrato il ricalcolo nativo e retroattivo all'interno di `/confirm` tramite query PostgreSQL pgvector (soglia di match coseno $\ge 0.72$, ovvero distanza $\le 0.28$) per riassociare automaticamente i turni di speaker orfani (`person_id IS NULL`) alla persona confermata.
+- **Premium Glassmorphic Identity Panel**: Aggiornato `/people/+page.svelte` in Svelte 5 con tipizzazione TypeScript (`Candidate[]`) per sostituire il dump JSON raw con un'interfaccia interattiva premium. Gli utenti vedono le evidenze virgolettate, la logica del Detective ed il form inline Frosted-glass di conferma con gestione della collisione per l'omonimia, il tag di disambiguazione ed i dropdown di relazione.
+- **E2E Validation Success**: Eseguito il test di conferma su `CT203` (RT). Il trigger ha promosso con successo l'identità del proprietario `"Roberto Guareschi"` marcando a `null` i candidati ed aggiornando anagrafica, livello ed allineando i dati reali del DB.
+- **Pagine toccate**: [[log.md]], [[NH-Mini/index.md]], [[entities/containers/ct203-lifelog.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
 ## [2026-05-25] bugfix | Lifelog2 Detective JSON Truncation, NULL-safe Dedup, max_tokens Fix
 
 - **Detective loop infinito risolto**: root cause = batch 8 atomi → output JSON > max_tokens=1536 → troncamento → parse fail → cursore Redis bloccato → stesso batch ripetuto ogni 15min per 3+ ore. Fix: `BATCH_SIZE=4`, `max_tokens=2048` per il Detective.
