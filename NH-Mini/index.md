@@ -2,7 +2,7 @@
 
 Catalogo master di tutte le pagine wiki. Aggiornato ad ogni ingest.  
 Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
-_Ultimo aggiornamento: 2026-05-22_
+_Ultimo aggiornamento: 2026-05-24_
 
 ---
 
@@ -132,7 +132,7 @@ _Ultimo aggiornamento: 2026-05-22_
 - **Concepts:** 16
 - **Sources ingerite:** 26
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-22 (lifelog2-status-roadmap — audit completo codebase + tasklist P1→P5)
+- **Ultimo aggiornamento:** 2026-05-24 (CT202 Gateway Telemetry & Lifelog2 Control Plane Integration)
 
 ---
 

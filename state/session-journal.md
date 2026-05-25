@@ -1,3 +1,93 @@
+## [2026-05-25 12:20] START — Detective Greedy Batch Processing & E2E Validation
+
+**Obiettivo:** Confermare e documentare l'implementazione del Greedy Batch Processing (5 passate x 8 atomi = 40 atomi max per innesco) per il worker Detective (Stage L2) e monitorare il corretto drenaggio del backlog storico dei segmenti audio.
+**Grounding:**
+- Codice di `worker_detective.py` verificato e validato su `y:\home\Projects\NH-Mini\sviluppi\Lifelog2\src\backend\lifelog2\services\pipeline\worker_detective.py`.
+- Il loop greedy `for batch_num in range(5)` con early-exit `if atoms_processed == 0` risulta già integrato e deployato su `CT203`.
+- Esecuzione manuale triggerata tramite Redis e monitorata tramite SSH per ispezionare `/tmp/lifelog2-workers/detective.log`.
+
+## [2026-05-25 12:25] TASK — Greedy Detective Logs Inspection
+
+- Recuperati con successo i log reali di `/tmp/lifelog2-workers/detective.log` su `CT203` passando per il comando `pct exec` sull'host Proxmox `192.168.1.2` con la chiave `id_homelab`.
+- I log dimostrano inequivocabilmente che all'innesco delle ore **12:13:04**, il Detective ha completato con successo **5 batch consecutivi** (da 8 atomi ciascuno, totale 40 atomi) con le seguenti metriche temporali:
+  - **Batch 1/5**: 8 atomi analizzati, completato in 40.5s.
+  - **Batch 2/5**: 8 atomi analizzati, completato in 35.9s.
+  - **Batch 3/5**: 8 atomi analizzati, completato in 41.1s.
+  - **Batch 4/5**: 8 atomi analizzati, completato in 48.8s.
+  - **Batch 5/5**: 8 atomi analizzati, completato in 28.1s.
+- Tempo totale di elaborazione: **3 minuti e 14 secondi** per 40 atomi, con 0 crash o leak di risorse.
+- Il backlog storico si sta drenando a velocità record (5x rispetto alla configurazione legacy).
+
+## [2026-05-25 12:30] END
+
+**Completato:**
+- Verificato il corretto funzionamento del "Greedy Batch Processing" per il worker Identity Detective (`worker_detective.py`) su `CT203`.
+- Ispezionati e analizzati i log reali tramite Proxmox, confermando l'esecuzione sequenziale di 5 batch da 8 atomi l'uno senza tempi morti (3m 14s di elaborazione continua, 0 candidati rigettati da crash).
+- Documentata l'ottimizzazione e l'esito positivo del test nel Second Brain (`log.md`) e in `development-log.md`.
+
+---
+
+## [2026-05-24 23:50] START — Svelte Page Hydration Fix
+
+**Obiettivo:** Risolvere il problema della schermata bianca / mancato rendering della pagina `/pipeline` (si vede solo la headline) su CT203 dopo il refactor e il ripristino del background scuro.
+**Grounding:**
+- Verificato che il file `+page.svelte` su `CT203` (192.168.1.203) conteneva il codice della pagina.
+- Diagnosticato tramite grep la presenza di blocchi HTML duplicati per STAGE F e STAGE G all'interno di `streams-row`.
+- Rilevato che i tipi TypeScript su `OrchestratorStatus` erano corretti, ma che la duplicazione dei blocchi HTML causava il crash o il disallineamento visivo.
+- Verificato che rimuovendo i blocchi duplicati la compilazione di Vite si completa con successo con 0 errori.
+
+---
+
+## [2026-05-24 23:45] END
+
+**Completato:**
+- **Refinement Visivo Cockpit (/pipeline)**:
+  - Ripristinato lo sfondo scuro originario (`oklch(0.10 0.015 250)`) di `.pipeline-shell` su CT203.
+  - Sfruttata l'opacità ridotta al **45%** delle card (`oklch(0.13 0.02 250 / 0.45) !important`) e dell'headline sticky per creare un superbo effetto **frosted dark glass** (vetro fumé semitrasparente sfocato) che valorizza al massimo i contrasti dei testi chiari e i bagliori al neon.
+  - Colorati i titoli delle sezioni (`.section-title`) in electric cyan-blue (`oklch(0.78 0.15 230)`), ereditando la palette dell'eyebrow di testata e rafforzando la coerenza visiva.
+- **Integrazione Stage F & G Workers**:
+  - Integrate ed esposte nella UI le card per **STAGE F** (Episode Grouping) e **STAGE G** (Visual Covers / FLUX) affiancate alle altre pipeline nella griglia dei worker.
+  - Risolti i tipi TypeScript in `OrchestratorStatus` dichiarando esplicitamente le proprietà opzionali `active`, `grouping` e `covers` per evitare crash di compilazione.
+  - Rilasciata la funzione helper `formatIsoTime()` in Svelte per formattare i timestamp ISO live degli ultimi run estratti in tempo reale da Redis.
+- **Esecuzione Triggers (`/lint` e `/doc`)**:
+  - Eseguito `nh-lint.py` per la compliance del progetto Lifelog2 (51 passati, 0 errori, 7 warnings consigliati per script non referenziati).
+  - Eseguito `/doc Lifelog2`: aggiornati `knowledge/containers/infrastructure-map.mdc` (CT202 specs RAM/storage dopo resize), `sviluppi/Lifelog2/knowledge/development-log.md` (milestone entry 2026-05-24), `sviluppi/Lifelog2/knowledge/architecture.md` (date + CT202 role), e `sviluppi/Lifelog2/knowledge/api-contracts.md` (documentazione blocco `"gateway"` in `/status`).
+  - Committate le modifiche allo storico architetturale con `history_manager.py` (componente `gateway-cockpit`, categoria `FEATURE`).
+
+---
+
+## [2026-05-24 18:05] TASK — Cockpit Aesthetics Refinement & Glassmorphism
+
+**Obiettivo:** Personalizzare l'estetica della dashboard `/pipeline` su CT203 lavorando su sfondo grigio 50% (light slate-grey), semitrasparenze stile frosted glass delle card e della testata, e palette coordinata electric cyan-blue per i titoli di sezione.
+**Grounding:**
+- Codice di `src/frontend/src/routes/pipeline/+page.svelte` letto.
+- File di stile e configurazione ispezionati via SSH.
+- Test in tempo reale abilitato con Vite HMR su CT203:5173.
+
+---
+
+## [2026-05-24 17:35] END — CT202 Gateway Telemetry & Control Plane Integration
+
+**Completato:**
+- **Proxmox CT202 Resize**: Spegnimento controllato, resize RAM (256 MB → 512 MB) e disco (4 GB → 6 GB) di `[[ct202-gateway|CT202]]` da Proxmox via SSH. Container riavviato e servizi Nginx/Ngrok ripartiti correttamente.
+- **Standalone Gateway Dashboard**: Creata una dashboard standalone statico-client-side (Vanilla JS) caricata all'indirizzo `http://192.168.1.202/gateway/` per monitorare live connessioni, throughput e percentili di latenza di Nginx e Ngrok con consumo di **0 MB** RAM sul container.
+- **FastAPI /orchestrator/status integration**: Sviluppata fetch asincrona parallela in `src/backend/lifelog2/api/routers/orchestrator.py` su `[[ct203-lifelog|LXC 203]]` con timeout protetto a 1.5s, includendo la telemetria nella risposta JSON. Riavviato il solo servizio FastAPI API (`systemctl restart lifelog2`), mantenendo la pipeline worker interamente attiva e intatta.
+- **Svelte 5 /pipeline integration**: Estesa la dashboard del control plane in `+page.svelte` con una card premium glassmorphic "Internet Gateway · CT202" che mostra tutti i dati live in tempo reale. Vite HMR applicato con successo ed istantaneamente.
+- **Audit e Documentazione**: Compilato `walkthrough.md` di riepilogo, aggiornati `NH-Mini/log.md`, `NH-Mini/index.md` e `state/session-journal.md`.
+
+---
+
+## [2026-05-24 13:31] TASK — Monitoring pipeline & quality audit
+
+**Obiettivo:** Verificare lo stato live della pipeline di reprocessing su LXC 203, code Redis su CT120, qualità semantica degli atomi generati, ed upload sul gateway CT202.
+**Grounding:**
+- Status API `/orchestrator/status` su CT203:8002 caricato.
+- Log di `stage_d_enrichment` in `/tmp/lifelog2-workers/` tailato.
+- Query diretta su Postgres `lifelog_roberto` via CT190 eseguita.
+- Log di Nginx `gateway_access.log` su CT202 controllati via SSH.
+
+---
+
 ## [2026-05-22 16:02] START — Allineamento e prosecuzione dopo sessione intermedia
 
 **Obiettivo:**

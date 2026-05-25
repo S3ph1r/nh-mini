@@ -1051,3 +1051,16 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-05-24 - CT202 resource upgrade, FastAPI API integration, S...
+```json
+{
+  "timestamp": "2026-05-24T17:09:15.621742+00:00",
+  "category": "FEATURE",
+  "component": "gateway-cockpit",
+  "change": "CT202 resource upgrade, FastAPI API integration, Svelte 5 Cockpit visual redesign with slate-grey background and glassmorphism elements",
+  "reason": "Expose live gateway stats securely and optimize control plane readability and aesthetics",
+  "author": "agent",
+  "impact": "high"
+}
+```

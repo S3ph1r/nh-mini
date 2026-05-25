@@ -11,14 +11,10 @@
             "id": "f3391ea3edec8893",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "log.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "log"
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Vista grafo"
             }
           }
         ]
@@ -74,11 +70,13 @@
               "title": "Segnalibri"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 200,
+    "collapsed": true
   },
   "right": {
     "id": "9ae0fa15e8e8d050",
@@ -185,12 +183,15 @@
   },
   "active": "f3391ea3edec8893",
   "lastOpenFiles": [
-    "entities/containers/ct201-dias-rt.md",
+    "entities/containers/ct203-lifelog.md",
     "index.md",
+    "sources/lifelog2-project-context.md",
+    "sources/lifelog-stage-d-blueprint.md",
+    "log.md",
+    "entities/containers/ct201-dias-rt.md",
     "concepts/aria-environments.md",
     "concepts/dias-voice-pipeline-quality.md",
     "overview.md",
-    "log.md",
     "entities/systems/stack-dias.md",
     "entities/systems/stack-nh-mini.md",
     "entities/containers/ct101-chromadb.md",
@@ -209,9 +210,6 @@
     "sources/aria-blueprint.md",
     "sources/aria-master-roadmap.md",
     "sources/aria-environments-setup.md",
-    "sources/dias-technical-reference.md",
-    "sources/aria-qwen3-tts-backend.md",
-    "sources/dias-preproduction-guide.md",
     "concepts",
     "entities/containers",
     "entities",

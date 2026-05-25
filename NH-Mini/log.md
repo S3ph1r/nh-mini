@@ -4,6 +4,63 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-25] dev | Lifelog2 Identity Detective Greedy Batch Processing Optimization
+
+- **Greedy Loop Activation**: Modificato il worker Identity Detective (`worker_detective.py`) introducendo un ciclo sequenziale fino a 5 batch (8 atomi/chiamata LLM) per ogni attivazione periodica (15min) o manuale.
+- **Type-safe Early-exit**: Aggiunta la clausola `if atoms_processed == 0: break` nel ciclo greedy per terminare immediatamente l'esecuzione se la coda si esaurisce prima dei 5 batch, azzerando le query e le chiamate API ridondanti.
+- **E2E Validation Success**: Eseguito il test manuale via Redis (`run_detective`). I log del container `CT203` (letti tramite `pct exec` da Proxmox) confermano l'elaborazione sequenziale e ininterrotta di 5 batch da 8 atomi l'uno (totale 40 atomi) completata in **3 minuti e 14 secondi** con 0 errori.
+- **Pagine toccate**: [[log.md]], [[entities/containers/ct203-lifelog.md]]
+
+## [2026-05-25] bugfix | Lifelog2 Identity Detective E2E Success & Parser Fallback
+
+- **Detective Datetime Binding Fix**: Risolto il crash sistematico di `asyncpg` nel worker `worker_detective.py` dovuto al type-binding asincrono per `ma.created_at` (TIMESTAMPTZ), parsando la stringa ISO da Redis in un oggetto `datetime` nativo.
+- **AriaLLMClient Robust Parser Fallback**: Risolto il baco nel parser regex di fallback di `llm.py` che cercava solo parentesi graffe `{}` per singoli oggetti, estendendo la ricerca anche a parentesi quadre `[]` per supportare con successo gli array JSON (utilizzati dal Detective per restituire i candidati).
+- **E2E Success**: Il Detective ha completato con successo il suo primo run end-to-end pulito in 50.9 secondi, popolando i log con timestamp validi pronti per lo streaming live sul Cockpit Terminal.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
+## [2026-05-25] dev | Lifelog2 Cockpit premium layout evolution & Background Workers integration
+
+- **Live Log Ticker UI**: Moved the live terminal window to the very top of the cockpit (just below the KPI summary bar), transforming it into a high-visibility compact ticker limited to 10 lines (150px height) for instantaneous pipeline monitoring. Integrated the inclusion of `[DETECTIVE]` (`detective.log`) into the FastAPI log aggregator to stream identity candidate analysis live.
+- **Stage F & G Backlog Displays**: Added dynamic backlog counters (`CODA`) inside the Svelte cockpit cards for Stage F (Episode Grouping) and Stage G (Visual Covers / FLUX) using the backend database keys `status.db.memory_atoms_ungrouped` and `status.db.episodes_without_cover` respectively.
+- **Background Intelligence Tiles**: Integrated the independent asynchronous workers into the `workers-grid` layout by adding premium tiles for **Stage L2 (Identity Detective)** and **Strato V (Profile Validator)**, complete with active running status indicators, interval/trigger notes, last/next run times, and dynamic task backlogs (`CODA` calculated via SQL queries).
+- **Orchestrator Uptime & DB Alignments**: Modified `[[orchestrator.py]]` to natively track loop state, last run and next run timers for the Detective worker, exposing them in `/status` Redis JSON. Corrected `[[api/routers/orchestrator.py]]` to calculate real-time pending task counts (atomi consolidati non analizzati per Detective, fatti grigi non validati per Validator) and fixed `episodes_without_cover` count to accurately sum both episodes and atoms lacking covers.
+- **Full Deployment & HMR**: Deployed all modifications to `[[ct203-lifelog|LXC 203]]` via SCP and restarted both `lifelog2` and `lifelog2-orchestrator` systemd services, cleanly hot-reloading the interface.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]], [[entities/containers/ct203-lifelog.md]]
+
+## [2026-05-24] bugfix | Lifelog2 Cockpit layout duplicate cards and Svelte hydration crash
+
+- **TypeScript Type Safety**: Resolved a Svelte page rendering failure (which left only the headline visible) by correcting type definitions and verifying reactive properties on `status.orchestrator` at runtime.
+- **HTML Grid Clean-up**: Fixed a duplicate card layout bug where the Stage F (Episode Grouping) and Stage G (Visual Covers) blocks were mistakenly rendered inside the horizontal `streams-row` under the Redis Streams section due to an automated multi-match regex replace, cleanly keeping them exclusively inside the correct `workers-grid` layout.
+- **HMR Hot-reload**: Synchronized the Svelte fix back to `ct203-lifelog` (192.168.1.203) using nested secure copy, successfully triggering Hot Module Replacement (HMR) with zero compilation errors.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
+## [2026-05-24] dev | CT202 Gateway Telemetry & Lifelog2 Control Plane Integration
+
+- **Resource Resize**: Aumentate in modo permanente le risorse di `[[ct202-gateway|CT202]]` da Proxmox via SSH (RAM: 512 MB, disco: 6 GB) per ospitare il monitoraggio autonomo 24/7.
+- **Standalone Dashboard**: Creata una dashboard standalone statico-client-side (Vanilla JS) su `[[ct202-gateway|CT202]]` all'indirizzo `/gateway/` che interroga Nginx `stub_status` e l'API locale di Ngrok in sicurezza (limitati solo a LAN), consumando esattamente **0 MB** di RAM aggiuntiva sul container.
+- **FastAPI Backend Integration**: Modificato `[[api/routers/orchestrator.py]]` nel backend FastAPI di Lifelog2 su `[[ct203-lifelog|LXC 203]]` per interrogare asincronamente in parallelo gli endpoint metriche di CT202 con un timeout resiliente di 1.5 secondi, restituendo i dati live nella risposta di `/status`. Riavviato solo il servizio API, lasciando la pipeline worker in esecuzione senza interruzioni.
+- **Svelte 5 UI Control Plane**: Aggiunta una card premium "Internet Gateway · CT202" nella pagina `/pipeline` Svelte 5 che mostra badge online/offline, tunnel pubblico attivo Ngrok, percentili di latenza, connessioni attive ed HTTP request rates in tempo reale con HMR istantaneo.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
+## [2026-05-24] dev | Lifelog2 Live Voiceprint Enrollment & Svelte Dashboard Audio Player
+
+- **Live Voiceprint Enrollment**: Eseguito con successo lo script `enroll_user_voiceprint.py` live. Caricati permanentemente i 3 campioni audio `.m4a` da `D:\LifeLogData\user_data\` su MinIO, estratti gli speaker turn embeddings da 256 dimensioni tramite ARIA, e memorizzato il centroid pesato a livello utente in Postgres.
+- **Diarizzazione Biometrica & Reclassification**: Eseguita la classificazione retroattiva automatica su 1222 segmenti audio: marcati 149 turni vocali appartenenti a Roberto (soglia coseno >= 0.75), portando alla promozione automatica di 13 segmenti personali e 22 segmenti misti.
+- **Dashboard Audio Stream**: Esteso l'endpoint `/api/dashboard/profile/voiceprint-audio` per accettare un query parameter `index`, permettendo di streammare individualmente ciascuno dei 3 campioni di enrollment.
+- **Svelte 5 UI Player Widgets**: Aggiornato `+page.svelte` per visualizzare tre comandi di riproduzione distinti (**▶ 1, ▶ 2, ▶ 3**) posizionati elegantemente di fianco al badge del profilo utente Roberto.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
+## [2026-05-23] dev | Lifelog2 Stage F Deterministic Boundary Detection & Z7 Profile Builder Fix
+
+- **Alembic Migration**: Creata ed eseguita la migrazione `0013_memory_atom_mode_timeline.py` per aggiungere le colonne `media_fingerprint` (`TEXT`) e `mode_timeline` (`JSONB`) su `memory_atoms`.
+- **Modelli SQLAlchemy**: Aggiornato `MemoryAtom` in `models/memory.py`.
+- **Prompt Stage D (v11)**: Creato `prompts/stage_d_enrich_v11.txt` per estrarre `media_fingerprint` e `conversation_type`, e impostato come default in `prompts/config.json`.
+- **Stage D Integration**: Aggiornato `stage_d_enrichment.py` per estrarre e persistere i nuovi campi in `entities_json` e `media_fingerprint`.
+- **Stage E Timeline**: Implementato il calcolo deterministico `_build_mode_timeline(...)` in `stage_e_embedding.py` leggendo i turni vocali e identificando contatti noti dal voiceprint.
+- **Stage F Grouping State Machine**: Riscritto completamente il boundary detection in `stage_f_grouping.py` tramite Pass 1b deterministico con merge di silenzi < 5min, significatività del personal >= 60s, breaks a mezzanotte, soft break LLM ultraleggero solo in assenza di fingerprint identici, e calcolo automatico degli indici di split intra-atomo tramite turn offset, riducendo le chiamate LLM di oltre l'80% (da ~56 a ~8 al giorno).
+- **Z7 Profile Builder Bugfix**: Corretto il bug SQL di casting di SQLAlchemy (`:src::jsonb` -> `CAST(:src AS jsonb)`) in `worker_profile_builder.py`.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
 ## [2026-05-22] dev | Lifelog2 Strato V — LLM Validation Pass (Profile Intelligence)
 
 - **Prompt creato**: `src/backend/lifelog2/prompts/stage_z7_profile_validator_v1.txt` — istruisce Qwen3 su ARIA a classificare fatti di profilo in 5 verdetti (`valid`, `invalid`, `third_party`, `context_limited`, `partial`) con output JSON strutturato.

@@ -3,7 +3,7 @@ title: "Stack — Lifelog2"
 type: entity
 tags: [stack, lifelog, memory, pipeline, embedding, identity]
 sources: [lifelog2-project-context.md, lifelog2-identity-resolution.md]
-updated: 2026-05-22
+updated: 2026-05-24
 ---
 
 # Stack — Lifelog2
@@ -67,7 +67,7 @@ L'interfaccia di Lifelog2 è stata evoluta da un modello glassmorphism generico 
 
 - **MemoryAtom.embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
 - **Thread.topic_embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
-- **Person.voiceprint_embedding**: `vector(256)` — WeSpeakerResNet293 embedding via ARIA PC139. Roberto: **multi-segment centroid** (17 segmenti, norm=1.000, max_sim=0.9371). 582 speaker_turns assegnati con cosine ≥ 0.72.
+- **Person.voiceprint_embedding**: `vector(256)` — WeSpeakerResNet34 embedding via ARIA PC139. Roberto: **3-sample weighted centroid** (norm=1.5062, dal 17.3s, 15.5s e 25.1s .m4a in `D:\LifeLogData\user_data\`). 149 speaker_turns assegnati con cosine ≥ 0.75. ✅ Live 2026-05-24.
 
 CT107 promosso da legacy a infra reale: LXC always-on, CPU, Ollama con mxbai-embed-large già installato.
 
@@ -87,9 +87,9 @@ Questo garantisce che il server NH-Mini sia un "guscio vuoto" senza dati persona
 A (Ingest Android M4A) 
 → B (Preprocess WAV 16kHz — LXC 203)
 → C (ASR + Diarize + Voiceprint 256d — PC 139 WhisperX large-v3 [primary] / Qwen3-ASR-1.7b [standby])
-→ D (MemoryAtom LLM — PC 139 qwen3-14b-q4km, prompt v10: capture_class-aware + sentiment + transcript_quality)
-→ E (Text Embedding 1024d — LXC 107 mxbai)
-→ F (Grouping/Episodes + visual_prompt LLM — LXC 203)
+→ D (MemoryAtom LLM — PC 139 qwen3-14b-q4km, prompt v11: capture_class-aware + sentiment + transcript_quality + media_fingerprint + conversation_type)
+→ E (Text Embedding 1024d — LXC 107 mxbai + mode_timeline construction)
+→ F (Grouping/Episodes + visual_prompt LLM — LXC 203 deterministica tramite State Machine Pass 1b con soft break)
 → G (Episode Cover Generation — PC 139 FLUX.2-klein-4B)
 → H (Retention/Oblivion — futuro)
 
@@ -348,7 +348,7 @@ UPDATE persons SET identity_level=3, confirmed_by='enrollment', confirmed_at=NOW
 WHERE relationship_type='self' AND voiceprint_embedding IS NOT NULL;
 ```
 
-Roberto Guareschi: `identity_level=3` (enrolled). Voiceprint: multi-segment centroid, 17 segmenti, 582 speaker_turns con cosine ≥ 0.72 assegnati (`person_id` + `capture_class`: 92 segmenti ambient→mixed, 1 ambient→personal).
+Roberto Guareschi: `identity_level=3` (enrolled). Voiceprint: weighted centroid da 3 campioni audio (.m4a in `D:\LifeLogData\user_data\`), 149 speaker_turns con cosine ≥ 0.75 assegnati (`person_id` + `capture_class` su 1222 segmenti: 1187 ambient, 22 mixed, 13 personal). ✅ Live 2026-05-24.
 
 ### Back-Propagation
 

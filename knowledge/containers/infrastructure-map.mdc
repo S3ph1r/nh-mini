@@ -67,7 +67,7 @@ Tutto il resto è legacy/reference — vedi sezione sotto.
 - **purpose**: Internet gateway — reverse proxy HTTP + tunnel ngrok permanente. Unico punto di ingresso HTTP dall'esterno.
 - **isolation_model**: instance
 - **ports**: 80 (nginx, ingresso ngrok)
-- **resources**: 256MB RAM, 1 CPU, 4GB storage
+- **resources**: 512MB RAM, 1 CPU, 6GB storage
 - **os**: Debian 12 minimal
 - **pattern**: vedi `knowledge/network/internet-gateway-pattern.mdc`
 - **deployed**: 2026-04-20
