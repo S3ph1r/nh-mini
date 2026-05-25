@@ -4,6 +4,14 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-25] dev | Lifelog2 Stage Z7 Tier B Voiceprint Clustering E2E Success
+
+- **Voiceprint Clustering Algorithm E2E**: Implementata la pipeline matematica e SQL nativa per lo **Stage Z7 / Tier B (Cerchia Sociale - Voiceprint Clustering)** all'interno del worker `worker_profile_builder.py`.
+- **Math/SQL Refinement**: Ottimizzata la procedura di greedy cosine clustering (soglia >= 0.65) e di estrazione centroidi normalizzati L2. Risolto il crash su `persons` per colonne inesistenti (`created_at`/`updated_at`) sostituendole con `first_seen_at`/`last_seen_at`.
+- **SQLAlchemy Bind Parameter Fix**: Corretto l'errore di sintassi in `_write_audit` per la query di persistenza dei log di consolidamento, rimpiazzando il cast PostgreSQL `:after::jsonb` con la notazione standard compatibile con asyncpg `CAST(:after AS jsonb)`.
+- **E2E Validation Success**: Eseguito il run di bootstrap completo (`--full-scan`) su `CT203` (RT). La diagnostica pulita conferma la stabilità della base dati reale: **206 interlocutori ricorrenti anonimi** creati e persistiti in `persons`, **6.116 speaker turns** diarizzati e collegati biometricamente ai rispettivi cluster, e **206 fatti relazionali** generati e corroborati con confidenza dinamica scalata da 0.60 a 0.80.
+- **Pagine toccate**: [[log.md]], [[NH-Mini/index.md]], [[entities/containers/ct203-lifelog.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
 ## [2026-05-25] dev | Lifelog2 Identity Detective Greedy Batch Processing Optimization
 
 - **Greedy Loop Activation**: Modificato il worker Identity Detective (`worker_detective.py`) introducendo un ciclo sequenziale fino a 5 batch (8 atomi/chiamata LLM) per ogni attivazione periodica (15min) o manuale.
