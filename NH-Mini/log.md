@@ -4,6 +4,16 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-25] bugfix | Lifelog2 Detective JSON Truncation, NULL-safe Dedup, max_tokens Fix
+
+- **Detective loop infinito risolto**: root cause = batch 8 atomi → output JSON > max_tokens=1536 → troncamento → parse fail → cursore Redis bloccato → stesso batch ripetuto ogni 15min per 3+ ore. Fix: `BATCH_SIZE=4`, `max_tokens=2048` per il Detective.
+- **NULL-safe dedup fix critico**: `NOT (identity_candidates @> ...)` restituiva NULL silenzioso su persone senza candidati — zero candidati scritti in DB nonostante LLM corretto. Fix: `(IS NULL OR NOT (...))` + rowcount check.
+- **AriaLLMClient.generate_json() parametrizzato**: `max_tokens` ora parametro opzionale (default 1536, backward-compatible). Ogni worker può ora specificare il proprio budget di output.
+- **DB cleanup**: test artifacts (TEST_CANDIDATE, TEST_SA, TRACE_TEST) rimossi da `persons.identity_candidates`.
+- **Dev/RT allineati**: LXC 190 e LXC 203 ora a commit `b4daf35` su `origin/main`.
+- **Commits**: `7d501fe`, `ccc4db6`, `b4daf35` su `github.com/S3ph1r/Lifelog2`.
+- **Pagine toccate**: [[log.md]], [[entities/containers/ct203-lifelog.md]]
+
 ## [2026-05-25] dev | Lifelog2 Stage Z7 Tier B Voiceprint Clustering E2E Success
 
 - **Voiceprint Clustering Algorithm E2E**: Implementata la pipeline matematica e SQL nativa per lo **Stage Z7 / Tier B (Cerchia Sociale - Voiceprint Clustering)** all'interno del worker `worker_profile_builder.py`.

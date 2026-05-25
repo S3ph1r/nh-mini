@@ -1064,3 +1064,16 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-05-25 - BATCH_SIZE 8→4, NULL-safe dedup, max_tokens parame...
+```json
+{
+  "timestamp": "2026-05-25T20:49:43.446348+00:00",
+  "category": "BUGFIX",
+  "component": "worker-detective",
+  "change": "BATCH_SIZE 8→4, NULL-safe dedup, max_tokens parametrizzato in AriaLLMClient",
+  "reason": "Detective in loop infinito: batch denso (8 atomi, 18+ turn) produceva JSON > max_tokens=1536 → troncamento → parse fail → cursore Redis bloccato. NULL-safe dedup scriveva 0 candidati su persone nuove. max_tokens hardcoded impediva tuning per-worker.",
+  "author": "agent",
+  "impact": "high"
+}
+```

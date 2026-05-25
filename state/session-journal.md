@@ -1,3 +1,40 @@
+## [2026-05-25 22:15] END
+
+**Completato:**
+- **Detective loop infinito risolto**: root cause = batch 8 atomi → output JSON > max_tokens=1536 → troncamento → cursore Redis bloccato → stesso batch ogni 15min per 3+ ore. Fix: `BATCH_SIZE=4` (commit `7d501fe`).
+- **NULL-safe dedup fix critico**: `NOT (col @> val)` restituiva NULL su colonne NULL → zero candidati scritti in DB per persone nuove. Fix: `(col IS NULL OR NOT (col @> val))` + `rowcount` check (commit `ccc4db6`).
+- **max_tokens parametrizzato**: `AriaLLMClient.generate_json()` ora accetta `max_tokens` opzionale; Detective usa 2048 (commit `b4daf35`). Tutti e 3 i commit pushati su `origin/main`.
+- **DB cleanup**: test artifacts (`TEST_CANDIDATE`, `TEST_SA`, `TRACE_TEST`) rimossi da `persons.identity_candidates`. 0 residui.
+- **Audit pipeline**: B/C/D/E/G = 0 errori attivi. F = 3 storici (pre-fix sessione precedente). Detective = 261 storici (tutti pre-fix). Pipeline idle e sana.
+- **Dev/RT allineati**: git pull su LXC 190 — `ca2f8d2` → `b4daf35` (7 commit recuperati).
+- **/doc lifelog2**: `session-journal.md`, `development-log.md`, `architecture.md`, `NH-Mini/log.md` aggiornati. `history_manager.py` BUGFIX registrato.
+- **/lint lifelog2**: 51 passed, 0 errors, 7 warnings `scripts_ref` (invariato da sessione precedente, non bloccante).
+
+**Incompleto / prossima sessione:**
+- Nessun task pendente urgente. Il Detective sta elaborando il backlog (cursore ~2026-05-24T15:23 UTC, ~943 atomi rimanenti al ritmo di ~20 atomi/ciclo).
+
+**Mine per il prossimo agent:**
+- I 7 lint warnings `scripts_ref` sono script diagnostici ad-hoc senza documentazione formale. L'utente non ha dato indicazione di fissarli — verificare se valgono un'entry in `core-modules.mdc`.
+- `max_tokens=1536` è ancora il default per tutti i worker tranne Detective. Se in futuro altri worker mostrano troncamento, applicare lo stesso pattern.
+- Stage Z4 (Day Digest) e Z6 (Thread Consolidation) mai avviati — gap architetturale noto.
+
+## [2026-05-25 21:00] START — Detective Debug: JSON Truncation, NULL-safe Dedup, max_tokens Fix
+
+**Obiettivo:** Diagnosticare il blocco del worker Detective su LXC 203, applicare fix, fare audit completo della pipeline, allineare dev (LXC 190) e rt (LXC 203).
+**Grounding:**
+- Detective bloccato in loop infinito da 3+ ore su batch 2025-10-07/08 (8 atomi → >18 turn → output JSON > 1536 token → troncamento → parse fail → checkpoint non avanzato).
+- Bug secondario scoperto durante debug: NULL-safe dedup e counter cieco in `worker_detective.py`.
+- Tutti i fix committati su LXC 203 e pushati su `origin/main`.
+
+## [2026-05-25 21:30] TASK — Detective fix, audit pipeline, DB cleanup, dev/rt align
+
+- **BATCH_SIZE 8→4** (`worker_detective.py`): ridotto il batch per prevenire troncamento JSON su batch densi (commit `7d501fe`).
+- **NULL-safe dedup + rowcount** (`worker_detective.py`): `NOT (identity_candidates @> ...)` restituiva NULL silenzioso su persone senza candidati → nessun candidate scritto in DB. Fix: `(identity_candidates IS NULL OR NOT (...))`. Counter incrementato solo su `result.rowcount > 0` (commit `ccc4db6`).
+- **max_tokens parametrizzato** (`llm.py`): `AriaLLMClient.generate_json()` ora accetta `max_tokens: int = 1536`. Worker Detective passa `max_tokens=2048` (commit `b4daf35`).
+- **DB cleanup**: rimossi `TEST_CANDIDATE`, `TEST_SA`, `TRACE_TEST` da `persons.identity_candidates` con UPDATE jsonb_agg filtrante.
+- **Audit pipeline**: B=0, C=0, D=0, E=0, F=3 storici (pre-fix), G=0, Detective=261 storici (JSON parse failures pre-fix). Nessun errore attivo.
+- **Dev/rt allineati**: git pull su LXC 190 — 7 commit recuperati (`ca2f8d2`→`b4daf35`).
+
 ## [2026-05-25 12:20] START — Detective Greedy Batch Processing & E2E Validation
 
 **Obiettivo:** Confermare e documentare l'implementazione del Greedy Batch Processing (5 passate x 8 atomi = 40 atomi max per innesco) per il worker Detective (Stage L2) e monitorare il corretto drenaggio del backlog storico dei segmenti audio.
