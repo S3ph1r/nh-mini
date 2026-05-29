@@ -15,6 +15,18 @@ Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 - **Commit**: `4944c6a` (feat(stage-cd): quality gate extraction_level + audio signals v13)
 - **Pagine toccate**: [[stack-lifelog2]]
 
+## [2026-05-29] dev | Lifelog2 Stage D prompt v14 — quality gate iterativo + test su 12 campioni
+
+- **Test baseline v13 (8 campioni A–H)**: confronto sistematico DB-stored (v12) vs live v13 su 8 segment_id reali da MinIO. Pattern rilevati: tq upward bias (6/8, Δtq ≈ +0.075), failure catastrofica su transcript degradato Test C (tq 0.20→0.60, full extraction, nome inventato), persons instabile (FP "l'ama", miss Antonio).
+- **Prompt v14 — 7 fix**: (1) Total words nell'header + soglie extraction_level (< 30 → metadata_only, 30–60 → contextual); (2) frammento_isolato soglia 15→35 parole; (3) tq ceiling: Total words < 60 → score max 0.50; (4) decisions mixed: escludere prima persona plurale; (5) conv_type tv/radio: descrizione espansa per caso capture_class=mixed+broadcast; (6) server-side floor word_count < 50 + full → contextual; (7) server-side filter persons: `any(c.isupper() for c in p)`.
+- **Iterazione Fix 7**: prima implementazione `p[0].isupper()` troppo aggressiva — dropped "dottoressa Bruzzone", "avvocato Macri" (titoli professionali italiani iniziano minuscolo). Fix: `any(c.isupper() for c in p)`, che richiede almeno una maiuscola ovunque nel token. Regressione rilevata (Test G 5/5→2/5) e corretta (4/5).
+- **Server-side tq floor aggiuntivo**: `tq_score < 0.60 + full → contextual` — cattura il caso LLM che assegna tq basso ma sceglie comunque full. Fix ortogonale al word_count floor.
+- **Test v14 finale (12 campioni A–L)**: aggiunti 4 campioni casuali (I, J, K, L). K: loop+incoerenza → contextual ✅. L: "Intesa" (banca) in persons → nuovo backlog entity-type bleeding.
+- **Documentazione**: `sviluppi/Lifelog2/docs/stage_d_quality_gate.md` — rationale fix, backlog 5 issue, metodologia test, guidance future sessioni.
+- **Script archiviati**: `docs/stage_d_tests/test_v14_{all,10,12}.py`.
+- **Commits**: `6b1bef4` (feat v14), `d486c2a` (fix persons filter).
+- **Pagine toccate**: [[stack-lifelog2]]
+
 ## [2026-05-27] dev | Lifelog2 Places Intelligence — implementazione Fase 0–4 completa
 
 - **Migration 0014**: nuove colonne `places` (visit_count, total_minutes_spent, cover_image_key, confirmed_*), tabella `place_hypotheses`, vista materializzata `place_signals`. Applicata su LXC 203 e verificata.
