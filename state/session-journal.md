@@ -1,4 +1,79 @@
+## [2026-05-29] END
+
+**Completato:**
+- **Voiceprint P0 risolto** — acoustic mismatch VOICE_RECOGNITION vs CAMCORDER. Archiviate enrollment precedenti (6 campioni + centroid 256d). Centroid ricostruito con 2 soli campioni CAMCORDER. `VOICEPRINT_MATCH_THRESHOLD` abbassata 0.72 → 0.60 dopo verifica manuale di 15+ clip audio reali. Backfill rematch su 10,694 speaker turns: 877 ora attributi correttamente a Roberto (capture_class = personal/mixed vs tutti ambient prima del fix).
+- **Stage C — 4 audio quality signals**: `avg_turn_duration_ms`, `min_turn_duration_ms`, `n_short_turns`, `inter_speaker_similarity` (max coseno tra speaker embeddings). Scritti in transcript JSON MinIO + messaggio Redis enrich stream.
+- **Stage D — extraction_level gate**: `_format_user_message` riceve segnali qualità e li inietta come header QA nel prompt utente. Dopo risposta LLM, se `extraction_level ≠ full`, Stage D azzera server-side entities/decisions/actions. `metadata_only` → path ephemeral. `hallucination_flags` + `extraction_level` persistiti in `entities_json`.
+- **Prompt stage_d_enrich_v13**: `extraction_level` (full/contextual/metadata_only), `hallucination_flags` con 8 pattern (loop_residuo, nome_inventato, densita_entita_anomala, lingua_fantasma, coerenza_locale_incoerenza_globale, dettaglio_non_ancorato, nome_storpiato, frammento_isolato), regole decisione LLM su soglie tq + inter_speaker_similarity. `config.json` v12 → v13.
+- **Test v13 su 2 trascrizioni reali**: A tq=0.50 → contextual, persons=[], nome_storpiato detected ✅. B tq=0.80 → full, persons=['Alia'] ✅. Bug v12 `decisions:['[',']']` eliminato.
+- **Deploy**: stage_c + stage_d + config.json + v13.txt copiati su LXC 203. Orchestrator riavviato. Commit `4944c6a`.
+
+**Mine per il prossimo agent:**
+- Nessuna pendenza urgente sul quality gate. Il sistema è live su nuovi segmenti.
+- **Places Intelligence Fase 5** ancora pending (richiede 1+ luogo confermato — primo Place Detective domenica 2026-06-01).
+- **Profile validator dormante**: non verificato in questa sessione.
+
+---
+
+## [2026-05-27 23:56] END
+
+**Completato:**
+- **Places Intelligence Fase 0–4 live** (sessione continuata da contesto precedente):
+  - Migration 0014: colonne `places` (visit_count, total_minutes_spent, cover_image_key, confirmed_*), tabella `place_hypotheses`, vista materializzata `place_signals` con UNIQUE INDEX per REFRESH CONCURRENTLY.
+  - Stage F: geocoding ora incrementa contatori e refresha `place_signals` dopo ogni run.
+  - Worker Place Detective (`worker_place_detective.py`): scoring rule-based zero-LLM per home/work/social/transit, schedule domenica 03:30, integrato come 5° loop asincrono in orchestratore (`_place_detective_loop`), trigger on-demand via Redis.
+  - Stage G: esteso con `_fetch_pending_places()` + 5 template prompt cinematografici + MinIO key `covers/places/{id}.jpeg`.
+  - API: 6 endpoint Places Intelligence in `dashboard.py` (GET /places, GET /places/{id}, GET /places/{id}/atoms, POST confirm, POST reject, GET cover/place/{id}).
+  - Frontend `/places`: Leaflet map + tiles Netflix-style + detail panel slide-in con confirm/reject UI. Sostituisce `/map` nella sidebar.
+- **`/doc lifelog2` eseguito**: aggiornati `knowledge/architecture.md`, `knowledge/memory-model.md`, `knowledge/api-contracts.md`, `knowledge/development-log.md`. Storico architetturale committato (`FEATURE/Lifelog2/PlacesIntelligence/high`).
+- **`/lint lifelog2` eseguito**: 51 passed, 0 errori, 7 warnings `scripts_ref` (invariati, non bloccanti).
+- **Chiarimento hard triggers**: `/dev` non esiste come hard trigger — i 6 definiti sono `/finalize`, `/lint`, `/troubleshoot`, `/reuse`, `/handover`, `/doc`.
+
+**Mine per il prossimo agent:**
+- **7 warning `scripts_ref`**: `check_aria_log.py`, `check_redis.py`, `clean_redis_queues.py`, `find_pm2.py`, `inspect_redis_queues.py`, `list_aria_dirs.py`, `restart_aria.py` — non referenziati in `core-modules.mdc`. Tool diagnostici ad-hoc, non bloccanti.
+- **Places Intelligence Fase 5 pending**: Stage D context integration (`location: home/work` nel prompt Qwen3). Bloccata: richiede almeno 1 luogo confermato dall'utente (primo run Place Detective domenica 2026-06-01).
+- **GPS data accumulation**: fix app Android eseguito 2026-05-27 — occorrono 2+ settimane per avere dati sufficienti al Place Detective.
+
+---
+
+## [2026-05-26 01:25] END
+
+**Completato:**
+- **Esecuzione protocollo esteso `/doc lifelog2`**: Sincronizzazione della documentazione ufficiale del sistema e del progetto.
+- **Aggiornamento Knowledge Base Lifelog2**:
+  - `architecture.md`: Documentata l'implementazione del clustering biometrico non supervisionato Tier B ed il flusso di Identity Resolution Upgrade, oltre alla Postgres Duplicates Protection.
+  - `memory-model.md`: Esteso il formato del campo `source_memory_ids` del `UserProfileFact` in JSONB (`{"person_id": UUID, "memory_ids": UUID[]}`) per la corretta attribuzione di identità provvisorie/definitive.
+  - `development-log.md`: Inserita la entry dettagliata per il 2026-05-26 riepilogando tutti i progressi sui lavoratori di intelligence, fix Svelte 5 e Postgres.
+- **Commit storico architetturale**: Eseguito con successo `history_manager.py add` per registrare il componente `profile-builder-tier-b` nello storico `development-history.mdc` con impatto `medium`.
+- **Allineamento Wiki Secondo Cervello**:
+  - `NH-Mini/log.md`: Inserita l'entry del 2026-05-26.
+  - `NH-Mini/index.md`: Aggiornata la data dell'ultimo allineamento del wiki al 2026-05-26 ed il relativo evento riassuntivo.
+- **Lint di Compliance**: Eseguito `nh-lint.py --project lifelog2` con variabili UTF-8 protette su Windows. Esito: **51 passed, 7 warnings (diagnostici storici, non bloccanti), 0 errori**.
+
+**Incompleto / prossima sessione:**
+- Nessuna pendenza urgente per il framework o il wiki. La documentazione e lo stato del sistema sono completamente sincronizzati ed allineati all'ultima produzione.
+
+**Mine per il prossimo agent:**
+- I 7 warning diagnostici `scripts_ref` sono script d'utilità ad-hoc non registrati. Non sono critici e possono essere mantenuti tali, ma se necessario si può procedere al loro censimento o pulizia in futuro.
+- Prestare attenzione quando si eseguono script Python su Windows che stampano caratteri emoji/Unicode: forzare sempre la codifica tramite la variabile d'ambiente `$env:PYTHONUTF8=1;` per evitare `UnicodeEncodeError`.
+
+---
+
+## [2026-05-26 01:10] START — Esecuzione Hard Trigger /doc lifelog2
+
+**Obiettivo:**
+- Eseguire in modo procedurale il protocollo esteso `/doc lifelog2` per allineare l'infrastruttura condivisa NH-Mini e la documentazione del progetto Lifelog2 dopo gli eccezionali progressi sul clustering biometrico Tier B, l'identity resolution upgrade, la correzione del bug sui record duplicati e la risoluzione del crash in Svelte 5.
+- Garantire che la codebase e la documentazione siano perfettamente sincronizzate e validate tramite il linting.
+
+**Grounding:**
+- Letta la specifica `.cursorrules` e `knowledge/agent/hard-triggers.mdc` relativi al protocollo `/doc`.
+- File `.project-context` di `Lifelog2` caricato con le relative entry in `KNOWLEDGE_INDEX`.
+- Session journal analizzato per recuperare i dettagli dell'ultimo run e delle implementazioni.
+
+---
+
 ## [2026-05-25 23:25] END
+
 
 **Completato:**
 - **Fase 3/4/5 Identity Review UI & API E2E**: Sviluppati gli endpoint FastAPI `/people/{id}/confirm`, `/people/{id}/reject` e `/people/{id}/update` in `dashboard.py`.
@@ -1240,3 +1315,39 @@ Aggiornamento `NH-Mini/log.md` con entry sessione odierna.
   - Script di Session Management per mount/unmount.
 - **Mine**:
   - Attenzione alla discrepanza tra il codice del repo App (TODO GPS) e la realtà dei file .m4a (GPS presente). Usare i file reali come ground truth.
+
+## [2026-05-28] START — Lifelog2 Checklist: Worker Flow + Stage G + Profile Validator + AriaLLMClient
+
+Continua sessione precedente. Checklist 8 punti pipeline Lifelog2.
+
+## [2026-05-28 TASK] — Orchestrator parallel B+E architecture
+
+Ridisegno orchestratore: `_stage_b_loop` e `_stage_e_loop` autonomi e indipendenti da ARIA. `ARIA_PIPELINE=[C,D]` seriale. `_reconciliation_loop` aggiunto. Commit `6a2b77d`. Deploy su CT203.
+
+## [2026-05-28 TASK] — Stage G COVERS_MIN_TOTAL=10
+
+`COVERS_MIN_TOTAL=10`: guard in `_covers_loop` che accumula almeno 10 cover pending prima di avviare Stage G FLUX. Commit `7295bc9`. Deploy su CT203.
+
+## [2026-05-28 TASK] — AriaLLMClient infinite-wait polling
+
+`generate_json()` ora aspetta indefinitamente con polling 30s invece di BRPOP hard timeout 600s. Re-push automatico se job consumato senza risposta (ARIA crash durante elaborazione). Commit `7e58e75`. Deploy su CT203.
+
+## [2026-05-28 TASK] — Profile Validator systemd timer
+
+`lifelog2-profile-validator.timer` abilitato su CT203, giornaliero 03:00. Prima run manuale: 339 fatti in 43 batch Qwen3, 0 errori.
+
+## [2026-05-28] END | Lifelog2 Checklist: Orchestrator Parallel Architecture + ARIA Infinite-Wait + Stage G Threshold + Profile Validator
+
+- **Completato**:
+  - Point 2: Orchestratore redesign parallel B+E loops (commit `6a2b77d`)
+  - Point 3: Stage G COVERS_MIN_TOTAL=10 threshold guard (commit `7295bc9`)
+  - Point 6: Profile Validator timer giornaliero 03:00 su CT203
+  - AriaLLMClient: infinite-wait polling con re-push automatico (commit `7e58e75`)
+  - /doc lifelog2: architecture.md + development-log.md + history_manager + wiki
+  - /lint lifelog2: 0 errori, 7 warnings scripts_ref (pre-esistenti)
+- **Incompleto / Deferred**:
+  - Stage D cold start: investigato (0.07% timeout rate, non urgente), no code fix
+  - ARIA FLUX health check 320s: approvato da utente, in attesa OK esplicito per toccare PC 139
+- **Mine (priorità prossima sessione)**:
+  - **P0 — Speaker enrollment rotto**: `best_score < 0.2` su tutti i segmenti, tutti classificati `ambient`. Nessun speaker Roberto riconosciuto. Diagnosi completa prima di qualsiasi fix.
+  - 7 `scripts_ref` warnings in lint: check_aria_log.py, check_redis.py, clean_redis_queues.py, find_pm2.py, inspect_redis_queues.py, list_aria_dirs.py, restart_aria.py — non documentati in core-modules.mdc

@@ -4,6 +4,69 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-29] dev | Lifelog2 Stage C/D quality gate — extraction_level + audio signals + prompt v13
+
+- **Voiceprint P0 risolto**: identificato acoustic mismatch (VOICE_RECOGNITION vs CAMCORDER). Archiviate le 6 enrollment esistenti + centroid 256d. Ricostruito embedding Roberto con 2 soli campioni CAMCORDER. Abbassata soglia `VOICEPRINT_MATCH_THRESHOLD` 0.72 → 0.60 dopo verifica manuale di 15+ clip audio. Backfill su 10,694 speaker turns: 877 ora correttamente attributi a Roberto (capture_class=personal/mixed).
+- **Stage C — audio quality signals**: aggiunti 4 campi al transcript JSON e al messaggio Redis Stage D: `avg_turn_duration_ms`, `min_turn_duration_ms`, `n_short_turns`, `inter_speaker_similarity` (coseno massimo tra embedding dei speaker). Il campo `inter_speaker_similarity > 0.78` segnala diarizzazione confusa.
+- **Stage D — extraction_level gate**: `_format_user_message` ora riceve i segnali audio dal payload e li inietta nell'header utente (linee quality + warning ⚠ se diarizzazione confusa). Dopo risposta LLM, se `extraction_level ≠ full`, Stage D azzera server-side persons/locations/orgs/projects/actions/decisions/speaker_turns_annotated/temporal_refs. `metadata_only` → path ephemeral (come tq < 0.20). `hallucination_flags` ed `extraction_level` persistiti in `entities_json`.
+- **Prompt stage_d_enrich_v13**: aggiunto campo `extraction_level` (full/contextual/metadata_only), `transcript_quality.hallucination_flags` con 8 pattern nominati (loop_residuo, nome_inventato, densita_entita_anomala, lingua_fantasma, coerenza_locale_incoerenza_globale, dettaglio_non_ancorato, nome_storpiato, frammento_isolato). Regole LLM esplicite su soglie tq + inter_speaker_similarity. `config.json` aggiornato v12 → v13.
+- **Test validato**: Test A tq=0.50 → `extraction_level=contextual`, persons=[], hallucin_flags=['nome_storpiato'] ✅. Test B tq=0.80 → `extraction_level=full`, persons=['Alia'] ✅.
+- **Deploy**: stage_c + stage_d + config.json + v13.txt copiati su LXC 203. Orchestrator riavviato.
+- **Commit**: `4944c6a` (feat(stage-cd): quality gate extraction_level + audio signals v13)
+- **Pagine toccate**: [[stack-lifelog2]]
+
+## [2026-05-27] dev | Lifelog2 Places Intelligence — implementazione Fase 0–4 completa
+
+- **Migration 0014**: nuove colonne `places` (visit_count, total_minutes_spent, cover_image_key, confirmed_*), tabella `place_hypotheses`, vista materializzata `place_signals`. Applicata su LXC 203 e verificata.
+- **Stage F aggiornato**: geocoding ora incrementa `visit_count + total_minutes_spent` e refresha `place_signals` dopo ogni geocoding.
+- **Worker Place Detective** (`worker_place_detective.py`): aggregazione segnali (ora, DOW, capture_class, topics, voiceprint), scoring rule-based per home/work/social/transit, upsert `place_hypotheses` con confidence ≥ 0.50. Nessun LLM — puro segnale statistico.
+- **Orchestrator aggiornato**: `_place_detective_loop` integrato — schedule domenica 03:30, on-demand via `run_place_detective` Redis cmd, stato visibile in status JSON.
+- **Stage G esteso**: `_fetch_pending_places()` + prompt templates per tipo (home/work/social/transit/unknown) + `covers/places/{id}.jpeg` MinIO schema.
+- **API endpoints**: `GET /dashboard/places`, `GET /dashboard/places/{id}`, `GET /dashboard/places/{id}/atoms`, `POST /{id}/confirm`, `POST /{id}/reject`, `GET /cover/place/{id}`. Tutti live e testati.
+- **Frontend `/places`**: Leaflet cluster map (40% vh, circle markers con radius=log(atom_count), dashed per ipotesi / solid per confermati), tiles Netflix-scroll (240px, cover AI, badge tipo+conf, stats, topics, evidence), detail panel 360px (mini-map, stats bar, class-bar, evidence list, confirm/reject form). Sidebar aggiornata: `/map` → `/places`.
+- **Status**: Fase 0–4 live. Fase 5 (Stage D context) e Fase 2b GPS data (Detective attivo da domenica) pendenti.
+- **Pagine toccate**: [[concepts/lifelog2-places-intelligence]], [[sources/lifelog2-status-roadmap]]
+
+## [2026-05-27] dev | Lifelog2 Places Intelligence — spec tecnica e roadmap
+
+- **Analisi GPS esistente**: verificato che raw_captures.lat/lon già salvato, Stage F già geocoda via Nominatim, places table con 1 record (home Via Louis Armstrong, Parma). GPS inviato su ~13% segmenti prima del fix app Android (27/05).
+- **Spec tecnica v1**: scritta `sviluppi/Lifelog2/docs/lifelog2-places-intelligence-spec-v1.md` — DB migration, worker Place Detective, estensione Stage G per cover places, API endpoints, frontend `/places` con mappa cluster + tiles Netflix-style + detail panel.
+- **Roadmap**: 5 fasi (Foundation DB → Detective worker → Stage G covers → API → Frontend), stima 13-19gg. Prerequisito: 2 settimane dati GPS continui (fix app eseguito oggi).
+- **Principi di design**: stesso pattern Detective (suggerimento+evidenza, conferma utente). Location change NON usata per break episodi. Stage D riceverà context "location: home/work" dopo conferma.
+- **Status roadmap aggiornato**: `lifelog2-status-roadmap.md` aggiornato con sezione P2b + stato visivo rapido.
+- **Pagine toccate**: [[concepts/lifelog2-places-intelligence]], [[log.md]], [[NH-Mini/index.md]]
+
+## [2026-05-26] dev | Lifelog2 Production Release & Git Synchronization
+
+- **Audit & Allineamento Checksum MD5**: Effettuato un audit di sicurezza comparativo calcolando gli MD5 dei file di produzione su **LXC 203** e confermando l'assoluta equivalenza byte-per-byte con i commit di sviluppo su **LXC 190** (`+page.svelte`, `people/+page.svelte`, `worker_profile_builder.py`, `check_db.py`), garantendo l'assenza di divergenze live.
+- **Consolidamento Script Operativi**: Eseguito il backup via SCP e tracciato sotto Git un set di 5 preziosi script untracked di produzione per il debug ed il test dei livelli biometrici e dell'anagrafica self (`find_self.py`, `fix_self.py`, `cleanup_test.py`, `test_upgrade.py`, `audit_db.py`).
+- **Release su GitHub & Deploy Produzione**: Committati 19 file consolidati e pushati sulla repository remota (`main -> main`). Puliti i file duplicati su **LXC 203** ed eseguito un allineamento pulito tramite `git reset --hard` e `git pull`, portando la produzione in perfetto pareggio con la codebase di sviluppo.
+- **Riavvio Servizi di Produzione**: Riavviati con successo `lifelog2-orchestrator.service`, `lifelog2.service` e `lifelog2-ui.service` su **LXC 203**, ripristinando la telemetria, l'orchestratore sequential greedy ed i worker ASR/Intelligence a pieno regime con la nuova codebase attiva in memoria.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
+## [2026-05-26] bugfix | Lifelog2 Sagas scroll layout double scrollbar fix
+
+- **Sagas Scroll Layout Fix**: Risolto il bug di scrolling bloccante nella vista delle Saghe (`/sagas/+page.svelte`) rimuovendo la regola `overflow-y: auto` dalla classe `.sagas-body`. Questa impostazione creava un'area di scrolling annidata indipendente rispetto al pannello principale `.main-content-panel`, bloccando in alto la card delle statistiche `Z6 · Cinematic Personal Analytics` e comprimendo la griglia delle saghe sottostanti in pochissimi pixel visibili.
+- **Natural Global Scrolling**: Ora, la griglia delle saghe si espande naturalmente e l'intera pagina scolla all'interno dell'unico contenitore globale, permettendo alla card delle statistiche di scorrere naturalmente verso l'alto scomparendo sotto l'header sticky ed offrendo una navigazione fluida ad altezza intera.
+- **Deploy di Produzione**: File copiato su `CT203` via SCP ed il servizio `lifelog2-ui.service` riavviato con successo.
+- **Pagine toccate**: [[log.md]], [[sviluppi/Lifelog2/src/frontend/src/routes/sagas/+page.svelte]]
+
+## [2026-05-26] dev | Stage Z6 Thread Consolidation E2E Success — Hybrid Gemini Cloud & Qwen3 Local via ARIA
+
+- **Stage Z6 Pipeline Implementation**: Implementato con successo lo Stage Z6 (Thread Consolidation Worker) per Lifelog2, che consolida gli episodi quotidiani (Z3) in saghe tematiche a lungo termine (Z6), calcolando i vettori embedding a 1024d su PostgreSQL.
+- **Hybrid AI Architecture**: Progettata e validata un'architettura ibrida per l'elaborazione ad alto contesto: la mappatura in batch degli episodi sui thread (che richiede una context window ampia) è delegata a Google Gemini tramite il nuovo `AriaCloudLLMClient`, mentre la sintesi e la timeline narrativa per ciascun thread è affidata a Qwen3 locale tramite `AriaLLMClient`.
+- **SQLAlchemy/Postgres Cast Compatibility**: Corretto un bug critico di sintassi PostgreSQL per il driver asyncpg rimpiazzando l'operatore di array cast `:ep_ids::uuid[]` con `CAST(:ep_ids AS uuid[])` per scongiurare collisioni con il parser dei bind parameter di SQLAlchemy.
+- **Production Validation Success**: Eseguito con successo il dry-run di validazione reale su **CT203** (produzione) tramite gateway Proxmox (`pct exec 203` e `pct push`). Il worker ha analizzato i 5 episodi di test, delegando a Gemini cloud la mappatura via Redis (tempo di risposta: 14 secondi, 5328 token processati) ed a Qwen3 locale la sintesi in parallelo, completando l'intero processo in 108.5 secondi senza errori.
+- **Pagine toccate**: [[log.md]], [[entities/systems/stack-lifelog2|stack-lifelog2.md]]
+
+## [2026-05-26] doc | /doc lifelog2 — Svelte 5 Runes compiler fix, Postgres Duplicates Protection & Environment Agnostic Worker
+
+- **Svelte 5 Runes Compiler Fix**: Risolto l'errore fatale di compilazione introdotto con Svelte 5 su `/people/+page.svelte` (deprecati i modifier pipe inline come `onsubmit|preventDefault`), spostando l'inibizione del submit all'interno del gestore `submitForm(e)` richiamando `e.preventDefault()` a livello programmatico.
+- **Postgres Duplicates Protection**: Implementata una query SQL robusta basata su `.scalars().all()` in `worker_profile_builder.py` (`_build_profile`) per isolare e selezionare l'identità attiva a livello più elevato in presenza di record duplicati `relationship_type = 'self'`, scongiurando eccezioni `MultipleResultsFound` di SQLAlchemy ed il conseguente crash del cockpit.
+- **Environment Agnostic Worker**: Integrato il caricamento asincrono e dinamico del file `.env` tramite `dotenv` all'interno di `worker_profile_builder.py` per rendere l'esecuzione offline e manuale del Profile Builder ed il clustering biometrico resiliente all'ambiente fisico (Dev `CT190` o Prod `CT203`).
+- **Wiki & Docs Sync**: Sincronizzati i file architetturali di NH-Mini e del progetto Lifelog2 (`development-log.md`, `architecture.md` e `memory-model.md`) per censire l'implementazione del clustering biometrico non supervisionato Tier B (voiceprint a 256d con matching $\ge 0.65$) e l'Identity Resolution Upgrade per la cerchia sociale (promozione a Tier A pgvector $\ge 0.72$).
+- **Pagine toccate**: [[log.md]], [[NH-Mini/index.md]], [[sviluppi/Lifelog2/knowledge/development-log.md]], [[sviluppi/Lifelog2/knowledge/architecture.md]], [[sviluppi/Lifelog2/knowledge/memory-model.md]]
+
 ## [2026-05-25] dev | Lifelog2 Stage L2 Identity Review UI & API E2E Success
 
 - **Backend Mutation Endpoints**: Sviluppate le API di mutazione delle persone in `dashboard.py`: `/people/{person_id}/confirm` (promozione a livello 2, assegnazione relazioni/disambiguation e cancellazione candidati), `/people/{person_id}/reject` (rifiuto selettivo dei candidati) e `/people/{person_id}/update` (modifica anagrafiche e tag esistenti).
@@ -1230,3 +1293,10 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - **Stage E nuovo**: consumer `lifelog:stream:embed`, embedding mxbai-embed-large via CT107, WAV delete da MinIO, `pipeline_status="consolidated"`.
 - **config.py**: aggiunti `ollama_url` e `ollama_embed_model` (override via env).
 - **Confine pipeline**: dopo Stage E il ricordo è autosufficiente — testo, voiceprint 256d, MemoryAtom, embedding 1024d. I worker Level 2 leggono questi dati senza bisogno di riaprire audio.
+
+## [2026-05-28] dev | Lifelog2: Orchestrator parallel B+E + AriaLLMClient infinite-wait + Stage G threshold + Profile Validator timer
+
+- **Orchestratore redesign** (commit `6a2b77d`): `_stage_b_loop` e `_stage_e_loop` autonomi e indipendenti, `ARIA_PIPELINE=[C,D]` seriale. `_reconciliation_loop` per segmenti orfani. Stage B non dipende mai da ARIA.
+- **AriaLLMClient infinite-wait** (commit `7e58e75`): BRPOP hard timeout rimosso. Polling ogni 30s con re-push automatico se job consumato senza risposta. Tutti i worker ARIA-dipendenti ereditano il comportamento.
+- **Stage G threshold** (commit `7295bc9`): `COVERS_MIN_TOTAL=10` — attende 10 cover pending prima di swappare FLUX in VRAM.
+- **Profile Validator timer**: `lifelog2-profile-validator.timer` abilitato su CT203, giornaliero 03:00. Prima run: 339 fatti gray-zone processati in 43 batch Qwen3, 0 errori.
