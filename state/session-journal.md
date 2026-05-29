@@ -1,3 +1,12 @@
+## [2026-05-29] TASK — /doc lifelog2 eseguito
+
+- **architecture.md**: Stage C quality signals (4 campi), Stage D quality gate sezione (extraction_level floors, persons filter, prompt v14), voiceprint threshold corretto 0.72→0.60, prompts block aggiornato
+- **memory-model.md**: MemoryAtom entities_json campi documentati (extraction_level, hallucination_flags, conversation_type), retention_class allineata all'implementazione reale (_retention_from_importance)
+- **api-contracts.md**: `lifelog:stream:enrich` riscritto con payload reale Stage C→D (era blueprint M0 Stage F); aggiunti 4 campi audio quality
+- **development-log.md**: entry 2026-05-29 completa con ciclo v13/v14, tabella risultati, backlog
+- **history_manager**: FEATURE/Lifelog2/StageD-QualityGate registrato
+- **Commit**: `a92d671` (doc(/doc lifelog2): sync knowledge)
+
 ## [2026-05-29] END
 
 **Completato:**
