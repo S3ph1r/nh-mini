@@ -110,6 +110,20 @@ La directory `scripts/` contiene le CLI utilizzabili direttamente dall'agent.
 | `check_sops_creds.py` *(2026-05-21)* | Verifica disponibilità namespace SOPS + SSH reach per tutti i nodi. Mostra solo chiavi, **mai valori** | `python3 scripts/check_sops_creds.py` |
 | `lifelog_audit.py` *(2026-05-21)* | Audit Lifelog2: telemetry.db, Postgres row counts, MinIO object counts — report diagnostico da CT190 | `python3 scripts/lifelog_audit.py` |
 
+### scripts/ — Diagnostici Ad-hoc (ARIA + Redis)
+
+Script di troubleshooting one-shot per ARIA (PC139) e Redis (CT120). Non fanno parte del flusso operativo standard — usare in caso di incidenti.
+
+| Script | Funzione |
+|--------|----------|
+| `check_aria_log.py` | SSH su PC139 → tail 30 righe `aria_orchestrator.log` (Windows PowerShell) |
+| `check_redis.py` | Dump chiavi Redis CT120 filtrate per namespace `aria/qwen/lifelog/queue/q:` — snapshot stato code |
+| `inspect_redis_queues.py` | Dump completo Redis CT120 — tutte le chiavi con tipo e contenuto |
+| `clean_redis_queues.py` | Elimina code ARIA specifiche da Redis: `aria:q:llm:local:qwen3-14b-q4km:lifelog` + `aria:result:llm:*` — usare con cautela |
+| `restart_aria.py` | Riavvio completo ARIA su PC139 via SSH: `taskkill /F /IM python.exe /T` + `taskkill /F /IM llama-server.exe /T`, poi restart. **⚠️ Non eseguire autonomamente — attendere ok esplicito di Roberto** |
+| `list_aria_dirs.py` | SSH su PC139 → `whoami` + `Get-ChildItem C:\Users` — verifica directory utenti Windows |
+| `find_pm2.py` | SSH su PC139 → cerca `pm2.cmd` in `C:\Users\roberto` e `C:\Users\gemini` (diagnostico legacy PM2) |
+
 ## web/ — Dashboard NH-Mini (aggiunto 2026-04-24)
 
 ### web/app.py

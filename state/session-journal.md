@@ -1,3 +1,32 @@
+## [2026-05-30 END] — Pipeline Dashboard + /doc lifelog2 + /lint lifelog2
+
+**Completato:**
+- **Svelte 500 fix**: `{@const}` nelle 4 tile Batch Workers era figlio diretto di `<div>` — wrap in `{#if status.orchestrator}`. Deploy su CT203.
+- **Pipeline Dashboard refactor**: layout 2 colonne (workers sinistra, data destra), KPI bar, log terminal collassabile, stream `lag` vs `length`, 5 tile Background Workers (systemd timers), Place Detective tile. Deploy su CT203.
+- **4 data fix frontend**: `StreamInfo` type aggiornato (`lag`), `formatNextTimer()` per timestamp futuri (era "-1g fa" per next_elapse di domani), CSS `.col-span-2`, `{@const}` placement.
+- **Backend**: nuovo `GET /orchestrator/timers`, `_stream_info()` con lag via consumer group, `_STREAM_CONSUMER_GROUPS` mapping.
+- **/doc lifelog2**: `architecture.md` (streams table, orchestrator.py, Control Plane v2), `api-contracts.md` (streams schema + /timers endpoint), `development-log.md` (entry 2026-05-30), `NH-Mini/log.md`, history_manager FEATURE/Lifelog2/PipelineDashboard.
+- **/lint lifelog2**: 50 passed, 0 errori, 8 warnings → risolti: 7 script diagnostici registrati in `core-modules.mdc`, entry journal aggiunta.
+
+**Incompleto / prossima sessione:**
+- Speaker enrollment diagnosis (voiceprint broken, best_score < 0.2 su tutti i segmenti)
+- Profile Builder: fallisce dal 2026-05-24, esce in 1s — root cause non investigata
+- Places Intelligence Fase 5 pending (Stage D context — bloccata su primo luogo confermato)
+
+**Mine per il prossimo agent:**
+- I 7 script diagnostici ARIA/Redis ora in `core-modules.mdc` ma `restart_aria.py` porta il vincolo **"non eseguire autonomamente"** — vedi [[feedback_aria_control]].
+- `COVERS_MIN_TOTAL=10` in orchestratore: Stage G non scatta con meno di 10 cover pending — se vedi "items senza cover" in dashboard ma Stage G idle, è normale.
+
+---
+
+## [2026-05-30 START] — Pipeline Dashboard refactor + Svelte 500 fix
+
+**Obiettivo:** Correggere errore 500 su `/pipeline` (Svelte `{@const}` fuori da control-flow), refactor completo layout dashboard, aggiunta tile Background Workers, data accuracy fixes.
+
+**Grounding:** Contesto di sessione da compressione. Errore 500 diagnosticato: `{@const runningF = ...}` a riga 438 figlio diretto di `<div class="workers-grid">`. Fix noto prima di iniziare.
+
+---
+
 ## [2026-05-29] TASK — /doc lifelog2 eseguito
 
 - **architecture.md**: Stage C quality signals (4 campi), Stage D quality gate sezione (extraction_level floors, persons filter, prompt v14), voiceprint threshold corretto 0.72→0.60, prompts block aggiornato

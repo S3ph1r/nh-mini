@@ -4,6 +4,13 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-30] dev | Lifelog2 Pipeline Dashboard refactor — timer workers + stream lag + layout
+
+- **Nuovo endpoint `GET /orchestrator/timers`**: stato dei 5 systemd timer workers (day_digest, profile_validator, profile_builder, thread_consolidation, thread_consolidator) via `systemctl show`. Campi: status idle/running/failed, last_trigger, next_elapse, duration_s.
+- **Stream lag corretto**: `_stream_info()` ora legge `lag` via `XINFO GROUPS` sul consumer group associato. Prima si mostrava `length` (total history) — fuorviante. Tutti i lag = 0 (pipeline sana). Deadletter = 1449 msg permanenti (rejected, non da riprocessare).
+- **Dashboard layout 2 colonne**: sinistra = tutti i workers (streaming B→E, batch F/G/Detective/PlaceDetective, background workers systemd); destra = DB stats + gateway + telemetria. KPI bar full-width, log terminal collassabile.
+- **4 fix dati frontend**: TypeScript `StreamInfo` type aggiornato (lag vs first_entry); `formatNextTimer()` per timestamp futuri; CSS `.col-span-2`; `{@const}` Svelte 5 placement fix (500 error).
+
 ## [2026-05-29] dev | Lifelog2 Stage C/D quality gate — extraction_level + audio signals + prompt v13
 
 - **Voiceprint P0 risolto**: identificato acoustic mismatch (VOICE_RECOGNITION vs CAMCORDER). Archiviate le 6 enrollment esistenti + centroid 256d. Ricostruito embedding Roberto con 2 soli campioni CAMCORDER. Abbassata soglia `VOICEPRINT_MATCH_THRESHOLD` 0.72 → 0.60 dopo verifica manuale di 15+ clip audio. Backfill su 10,694 speaker turns: 877 ora correttamente attributi a Roberto (capture_class=personal/mixed).
