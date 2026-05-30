@@ -1,4 +1,4 @@
-## [2026-05-30 END] — Pipeline Dashboard + /doc lifelog2 + /lint lifelog2
+## [2026-05-30 15:18] END — Pipeline Dashboard + /doc lifelog2 + /lint lifelog2
 
 **Completato:**
 - **Svelte 500 fix**: `{@const}` nelle 4 tile Batch Workers era figlio diretto di `<div>` — wrap in `{#if status.orchestrator}`. Deploy su CT203.
@@ -19,7 +19,7 @@
 
 ---
 
-## [2026-05-30 START] — Pipeline Dashboard refactor + Svelte 500 fix
+## [2026-05-30 09:00] START — Pipeline Dashboard refactor + Svelte 500 fix
 
 **Obiettivo:** Correggere errore 500 su `/pipeline` (Svelte `{@const}` fuori da control-flow), refactor completo layout dashboard, aggiunta tile Background Workers, data accuracy fixes.
 
