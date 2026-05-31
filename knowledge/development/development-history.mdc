@@ -1077,3 +1077,124 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "high"
 }
 ```
+
+### 2026-05-25 - Implementato il clustering biometrico non supervis...
+```json
+{
+  "timestamp": "2026-05-25T23:18:35.163865+00:00",
+  "category": "FEATURE",
+  "component": "profile-builder-tier-b",
+  "change": "Implementato il clustering biometrico non supervisionato Tier B ed il flusso di Identity Resolution Upgrade asincrono in worker_profile_builder.py, estendendo UserProfileFact con person_id JSONB e proteggendo Postgres da record duplicati relationship_type = 'self'",
+  "reason": "Documentare l'integrazione di Tier B cerchia sociale ed il recovery del DB e Svelte 5",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-27 - Implementata Places Intelligence Fase 0-4: migrati...
+```json
+{
+  "timestamp": "2026-05-27T20:47:06.029889+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/PlacesIntelligence",
+  "change": "Implementata Places Intelligence Fase 0-4: migration 0014 (place_hypotheses, place_signals view), Stage F contatori, Worker Place Detective (rule-based scheduling domenica 03:30), Stage G place covers, 6 API endpoints, frontend /places con mappa+tiles+detail panel",
+  "reason": "Permettere l'apprendimento automatico del ruolo semantico dei luoghi frequentati (casa/ufficio/sociale/transito) da segnali multi-dimensionali accumulati nel tempo — stesso paradigma del Detective per l'identità",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-28 - Parallel B+E autonomous loops replacing sequential...
+```json
+{
+  "timestamp": "2026-05-28T19:46:57.091139+00:00",
+  "category": "ARCHITECTURE",
+  "component": "lifelog2/orchestrator",
+  "change": "Parallel B+E autonomous loops replacing sequential B→E scan; serial ARIA C→D pipeline; _reconciliation_loop added",
+  "reason": "Stage B è autonomo (no ARIA); Stage E elabora in parallelo; riduce latenza durante downtime ARIA",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "6a2b77d"
+}
+```
+
+### 2026-05-28 - AriaLLMClient.generate_json() infinite-wait pollin...
+```json
+{
+  "timestamp": "2026-05-28T19:47:03.366585+00:00",
+  "category": "FEATURE",
+  "component": "lifelog2/llm",
+  "change": "AriaLLMClient.generate_json() infinite-wait polling: POLL_S=30, REPUSH_GRACE_S=60, no hard timeout",
+  "reason": "Pipeline non deve perdere job LLM durante downtime ARIA; tutti i worker ereditano il comportamento wait-forever",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "7e58e75"
+}
+```
+
+### 2026-05-28 - COVERS_MIN_TOTAL=10: Stage G avvia solo quando pen...
+```json
+{
+  "timestamp": "2026-05-28T19:47:08.764445+00:00",
+  "category": "FEATURE",
+  "component": "lifelog2/orchestrator",
+  "change": "COVERS_MIN_TOTAL=10: Stage G avvia solo quando pending atom+episode covers >= 10",
+  "reason": "Evitare swap FLUX↔LLM per batch piccoli; GPU swap ha costo fisso ~35s che vale solo per batch significativi",
+  "author": "agent",
+  "impact": "medium",
+  "git_commit": "7295bc9"
+}
+```
+
+### 2026-05-29 - Prompt v14 + server-side floors + persons filter +...
+```json
+{
+  "timestamp": "2026-05-29T16:37:17.381647+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/StageD-QualityGate",
+  "change": "Prompt v14 + server-side floors + persons filter + 12-sample test methodology",
+  "reason": "LLM Qwen3-14b genera allucinazioni su transcript corti/degradati; quality gate a doppio layer (prompt + server-side) mitiga il problema senza perdere ricordi utili",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-30 - Pipeline Cockpit refactor: systemd timer workers v...
+```json
+{
+  "timestamp": "2026-05-30T13:08:42.752236+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/PipelineDashboard",
+  "change": "Pipeline Cockpit refactor: systemd timer workers visibility, stream lag monitoring, KPI bar, collapsible log, 2-column layout (workers/data), 4 frontend data fixes",
+  "reason": "Dashboard mostrava dati fuorvianti (stream length vs lag), mancavano tile per 5 background workers systemd, layout non differenziava workers da monitoring",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-05-30 - Tier1/Tier2 architecture: VP→C→D serial ARIA loop,...
+```json
+{
+  "timestamp": "2026-05-30T19:55:40.283441+00:00",
+  "category": "REFACTOR",
+  "component": "Lifelog2/Orchestrator",
+  "change": "Tier1/Tier2 architecture: VP→C→D serial ARIA loop, TIER2_REGISTRY sequential post-drain workers, worker health Redis keys, all conflicting systemd timers disabled",
+  "reason": "Eliminate ARIA contention between voiceprint worker and pipeline stages; single point of control for all ARIA-dependent workers",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-05-31 - Batch Tier1 trigger (BATCH_MIN_SIZE=6, BATCH_MAX_W...
+```json
+{
+  "timestamp": "2026-05-31T18:31:46.815318+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/OrchestratorBatchTier1",
+  "change": "Batch Tier1 trigger (BATCH_MIN_SIZE=6, BATCH_MAX_WAIT_S=1800s) e calibrazione TIER2_REGISTRY",
+  "reason": "Riduzione GPU model swap da 12/h a 2/h (83%). profile_builder e place_detective ogni 6h. thread_consolidation ogni 2gg con --limit 30 e timeout 2700s per evitare timeout ricorrenti su backlog 240 episodi.",
+  "author": "agent",
+  "impact": "medium",
+  "git_commit": "d236992"
+}
+```

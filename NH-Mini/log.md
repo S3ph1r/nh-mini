@@ -4,6 +4,23 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-05-31] dev | Lifelog2 Orchestrator tuning — Batch Tier1 trigger + Tier2 schedule calibration + two-service discovery
+
+- **Batch Tier1 trigger:** `BATCH_MIN_SIZE=6`, `BATCH_MAX_WAIT_S=1800`. GPU swap ridotti da 12/h a 2/h (83%). Warm cache chain: WhisperX→Qwen3→Tier2 workers.
+- **TIER2_REGISTRY schedule:** `profile_builder` 7gg→6h, `place_detective` domenica→6h, `thread_consolidation` 7gg→2gg + `--limit 30` + timeout 2700s.
+- **Two-service architecture:** `lifelog2.service` (API) vs `lifelog2-orchestrator.service` (pipeline) — due processi distinti su CT203.
+- **Commit:** `5b30553` (thread_consolidation), `486f4f7` (profile_builder + place_detective), `d236992` (batch trigger). Deploy CT203 ore 20:23 CEST.
+- **Doc:** `knowledge/architecture.md`, `knowledge/development-log.md`.
+
+## [2026-05-30] dev | Lifelog2 Orchestrator Tier1/Tier2 refactor — voiceprint ARIA fix + single point of control
+
+- **Root cause diagnosi:** voiceprint worker competeva con Stage C/D per ARIA (entrambi whisperx-large-v3). `ARIA_TIMEOUT_S=300s` < tempo reale ARIA sotto carico (~9 min). Enrollment stuck in Redis PEL indefinitamente. Domain shift (enrollment casa → recording ufficio) spiegava score 0.583 < threshold 0.60.
+- **Tier1 ARIA serial loop:** `ARIA_PIPELINE` esteso con `stage_vp` come primo stage. VP enrollment processato prima di Stage C — WhisperX già in VRAM, zero model swap. `voiceprint.service` e `.timer` disabilitati.
+- **TIER2_REGISTRY:** 6 worker sequenziali post-drain (detective 15min, day_digest 24h, profile_builder 7gg, profile_validator 24h, thread_consolidation 7gg, place_detective domenica 03:30). Hard timeout per worker via `asyncio.wait_for`.
+- **Systemd audit:** 5 timer + 1 duplicato disabilitati (day_digest, profile_validator, profile_builder, thread_consolidation, thread_consolidator). Solo `cleanup.timer` mantenuto.
+- **Worker health Redis:** `lifelog:worker:health:{name}` (no TTL) con `consecutive_failures`. Dashboard warning se > 0.
+- **Doc aggiornata:** `knowledge/architecture.md`, `knowledge/api-contracts.md`, `knowledge/development-log.md`, `history_manager.py`.
+
 ## [2026-05-30] dev | Lifelog2 Pipeline Dashboard refactor — timer workers + stream lag + layout
 
 - **Nuovo endpoint `GET /orchestrator/timers`**: stato dei 5 systemd timer workers (day_digest, profile_validator, profile_builder, thread_consolidation, thread_consolidator) via `systemctl show`. Campi: status idle/running/failed, last_trigger, next_elapse, duration_s.

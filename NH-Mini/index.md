@@ -2,7 +2,7 @@
 
 Catalogo master di tutte le pagine wiki. Aggiornato ad ogni ingest.  
 Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
-_Ultimo aggiornamento: 2026-05-25_
+_Ultimo aggiornamento: 2026-05-31_
 
 ---
 
@@ -58,11 +58,19 @@ _Ultimo aggiornamento: 2026-05-25_
 
 ---
 
-## Concepts — ARIA
+## Concepts — Lifelog2
 
 | Pagina | Descrizione |
 |--------|-------------|
 | [[concepts/lifelog2_dev-pattern\|lifelog2_dev-pattern]] | Pattern dev Lifelog2 — orchestrator B→E+Detective, Stage F, API, MinIO, Redis, frontend workflow |
+| [[concepts/lifelog2-places-intelligence\|lifelog2-places-intelligence]] | Places Intelligence — apprendimento luoghi (Place Detective, cover AI, /places dashboard) |
+
+---
+
+## Concepts — ARIA
+
+| Pagina | Descrizione |
+|--------|-------------|
 | [[concepts/aria-redis-protocol\|aria-redis-protocol]] | Nomenclatura code Redis e schema payload (SOT) |
 | [[concepts/aria-task-lifecycle\|aria-task-lifecycle]] | Ciclo di vita di un task ARIA (stati e transizioni) |
 | [[concepts/aria-environments\|aria-environments]] | Architettura ambienti Python 3 livelli (Miniconda + conda envs) |
@@ -132,7 +140,7 @@ _Ultimo aggiornamento: 2026-05-25_
 - **Concepts:** 16
 - **Sources ingerite:** 26
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-24 (CT202 Gateway Telemetry & Lifelog2 Control Plane Integration)
+- **Ultimo aggiornamento:** 2026-05-28 (Orchestratore parallel B+E, AriaLLMClient infinite-wait, Stage G threshold, Profile Validator timer)
 
 ---
 
