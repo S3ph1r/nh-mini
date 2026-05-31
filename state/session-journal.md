@@ -1,3 +1,28 @@
+## [2026-05-31 20:33] END — Lifelog2 Orchestrator Tuning + /doc + /lint
+
+**Completato:**
+- **Batch Tier1 trigger**: `BATCH_MIN_SIZE=6`, `BATCH_MAX_WAIT_S=1800s`. GPU swap VRAM ridotti da 12/h a 2/h (83%). Warm cache chain: WhisperX×6 → Qwen3×6 (resta in VRAM) → Tier2 workers trovano Qwen3 già carico. Commit `d236992`. Deploy CT203 ore 20:23 CEST.
+- **TIER2_REGISTRY calibration**: `profile_builder` 7gg→6h (checkpoint Redis incrementale, no LLM), `place_detective` domenica-only→6h (no LLM, ~5s/run), `thread_consolidation` 7gg→2gg + `--limit 30` + timeout 1800s→2700s. Fix: 240 episodi non-threaded causavano timeout ×2. Commit `5b30553`, `486f4f7`.
+- **Two-service architecture CT203 documentata**: `lifelog2.service` (API :8002) vs `lifelog2-orchestrator.service` (pipeline). `restart lifelog2` lascia orchestratore con codice vecchio. Memory entry salvata.
+- **thread_consolidation completato** nella sessione corrente: run 19:08 CEST, 23 episodi threaded in ~7 min (primo run funzionante dopo due TIMEOUT).
+- **Tier2 workers attivi**: day_digest, profile_builder, profile_validator, thread_consolidation, place_detective tutti corsi nella stessa sessione dopo restart orchestratore alle 18:59 CEST.
+- **/doc lifelog2**: `knowledge/architecture.md` (Tier2 table, Batch Tier1 section, two-service arch, Place Detective + Profile Builder schedule), `knowledge/development-log.md` (entry 2026-05-31), `NH-Mini/log.md`, `NH-Mini/index.md`, `history_manager` FEATURE/Lifelog2/OrchestratorBatchTier1. Commit `e2566f0` (Lifelog2), `e84512e` (NH-Mini).
+- **/lint lifelog2**: 58 passed, 0 warnings, 0 errori. Tutti i 7 script `scripts_ref` ora sono 0 warning (risolti nella sessione precedente).
+- **/finalize**: 54 passed, 0 warnings, 0 errori.
+
+**Incompleto / prossima sessione:**
+- Speaker enrollment voiceprint: best_score < 0.2 su tutti i segmenti — non investigato in questa sessione
+- Profile Builder: esce in 1s dal 2026-05-24 — root cause non investigata
+- Places Intelligence Fase 5: Stage D location context nel prompt (bloccata su primo luogo confermato — place_detective ora gira ogni 6h, primo hit possibile domani)
+
+**Mine per il prossimo agent:**
+- `BATCH_MAX_WAIT_S=1800s` è in-memory. Se l'orchestratore viene riavviato a metà finestra, la finestra riparte da zero — comportamento corretto, non un bug.
+- `_tier2_last_run` si azzera al riavvio dell'orchestratore → tutti i Tier2 worker girano immediatamente al prossimo ciclo idle. Voluto: garantisce run post-deploy.
+- **Regola deployata**: `systemctl restart lifelog2-orchestrator` (non `lifelog2`) dopo fix codice pipeline. Vedi [[feedback_orchestrator_service]].
+- thread_consolidation backlog: 23 episodi threaded oggi. Con `--limit 30` + intervallo 2gg smaltirà il backlog residuo nelle prossime run senza bloccare catena.
+
+---
+
 ## [2026-05-30 15:18] END — Pipeline Dashboard + /doc lifelog2 + /lint lifelog2
 
 **Completato:**
