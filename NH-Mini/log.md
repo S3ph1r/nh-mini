@@ -4,6 +4,21 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-06-01] dev | Lifelog2 — conversation_type refactor deploy + Stage G placement + backfill 2025
+
+- **Conversation type taxonomy live:** migration 0015, Stage C classifica real_dialogue/personal_mono/hybrid/media_passive/ambient_voices. Tier gate Stage D (analysis_tier≤1.0 → skip LLM). Z7/Detective filtrano su conversation_type. Verificato: 44 atoms tipizzati correttamente, persons=1.
+- **Backfill 2025:** `backfill_asr_from_archive.py` — 1025 discarded (audio_deleted), 85 re-queued su stream:asr. DB pulito.
+- **Stage G covers refactor:** commit `b509e4c`. Stage G FLUX2 ora triggerato dopo Tier2 (non da Stage F). Ordine D→Tier2→G = 2 swap GPU (era 3). Git pull su CT203, restart pendente.
+- **Aggiornato:** `knowledge/architecture.md`, `knowledge/memory-model.md`, `knowledge/development-log.md`.
+
+## [2026-06-01] dev | Lifelog2 — analisi empirica pipeline, fix voiceprint/detective, design blueprint classificazione
+
+- **Fix sessione:** Stage Z7 capture_class filter (personal/mixed), detective loop while True, DETECTIVE_TIMEOUT_S 10min→24h, detective return 0 fix, VOICEPRINT_MATCH_THRESHOLD 0.60→0.50.
+- **Analisi empirica:** segmento 799997ce identificato come caso canonico del problema — Roberto guarda TV, conduttore classificato come "giornalista/analista politico" (false identity). 25 su 33 detective candidates potenzialmente contaminati da media content.
+- **Problema fondamentale scoperto:** `mixed` conflates real dialogue, media passive, ambient voices. `conversation_type` mancante è la radice di tutto.
+- **Design document:** `sviluppi/Lifelog2/docs/lifelog2-classification-evolution-blueprint-v1.md` — conversation_type taxonomy, 8 scenari di vita reale, retroazione architettura, data model extensions, roadmap P0→P5.
+- **Dati DB:** rematch 2309 turns Roberto, 5 Person provvisori eliminati, profile_builder --full-scan (33 nuovi persons, 1315 turns linkati).
+
 ## [2026-05-31] dev | Lifelog2 Orchestrator tuning — Batch Tier1 trigger + Tier2 schedule calibration + two-service discovery
 
 - **Batch Tier1 trigger:** `BATCH_MIN_SIZE=6`, `BATCH_MAX_WAIT_S=1800`. GPU swap ridotti da 12/h a 2/h (83%). Warm cache chain: WhisperX→Qwen3→Tier2 workers.
@@ -1336,3 +1351,56 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - **AriaLLMClient infinite-wait** (commit `7e58e75`): BRPOP hard timeout rimosso. Polling ogni 30s con re-push automatico se job consumato senza risposta. Tutti i worker ARIA-dipendenti ereditano il comportamento.
 - **Stage G threshold** (commit `7295bc9`): `COVERS_MIN_TOTAL=10` — attende 10 cover pending prima di swappare FLUX in VRAM.
 - **Profile Validator timer**: `lifelog2-profile-validator.timer` abilitato su CT203, giornaliero 03:00. Prima run: 339 fatti gray-zone processati in 43 batch Qwen3, 0 errori.
+
+## [2026-06-01] dev | Lifelog2 — implementazione conversation_type classification (refactor completo)
+
+### Modifiche applicate (commit d351760)
+
+**Migration 0015** — nuove colonne:
+- `segments`: conversation_type, conversation_type_confidence, turn_taking_score, roberto_word_ratio, avg_nonroberto_turn_s, dominant_speaker_ratio, known_persons_present (UUID[]), capture_class_version, capture_class_updated_at, analysis_tier
+- `speaker_turns`: person_confidence, turn_type
+- `memory_atoms`: conversation_type, analysis_tier, invalidated_at, invalidated_reason, extracted_with_context
+- `persons`: is_media_persona, media_source_hint, segment_count
+- Nuova tabella: `reclassification_queue`
+
+**Stage C** — calcolo in-memory conversation_type da speaker_turns (no LLM):
+- `_compute_conversation_metrics()`, `_classify_conversation_type()`, `_assign_analysis_tier()`
+- `_classify_and_resolve()` esteso: ora restituisce anche `speaker_to_score` e `user_labels`
+- `person_confidence` salvato su speaker_turns
+- conv_type, metrics, analysis_tier salvati su segments
+- conv_type emesso in stream:enrich payload
+
+**Stage D** — tier gate + conversation_type-aware:
+- `analysis_tier <= 1.0` → skip LLM, salva atom stats-only (media_passive/ambient_voices)
+- `_format_user_message()` aggiunto `conversation_type` nell'header prompt
+- `_retention_from_importance()` aggiornato: media/ambient → "counted"
+- importance cap per media_passive, ambient_voices
+- MemoryAtom: conversation_type, analysis_tier, extracted_with_context salvati
+
+**Z7 (profile_builder)**:
+- Strato 1: filtro `conversation_type NOT IN (media_passive, ambient_voices)` + `invalidated_at IS NULL`
+- Tier B clustering: filtro `conversation_type IN (real_dialogue, hybrid, unknown)` su speaker_turns
+- Post-filter cross-day: cluster deve coprire ≥ 2 date distinte
+
+**Detective** — doppio filtro:
+- atoms query: `conversation_type NOT IN (media_passive, ambient_voices)`
+- turns query: `turn_type != 'media'`
+
+**Scripts**:
+- `scripts/backfill_conversation_type.py` — calcola retroattivamente metrics+conv_type su tutti i segmenti
+- `scripts/cleanup_contaminated_data.py` — elimina memory_atoms, episodes, profile_facts, persons non-Roberto, resetta segmenti a 'enriching'
+- `scripts/requeue_for_enrichment.py` — re-emette segmenti 'enriching' su stream:enrich ricostruendo transcript_key
+
+**Test**: 13 unit test in `tests/test_stage_c_conversation_type.py` (23/23 pass)
+
+### Prossimi step (CT203 offline al momento del commit)
+
+1. Attendere CT203 online
+2. `git pull` su CT203
+3. `alembic upgrade head` (migration 0015)
+4. Fermare lifelog2-orchestrator.service
+5. `python scripts/backfill_conversation_type.py --dry-run` → verifica distribuzione
+6. `python scripts/cleanup_contaminated_data.py` (conferma interattiva)
+7. Riavviare lifelog2-orchestrator.service
+8. `python scripts/requeue_for_enrichment.py` → re-processa tutti i segmenti
+9. Monitorare Stage D, Z7, Detective

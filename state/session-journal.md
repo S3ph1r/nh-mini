@@ -1,3 +1,45 @@
+## [2026-06-01 23:40] TASK — /doc lifelog2 eseguito
+
+Aggiornati: `knowledge/architecture.md` (Stage G trigger refactor, conversation_type/analysis_tier in Stage C/D, backfill script), `knowledge/memory-model.md` (migration 0015: nuove colonne Segment, MemoryAtom, SpeakerTurn, Person), `knowledge/development-log.md` (entry 2026-06-01). Auto-restart orchestratore CT203 schedulato via script su CT120 (PID 15496).
+
+## [2026-06-01 23:00] DECISION — Stage G covers refactor: spostato dopo Tier2
+
+Rimosso `_covers_trigger.set()` da `_grouping_loop()`. Aggiunto dopo blocco Tier2 in `run()`. Commit `b509e4c`, push, git pull su CT203 eseguito — restart pendente (stage_c ancora running lag~500).
+
+**Motivazione:** Ordine D(qwen3)→G(flux2)→Tier2(qwen3) = 3 swap GPU. Nuovo ordine D→Tier2→G = 2 swap. FLUX2 è ora sempre l'ultimo step del ciclo.
+
+## [2026-06-01 19:30] RESOLVED — 1110 segmenti 2025 stuck in 'enriching'
+
+Script `scripts/backfill_asr_from_archive.py` creato, committato (`694f2c0`), deployato su CT203. Risultato: 1025 discarded (audio_deleted), 85 re-queued su `stream:asr`. DB pulito — nessun segmento pre-2026 bloccato.
+
+## [2026-06-01 18:00] DECISION — conversation_type refactor verificato live
+
+Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, personal_mono, media_passive, ambient_voices), tier gate corretto (analysis_tier=1.0 → skip LLM), persons=1 (zero falsi media persona), 44 memory_atoms tutti tipizzati correttamente.
+
+## [2026-06-01] IN CORSO — Lifelog2 Voiceprint, Detective, Stage Z7
+
+**Completato:**
+- **Post-drain bug fix** (da sessione precedente, verificato): `_post_drain_set_at` tracking — post-drain flush ora a 60s esatti. Commit `c3a9b4b`.
+- **Detective capture_class filter**: aggiunto `AND s.capture_class IN ('personal', 'mixed')` alla query atom. Commit `19d184f`. Deploy CT203 12:26.
+- **Stage Z7 capture_class filter**: stesso fix in `worker_profile_builder.py` → Stage Z7 ora clusterizza solo speaker da segmenti personal/mixed. Commit `d402149`. Deploy CT203 13:xx.
+- **Voiceprint rematch**: `rematch_voiceprint.py --threshold 0.60` → 33 segmenti ambient reclassificati a personal/mixed, 1381 speaker_turns.person_id = Roberto. Enrollment funzionante (256d, quality=1.0).
+- **Pulizia 412 falsi Interlocutori**: Stage Z7 senza filtro aveva creato 412 Person da ambient (TV/podcast). Eliminati tutti dal DB + speaker_turns.person_id azzerati.
+- **Stage Z7 corretto**: nuovo run con filtro → 28 "Interlocutore Ricorrente" reali (da 412). Top: `7db31827` 18 segmenti ottobre 2025 → maggio 2026.
+- **Detective checkpoint reset**: azzerato a 2026-05-20 per rielaborare i 250 atom personal/mixed (creati prima del checkpoint detective).
+- **Detective: rimozione batch cap + timeout 24h**: `range(5)` → `while True`, `DETECTIVE_TIMEOUT_S` 10min → 24h. Commit `85ec94e`. Deploy + orchestrator restart 14:08.
+- **Identity candidates trovati**: detective ha estratto "Alberto - collega" ricorrente in più cluster, Roberto identificato con confidence 0.9 su SPEAKER_00.
+
+**In corso:**
+- Detective sta drenando il backlog completo (250 atom, avviato 14:08 con timeout=86400s)
+
+**Incompleto / prossima sessione:**
+- Flusso "conferma identità → enrollment voiceprint per terzi": view per ascoltare campioni vocali + conferma identity → `Person.voiceprint_embedding` estratto da `speaker_turns`
+- Sample #4 voiceprint deteriorato: rimuovere da `voiceprint_ids` e ricalcolare centroide (bassa priorità, enrollment funziona)
+- Stage F greedy loop: max retries guard non ancora implementato
+- Places Intelligence Fase 5: Stage D location context (bloccata su primo luogo confermato)
+
+---
+
 ## [2026-05-31 20:33] END — Lifelog2 Orchestrator Tuning + /doc + /lint
 
 **Completato:**
