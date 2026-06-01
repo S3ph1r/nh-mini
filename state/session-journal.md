@@ -1,3 +1,25 @@
+## [2026-06-01 23:55] END — Lifelog2 conversation_type + Stage G refactor + /doc + /lint + /finalize
+
+**Completato:**
+- **Conversation type taxonomy live** (migration 0015, commit `d351760`): real_dialogue/personal_mono/hybrid/media_passive/ambient_voices. Tier gate Stage D (analysis_tier≤1.0 → skip LLM). Filtri Z7/Detective. Verificato su DB: 44 atoms tipizzati correttamente, persons=1, zero falsi media persona.
+- **Backfill 2025** (`scripts/backfill_asr_from_archive.py`, commit `694f2c0`): 1025 discarded (audio_deleted), 85 re-queued stream:asr. DB pulito — nessun segmento pre-2026 bloccato.
+- **Stage G covers refactor** (commit `b509e4c`): rimosso trigger da `_grouping_loop`, aggiunto dopo Tier2 in `run()`. D(qwen3)→Tier2(qwen3)→G(flux2) = 2 swap GPU (era 3). Git pull su CT203 ✅. Auto-restart schedulato via script CT120 (PID 15496, si attiva quando stage_c → idle).
+- **/doc lifelog2**: `knowledge/architecture.md` (Stage G rationale, conversation_type+roadmap P1-P5, riferimento blueprint), `knowledge/memory-model.md` (migration 0015 + campi planned P2/P3), `knowledge/development-log.md` (entry 2026-06-01). Blueprint aggiunto a KNOWLEDGE_INDEX e NH-Mini/index.md.
+- **/lint lifelog2**: 59 passed, 0 warnings, 0 errors ✅
+- **/finalize**: 54 passed, 0 warnings, 0 errors ✅
+
+**Incompleto / prossima sessione:**
+- Validazione nuovi memory_atoms post-restart orchestratore (10 atoms real_dialogue, 5 detective candidates, profile_facts)
+- Profile builder: `profile_facts_to_validate=0` da investigare (profilo quasi vuoto dopo cleanup contaminati)
+- Flusso conferma identità → voiceprint enrollment terzi (view ascolto + conferma → `Person.voiceprint_embedding`)
+
+**Mine per il prossimo agent:**
+- **Auto-restart CT120 PID 15496**: verificare se ha eseguito il restart (`ssh root@192.168.1.120 "cat /tmp/orchestrator_restart.log"`). Se non ha girato, fare `systemctl restart lifelog2-orchestrator.service` su CT203 manualmente.
+- **Dopo restart**: verificare nei log che Stage G fires DOPO Tier2 (non da Stage F). Cerca: `Stage F: greedy drain completo — triggero covers` deve essere ASSENTE; `Tier 1 idle + Tier 2 completato → covers` deve apparire.
+- **P2 blueprint non implementato**: Z7 cross-day filter (`segments_per_day > 5` → `media_persona` flag) e `persons.media_source_hint` — da fare in sessione dedicata.
+- **P3 blueprint non implementato**: retroazione (`reclassification_queue` worker, `memory_atoms.invalidated_reason/extracted_with_context`) — da fare in sessione dedicata.
+- Stage C lag era ~500 a fine sessione — WhisperX processa 85 backfill + catture recenti. Normale.
+
 ## [2026-06-01 23:40] TASK — /doc lifelog2 eseguito
 
 Aggiornati: `knowledge/architecture.md` (Stage G trigger refactor, conversation_type/analysis_tier in Stage C/D, backfill script), `knowledge/memory-model.md` (migration 0015: nuove colonne Segment, MemoryAtom, SpeakerTurn, Person), `knowledge/development-log.md` (entry 2026-06-01). Auto-restart orchestratore CT203 schedulato via script su CT120 (PID 15496).
