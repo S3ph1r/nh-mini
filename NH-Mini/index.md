@@ -2,7 +2,7 @@
 
 Catalogo master di tutte le pagine wiki. Aggiornato ad ogni ingest.  
 Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
-_Ultimo aggiornamento: 2026-05-31_
+_Ultimo aggiornamento: 2026-06-01_
 
 ---
 
@@ -64,6 +64,7 @@ _Ultimo aggiornamento: 2026-05-31_
 |--------|-------------|
 | [[concepts/lifelog2_dev-pattern\|lifelog2_dev-pattern]] | Pattern dev Lifelog2 — orchestrator B→E+Detective, Stage F, API, MinIO, Redis, frontend workflow |
 | [[concepts/lifelog2-places-intelligence\|lifelog2-places-intelligence]] | Places Intelligence — apprendimento luoghi (Place Detective, cover AI, /places dashboard) |
+| `sviluppi/Lifelog2/docs/lifelog2-classification-evolution-blueprint-v1.md` | **Design doc — Classification & Temporal Evolution Blueprint v1** (2026-06-01): problema capture_class, tassonomia conversation_type, 8 scenari vita reale, modello temporale evolutivo, retroazione reclassification_queue, roadmap P1-P5. Companion a master blueprint. |
 
 ---
 
