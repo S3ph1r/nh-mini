@@ -4,6 +4,13 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-06-02] dev | Lifelog2 — People view identity context panel + per-turn diarized audio
+
+- **Detective identity_level fix:** `GREATEST(identity_level, 1)` nella UPDATE candidati — persone con candidati LLM ora correttamente al level 1. Commit `6dd8506`.
+- **3 nuovi endpoint:** `/people/{id}/context` (12 turni+has_audio), `/people/{id}/turn-audio/{turn_id}` (ffmpeg slice AAC), `/people/{id}/voice-sample`.
+- **Frontend People view:** panel espanso con trascrizioni + ▶/■ per-turn audio. Bug fix: stale `audioUrl` reference in `fetchContext` (ReferenceError silenzioso bloccava contextLoading). Commit `b739425`.
+- **Aggiornato:** `knowledge/architecture.md`, `knowledge/api-contracts.md`, `knowledge/development-log.md`.
+
 ## [2026-06-01] dev | Lifelog2 — conversation_type refactor deploy + Stage G placement + backfill 2025
 
 - **Conversation type taxonomy live:** migration 0015, Stage C classifica real_dialogue/personal_mono/hybrid/media_passive/ambient_voices. Tier gate Stage D (analysis_tier≤1.0 → skip LLM). Z7/Detective filtrano su conversation_type. Verificato: 44 atoms tipizzati correttamente, persons=1.

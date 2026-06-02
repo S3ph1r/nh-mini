@@ -1,3 +1,19 @@
+## [2026-06-02] TASK — /doc lifelog2 eseguito
+
+Aggiornati: `knowledge/architecture.md` (People View section: 3 nuovi endpoint, per-turn audio pattern, detective fix, gotcha pre-try ReferenceError), `knowledge/api-contracts.md` (sezione 5c People Identity API: /context, /turn-audio/{turn_id} con schema response), `knowledge/development-log.md` (entry 2026-06-02), `NH-Mini/log.md`. History entries: FEATURE/PeopleView, BUGFIX/WorkerDetective.
+
+## [2026-06-02] TASK — People view identity context + per-turn audio
+
+**Sessione avviata da contesto compresso.** Lavori completati:
+
+1. **Audit Tier2 workers** — tutti e 6 funzionanti. Root cause empty candidates: person records creati dopo il detective pass sugli atom → checkpoint resettato → detective ha rilavorato tutto → candidati generati.
+2. **Detective identity_level fix** (commit `6dd8506`) — `GREATEST(identity_level, 1)` mancante nella UPDATE candidati.
+3. **3 nuovi endpoint People** (commit `6dd8506`) — `/context` (12 turni + has_audio), `/turn-audio/{turn_id}` (ffmpeg AAC slice), `/voice-sample`.
+4. **Bug critico fix** (commit `b739425`) — `fetchContext` referenziava `audioUrl` rimossa → ReferenceError silenzioso pre-try → contextLoading bloccato forever. Fix: rimossa riga spuria.
+5. **Per-turn audio UX** (commit `b739425`) — `<audio controls>` sostituito con `new Audio()` programmatico, ▶/■ inline, single player, blob URL cached e revocati su deselect.
+
+**Tutto deployato su CT203, service active.**
+
 ## [2026-06-01 23:55] END — Lifelog2 conversation_type + Stage G refactor + /doc + /lint + /finalize
 
 **Completato:**
