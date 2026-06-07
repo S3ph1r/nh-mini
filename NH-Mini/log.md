@@ -4,6 +4,41 @@ Log append-only di tutte le operazioni sul wiki.
 Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
 Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
 
+## [2026-06-07] dev | Lifelog2 — Orchestrator B→G gate, Stage B batch limit, V1 import tooling
+
+- **Orchestrator _stage_b_gate**: introdotto gate ciclo completo B→G. Stage B aspetta `asyncio.Event` impostato da Stage G prima di ogni batch. Rimossi i wait parziali errati su stream:asr/enrich. Ciclo garantito: B(25) → C → D → E → F → Tier2 → G → gate → B.
+- **MAX_MESSAGES_PER_RUN=25** in `stage_b_preprocess.py`: limita Stage B a 25 file per run per evitare saturazione MinIO su backlog.
+- **V1 import tooling**: `import_v1_from_pc.py` (SCP da PC139, cifra, staged), `inject_queued_batch.py` (ri-accoda queued persi da Redis), `restore_encryption_key.py` (recovery AES-256 dopo reset registry).
+- **Fix dati registry_devices**: creata entry LEGACY_DEVICE_ID per associare backlog V1 all'utente roberto. Script `emit_staged_segments.py` ha emesso 1469 staged su stream:ingest.
+- **Allineamento dev/rt/GitHub**: tutti su commit `537fce1`, working tree clean su LXC 203.
+- **Aggiornati**: `knowledge/architecture.md` (gate B→G, MAX_MESSAGES_PER_RUN, nuovi script), `knowledge/development-log.md` (entry 2026-06-07). History entry ARCHITECTURE/Lifelog2/Orchestrator.
+
+## [2026-06-04] dev | WhisperX — Allineamento contrattuale e documentazione metriche di qualità
+
+- **WhisperX Quality Contract:** Il backend WhisperX (`sviluppi/ARIA/backends/lifelog_whisperx/server.py`) è stato aggiornato per includere metriche di qualità a livello di turno (`avg_logprob`, `no_speech_prob`) e a livello globale di trascrizione radice (`transcription_quality` con `avg_logprob_mean`, `no_speech_prob_mean`, `no_speech_prob_max`, `n_segments`).
+- **Sincronizzazione Documentazione:** Eseguito il protocollo esteso `/doc lifelog2` e `/doc backend whisperx` per allineare le specifiche contrattuali ed architetturali.
+- **Aggiornato:** `sviluppi/ARIA/docs/backends/lifelog-whisperx.md`, `sviluppi/ARIA/docs/ARIA-blueprint.md`, `sviluppi/Lifelog2/knowledge/api-contracts.md`, `sviluppi/Lifelog2/knowledge/architecture.md`, `NH-Mini/log.md` e `NH-Mini/index.md`.
+- **Storico architetturale:** Committato con history_manager la feature `whisperx-quality-metrics` con impatto medium.
+
+## [2026-06-03] dev | Lifelog2 — Detective prompt v2 + fix confirm_person + fix episodes.person_ids
+
+- **Detective prompt v2:** regola disambiguazione esplicita (direct_address / self_identification / confirmed_reference). Nessuna 3a persona come evidenza identity. `name_evidence_type` nel JSON output. Config aggiornato a v2, commit `bb1f3c4`.
+- **fix(stage_f): episodes.person_ids** mai popolato — aggiunto query `speaker_turns` prima di INSERT Episode. Backfill SQL: 132/314 episodi aggiornati. Commit `d806176`.
+- **fix(confirm_person): numpy bugs** — `ValueError: truth value of array` (cambiato `if not arr` → `if arr is None`) + `TypeError: float32 not JSON serializable` (cambiato `list()` → `.tolist()`). Commits `8b6ed35`, `15effb8`.
+- **persons.confidence backfill:** 3 L1 persons con conf=0.000 nonostante candidates → backfill SQL da `max(candidate.confidence)`.
+- **Oleksandra Filonenko confermata L2:** 67 turn backpropagati via confirm_person con voiceprint centroid.
+- **L1 candidates cleanup + backfill:** 4 L1 persons azzerati (identity_candidates=NULL, confidence=0). Checkpoint Redis → 1970. Detective backfill avviato direttamente (no orchestratore). Risultati iniziali corretti: "collega IT - nome sconosciuto" vs il precedente "Marco/Antonio" per 3a persona.
+- **Pendente:** `name_evidence_type` prodotto da v2 ma non salvato in DB dal worker — da fixare prossima sessione.
+
+## [2026-06-03] dev | Lifelog2 — Stage C idempotency + dedup migration 0017 + People M3 + pipeline audit
+
+- **Stage C crash recovery fix:** DELETE speaker_turns WHERE segment_id prima di ogni INSERT batch. Crash+XACK lag → nessun duplicato. Deployato su CT203.
+- **Migration 0017:** rimossi 8,856 duplicati (42%) da crash recovery pre-fix. 11,988 righe pulite, 0 duplicati residui.
+- **People View M3:** `GET /dashboard/people` arricchito con `n_turns`, `n_days`, `best_candidate`, `is_ready`, `is_ambiguous`. Frontend: badge "Pronto"/"Ambiguo", pill stat, filtro `ready`.
+- **Detective checkpoint reset** a 1970 per forzare aggiornamento `persons.confidence` (era 0.00 dopo checkpoint avanzato senza candidates).
+- **Pipeline audit:** script `/tmp/pipeline_audit.py` — 0 anomalie critiche Tier1. Gap identificato: 314 episodi con `person_ids=[]`. Z4 `key_events` sempre vuoti.
+- **Aggiornato:** `knowledge/architecture.md` (Stage C idempotency, People M3), `knowledge/memory-model.md` (SpeakerTurn idempotency), `knowledge/api-contracts.md` (sezione 5d GET /dashboard/people), `knowledge/development-log.md`.
+
 ## [2026-06-02] dev | Lifelog2 — People view identity context panel + per-turn diarized audio
 
 - **Detective identity_level fix:** `GREATEST(identity_level, 1)` nella UPDATE candidati — persone con candidati LLM ora correttamente al level 1. Commit `6dd8506`.

@@ -95,6 +95,7 @@ A (Ingest Android M4A)
 
 [Worker indipendenti]
 → Day Digest & Temporal Aggregation (giornaliero 01:00, Qwen3 su ARIA → Day Z4)
+→ Thread Consolidation (mensile 1° del mese 03:30, timer systemd, ibrido: Gemini cloud via ARIA per mapping + Qwen3 locale per sintesi → Z6 Saga)
 → Profile Builder (domenica 04:00, Strato 1+2 zero-LLM → UserProfileFact Z7)
 ```
 
@@ -244,6 +245,7 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 | M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | **Prompt v10** (corrente, 2026-05-22): capture_class-aware + sentiment + transcript_quality + scoring tier. v8 (2026-05-20): prime versioni capture_class-aware. v5 (2026-05-15): action_items + decisions. Noise filter `_NOISE_PHRASES`. |
 | M4.5 — Stage E (Embedding + WAV cleanup) | ✅ Done 2026-05-13 | mxbai-embed-large 1024d via CT107, `memory_atoms.embedding` aggiornato, WAV MinIO eliminato, pipeline_status="consolidated". Fast Pipeline A→E operativa. |
 | M5 — Episode/Day Grouping | ✅ Done | Stage F **live** 2026-05-15 — 4-pass sliding window, 8 gruppi → 12 episodi su 19 atom, bug prefilter fixato. **Orchestratore integrato** — Stage F ogni 30min, trigger `run_grouping`. **Worker Detective** live 2026-05-16 — identity inference LLM ogni 15min, Redis checkpoint. **Stage G live 2026-05-16** — cover generation FLUX.2-klein-4B, ogni 60min, trigger `run_covers`. |
+| M5.5 — Thread Consolidation (Stage Z6) | ✅ Done 2026-05-26 | Worker periodico con approccio ibrido (Gemini cloud via ARIA per mapping in batch di max BATCH_SIZE=15 + Qwen3 locale per la sintesi dei singoli thread). Embedding 1024d salvati su Postgres. Testato e validato in produzione. |
 | M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico |
 | M7 — Frontend SvelteKit | ✅ Done | **Cinematic UI** live su CT203:5173. Views: Dashboard, Day, Map, People, Sagas, Timeline, Transcript, Pipeline, Tasks, Profile. Audio playback MP3 su transcript. Sfondo bg.jpg + oklch. |
 | M8 — Intelligence Layer Z7 | 🔧 In progress | **Profile Builder Strato 1+2 live** (2026-05-22). Strato V + Cerchia Tier B + HNSW index: P2 roadmap. `lifelog2-status-roadmap.md` come checklist periodica. |

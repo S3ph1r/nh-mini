@@ -1,3 +1,51 @@
+## [2026-06-07 08:30] END — B→G gate + V1 backlog inject + allineamento dev/rt/GitHub + /doc + /lint + /finalize
+
+**Completato:**
+- **Orchestrator B→G gate** (`_stage_b_gate` asyncio.Event): Stage B aspetta Stage G prima di ogni batch. Rimossi wait parziali errati su stream:asr/enrich. Commit `327e4a8`, deploy su CT203. Pipeline in running al momento della chiusura.
+- **1469 segmenti staged emessi**: `emit_staged_segments.py` (one-shot, non committato) ha emesso tutti i segmenti V1 su `stream:ingest`, aggiornando `pipeline_status='queued'`. Tutti ora in pipeline.
+- **Fix LEGACY_DEVICE_ID**: creata entry in `registry_devices` per device V1 import — necessario per join `devices.user_id` in emit_staged_segments.
+- **Allineamento dev/rt/GitHub**: LXC 190, LXC 203, GitHub tutti su commit `97181f0`. Working tree clean su CT203.
+- **Nuovi script committati** (commit `537fce1`): `import_v1_from_pc.py`, `inject_queued_batch.py`, `restore_encryption_key.py`, `.sops.yaml`, prompt history, blueprint V1 aggiornato.
+- **/doc lifelog2**: `knowledge/architecture.md`, `knowledge/development-log.md`, `NH-Mini/log.md` aggiornati. History entries: ARCHITECTURE/Lifelog2/Orchestrator (gate B→G), FEATURE/Lifelog2/scripts/ingestion.
+- **/lint lifelog2**: 58 passed, 0 errors, 1 warning (session_journal END stale — risolto ora).
+- **/finalize**: `index.md` aggiornato (data + stack-lifelog2 descrizione). END scritto.
+
+**Incompleto:**
+- **Backlog processing in corso**: 1469 segmenti in pipeline. Ciclo B→G lento per design (25 file/ciclo). Nessuna azione necessaria — lasciare girare.
+- **Voiceprint enrollment rotto** (P0 da sessione precedente): best_score < 0.2, tutti ambient. Non toccato in questa sessione.
+
+**Mine per il prossimo agent:**
+- **Edge case gate B→G con backlog esaurito**: quando lo stream:ingest si svuota completamente, `_stage_b_gate` resta SET e B non si blocca. Ma se ricominciano ad arrivare segmenti normali (1 ogni 5 min), verificare che G setti il gate correttamente dopo cicli con < 10 cover (branch "threshold not met" deve triggerare). Da monitorare al primo segmento nuovo post-backlog.
+- **Future import V1**: `import_v1_from_pc.py` usa LEGACY_DEVICE_ID hardcoded. Per import futuri, usare device_id reale dell'app Android di roberto per mantenere continuità dati.
+- **`emit_staged_segments.py`**: non è in git — è in `/tmp` su CT203. Se serve di nuovo, va ricostruito o salvato in `scripts/maintenance/`.
+
+## [2026-06-07 06:00] TASK — /doc lifelog2 eseguito
+
+Aggiornati: `knowledge/architecture.md` (loop autonomi: _stage_b_gate gate B→G, MAX_MESSAGES_PER_RUN=25; nuovi script ingestion/maintenance), `knowledge/development-log.md` (entry 2026-06-07), `NH-Mini/log.md` (entry dev 2026-06-07). History entry: ARCHITECTURE/Lifelog2/Orchestrator (impact: high).
+
+## [2026-06-04 16:30] START — Sincronizzazione Documentale (/doc lifelog2 e /doc backend whisperx)
+
+**Obiettivo:** Allineare la documentazione del framework NH-Mini, del progetto Lifelog2 e del backend WhisperX in ARIA, registrando nello storico i cambiamenti contrattuali e strutturali.
+**Grounding:** Letti .cursorrules, AGENTS.md, active_config.json (contesto Lifelog2 attivo). Le modifiche al backend WhisperX (avg_logprob, no_speech_prob e transcription_quality) sono state verificate e applicate sui server di produzione e di sviluppo.
+
+## [2026-06-04 17:00] TASK — /doc lifelog2 e /doc backend whisperx completati
+
+Sincronizzati tutti i file documentali del framework NH-Mini, del progetto Lifelog2 e di ARIA. Aggiunta la specifica delle nuove metriche contrattuali di WhisperX (avg_logprob, no_speech_prob e transcription_quality). Registrata la feature nello storico con `history_manager.py`. Eseguito `nh-lint.py` con successo.
+
+## [2026-06-03] TASK — /doc lifelog2 eseguito
+
+Aggiornati: `knowledge/architecture.md` (Stage C idempotency + migration 0017, People M3 sezione), `knowledge/memory-model.md` (SpeakerTurn idempotency note), `knowledge/api-contracts.md` (sezione 5d GET /dashboard/people schema completo), `knowledge/development-log.md` (entry 2026-06-03), `NH-Mini/log.md`. History entries: BUGFIX/StageC, FEATURE/PeopleView.
+
+## [2026-06-03] TASK — Stage C idempotency + migration 0017 + People M3 + pipeline audit
+
+**Sessione avviata da contesto compresso.** Lavori completati:
+
+1. **Stage C crash recovery fix** — DELETE speaker_turns WHERE segment_id prima di INSERT batch in `stage_c_asr.py`. Idempotente a qualsiasi numero di crash+retry. Deployato su CT203.
+2. **Migration 0017** (`0017_deduplicate_speaker_turns.py`) — rimossi 8,856 duplicati (42%) preesistenti. Post-migration: 11,988 righe, 0 duplicati.
+3. **People View M3** — endpoint `get_people` arricchito con n_turns, n_days, best_candidate, is_ready, is_ambiguous. Frontend: badges, pill stat "Pronti", filtro ready.
+4. **Detective checkpoint reset** a `1970-01-01T00:00:00+00:00` — forza M2 a rielaborare tutti gli atom e aggiornare `persons.confidence`.
+5. **Pipeline audit** — script campionamento trasversale. 0 anomalie Tier1/Tier2 critiche. Gap trovati: episodi person_ids=[], key_events Z4 vuoti. Detective in re-processing.
+
 ## [2026-06-02] TASK — /doc lifelog2 eseguito
 
 Aggiornati: `knowledge/architecture.md` (People View section: 3 nuovi endpoint, per-turn audio pattern, detective fix, gotcha pre-try ReferenceError), `knowledge/api-contracts.md` (sezione 5c People Identity API: /context, /turn-audio/{turn_id} con schema response), `knowledge/development-log.md` (entry 2026-06-02), `NH-Mini/log.md`. History entries: FEATURE/PeopleView, BUGFIX/WorkerDetective.

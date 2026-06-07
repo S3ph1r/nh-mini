@@ -1198,3 +1198,133 @@ tail -n 20 knowledge/development/development-history.mdc
   "git_commit": "d236992"
 }
 ```
+
+### 2026-06-01 - Stage G covers spostato dopo Tier2: rimosso trigge...
+```json
+{
+  "timestamp": "2026-06-01T21:49:11.691632+00:00",
+  "category": "REFACTOR",
+  "component": "Lifelog2/Orchestrator",
+  "change": "Stage G covers spostato dopo Tier2: rimosso trigger da _grouping_loop, aggiunto dopo TIER2_REGISTRY in run()",
+  "reason": "Ordine D→G→Tier2 causava 3 swap GPU VRAM. Nuovo ordine D→Tier2→G = 2 swap: FLUX2 ultimo, qwen3 resta warm per tutti i Tier2",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-01 - Conversation type taxonomy: real_dialogue/personal...
+```json
+{
+  "timestamp": "2026-06-01T21:49:18.664306+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/Pipeline",
+  "change": "Conversation type taxonomy: real_dialogue/personal_mono/hybrid/media_passive/ambient_voices + analysis_tier gate in Stage D. Migration 0015. Backfill script per segmenti 2025.",
+  "reason": "capture_class='mixed' non distingueva dialogo reale da media passivo. Z7 e Detective contaminati da voci TV/podcast producevano false identity. Fix upstream a Stage C/D elimina il problema alla radice.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-01 - backfill_asr_from_archive.py: ri-accoda segmenti p...
+```json
+{
+  "timestamp": "2026-06-01T21:58:48.756116+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/Scripts",
+  "change": "backfill_asr_from_archive.py: ri-accoda segmenti pre-2026 stuck in 'enriching' senza transcript. Discard se audio eliminato/mancante, Stage B lite se audio presente in MinIO archive/.",
+  "reason": "1110 segmenti settembre–dicembre 2025 bloccati senza transcript (audio V1 processati localmente). DB pulito: 1025 discarded (audio_deleted), 85 re-queued su stream:asr.",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-02 - Per-turn diarized audio playback in People identit...
+```json
+{
+  "timestamp": "2026-06-02T19:09:32.261355+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/PeopleView",
+  "change": "Per-turn diarized audio playback in People identity view",
+  "reason": "Permettere verifica identità interlocutori ascoltando le frasi trascritte esatte (slice ffmpeg start_ms→end_ms)",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-02 - identity_level non veniva bumpato a 1 quando il de...
+```json
+{
+  "timestamp": "2026-06-02T19:10:43.959757+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/WorkerDetective",
+  "change": "identity_level non veniva bumpato a 1 quando il detective scriveva il primo candidato",
+  "reason": "GREATEST(identity_level,1) mancante nella UPDATE — persone con candidati restavano a level 0 (Sconosciuto)",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-03 - Idempotent crash recovery: DELETE speaker_turns be...
+```json
+{
+  "timestamp": "2026-06-03T15:05:30.191601+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/StageC",
+  "change": "Idempotent crash recovery: DELETE speaker_turns before INSERT + migration 0017 deduplication (8856 rows, 42%)",
+  "reason": "Stage C crashed between INSERT and XACK → Redis re-delivered same segment_id → silent duplicate turns corrupting attribution data",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-03 - GET /dashboard/people M3: n_turns, n_days, best_ca...
+```json
+{
+  "timestamp": "2026-06-03T15:05:36.255811+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/PeopleView",
+  "change": "GET /dashboard/people M3: n_turns, n_days, best_candidate, is_ready, is_ambiguous; frontend badges + ready filter",
+  "reason": "Need readiness signals to surface persons ready for identity confirmation without clicking each card",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-04 - Integrated avg_logprob, no_speech_prob in speaker_...
+```json
+{
+  "timestamp": "2026-06-04T14:54:32.935632+00:00",
+  "category": "FEATURE",
+  "component": "whisperx-quality-metrics",
+  "change": "Integrated avg_logprob, no_speech_prob in speaker_turns and global transcription_quality root object in WhisperX contract",
+  "reason": "Provide downstream workers and quality gates with native quality signals to filter out hallucinations and low-quality transcriptions",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-07 - Introdotto _stage_b_gate (asyncio.Event) per gatin...
+```json
+{
+  "timestamp": "2026-06-07T03:47:49.316177+00:00",
+  "category": "ARCHITECTURE",
+  "component": "Lifelog2/Orchestrator",
+  "change": "Introdotto _stage_b_gate (asyncio.Event) per gating ciclo B→G. Stage B aspetta Stage G prima del batch successivo. MAX_MESSAGES_PER_RUN=25 in Stage B.",
+  "reason": "Stage B risaturava stream:asr prima che Stage D potesse girare. Il gate garantisce B→C→D→E→F→Tier2→G prima del ciclo successivo.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-07 - Aggiunto import_v1_from_pc.py (import V1 M4A da PC...
+```json
+{
+  "timestamp": "2026-06-07T04:25:32.919621+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/scripts/ingestion",
+  "change": "Aggiunto import_v1_from_pc.py (import V1 M4A da PC139 via SCP+AES-256), inject_queued_batch.py (re-inject batch queued da Redis persi), restore_encryption_key.py (recupero chiave AES dopo reset registry)",
+  "reason": "Backlog 1469 segmenti V1: strumenti per import one-shot, recovery credenziali e reiniezione batch fuori da pipeline normale",
+  "author": "agent",
+  "impact": "medium"
+}
+```

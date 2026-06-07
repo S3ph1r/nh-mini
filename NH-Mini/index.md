@@ -2,7 +2,7 @@
 
 Catalogo master di tutte le pagine wiki. Aggiornato ad ogni ingest.  
 Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
-_Ultimo aggiornamento: 2026-06-01_
+_Ultimo aggiornamento: 2026-06-07_
 
 ---
 
@@ -40,7 +40,7 @@ _Ultimo aggiornamento: 2026-06-01_
 | [[entities/systems/stack-dias\|stack-dias]] | DIAS — pipeline audiobook cinematico (10 stadi, Sound-on-Demand v4.1) |
 | [[entities/systems/stack-nh-mini\|stack-nh-mini]] | NH-Mini — control plane CT190 (dashboard, service catalog, discovery daemon) |
 | [[entities/systems/stack-stratex\|stack-stratex]] | Stratex — Wealth Intelligence System (gestione patrimoniale, AI ibrida, RAG) |
-| [[entities/systems/stack-lifelog2\|stack-lifelog2]] | Lifelog2 — Personal memory OS (pipeline A→F+Detective, 8 viste frontend, identity resolution) |
+| [[entities/systems/stack-lifelog2\|stack-lifelog2]] | Lifelog2 — Personal memory OS (pipeline A→F+Detective+G, gate B→G, 8 viste frontend, identity resolution) |
 | [[entities/services/service-asr-blackwell\|service-asr-blackwell]] | ASR Blackwell Service — Backend di trascrizione e biometria su PC 139 |
 
 ---
@@ -141,7 +141,7 @@ _Ultimo aggiornamento: 2026-06-01_
 - **Concepts:** 16
 - **Sources ingerite:** 26
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-05-28 (Orchestratore parallel B+E, AriaLLMClient infinite-wait, Stage G threshold, Profile Validator timer)
+- **Ultimo aggiornamento:** 2026-06-07 (Lifelog2 gate B→G, V1 import tooling, allineamento dev/rt/GitHub)
 
 ---
 
