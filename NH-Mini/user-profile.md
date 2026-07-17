@@ -1,7 +1,7 @@
 ---
 title: "Profilo Utente — Roberto"
 type: user_profile
-updated: 2026-05-01
+updated: 2026-06-11
 note: "Aggiornato dall'agent durante le sessioni. NON modificare manualmente se non per correzioni esplicite."
 ---
 
@@ -65,7 +65,7 @@ L'agent lo aggiorna autonomamente quando emergono nuove informazioni sulle prefe
 ## Cose che Fanno Scattare la Correzione
 
 - L'agent hardcoda IP, VMID, nomi servizi invece di leggerli da file di config
-- L'agent cita "ARIA e Redis" come se fossero gli unici servizi disponibili — il catalogo è dinamico
+- L'agent cita "ARIA e Redis" come se fossero gli unici servizi disponibili — il catalogo &egrave; dinamico
 - L'agent propone soluzioni esterne (Google Cloud API, nuovo container) senza prima verificare i servizi esistenti
 - L'agent "dimentica" di aggiornare la doc dopo una sessione di sviluppo
 - L'agent propone un Finalization Ritual posticipato invece di scrivere durante la sessione
@@ -95,3 +95,4 @@ L'agent lo aggiorna autonomamente quando emergono nuove informazioni sulle prefe
 - **2026-05-01 (Sera)**: Implementata la Fase 3 (Telegram). L'utente ha ribadito il bisogno di **controllo assoluto**: nessun fix autonomo (remediation) deve essere eseguito senza approvazione esplicita via bottone Telegram. Preferenza per bot dedicati e sicuri via SOPS.
 - **2026-05-01 (ARIA/Claude)**: Confermato uso parallelo di Claude e Gemini sugli stessi file CT190 — il framework è genuinamente model-agnostic. Roberto verifica sempre lo stato reale prima di agire (controlla i log prima di decidere sul riavvio). Apprezza spiegazione del rischio prima dell'azione. Ha corretto l'agent quando saltava il ritual — i protocolli rigidi valgono anche a sessione in corso.
 - **2026-05-11**: Stabilizzata la pipeline ASR su Blackwell (PC 139). Roberto ha richiamato l'agent al rigoroso rispetto degli **Hard Triggers** e dei rituali (Journal, History). È emersa la necessità di allineare i modelli biometrici (vettori 256d vs legacy 192d) e di usare `soundfile` come standard per prevenire crash su Windows/Blackwell.
+- **2026-06-11**: Introdotta l'estetica macOS Frosted Glass per SHIFTER. Roberto preferisce uno stile raffinato, inizialmente bianco/azzurro con ripples ampie, successivamente affinato ad un elegante grigio medio-scuro (obsidian/brushed silver) con capsule dei turni dai colori vividi e saturi ad alta leggibilità (giallo per M, verde per P, arancione per REC, azzurro per N).

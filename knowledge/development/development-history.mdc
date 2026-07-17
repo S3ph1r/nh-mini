@@ -1328,3 +1328,200 @@ tail -n 20 knowledge/development/development-history.mdc
   "impact": "medium"
 }
 ```
+
+### 2026-06-08 - Aggiunta Sezione 2 a _reconciliation_loop per reco...
+```json
+{
+  "timestamp": "2026-06-08T22:13:29.452210+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/Orchestrator/ReconciliationLoop",
+  "change": "Aggiunta Sezione 2 a _reconciliation_loop per recovery segmenti stuck in 'enriched' con memory_atom_id IS NOT NULL (Stage D commit-before-xadd race condition)",
+  "reason": "26 segmenti bloccati in 'enriched' per xadd fallito post-commit — nessuna recovery path esistente, segmenti persi senza intervento manuale",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-08 - Filtro ghost-exclusion su GET /api/dashboard/sagas...
+```json
+{
+  "timestamp": "2026-06-08T22:13:36.235730+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/Dashboard/SagasEndpoint",
+  "change": "Filtro ghost-exclusion su GET /api/dashboard/sagas via subquery: esclude episodi senza FK-linked atom",
+  "reason": "Stage F rieseguito su stessi atom da reconciliation re-queue creava episodi duplicati (ghost) visibili in dashboard con atom_count=0. DELETE 171 ghost episodes (Aug-Dec 2025).",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-09 - User-agnostic pipeline refactor: bonifica Stage C2...
+```json
+{
+  "timestamp": "2026-06-09T13:45:14.817329+00:00",
+  "category": "REFACTOR",
+  "component": "lifelog2/pipeline",
+  "change": "User-agnostic pipeline refactor: bonifica Stage C2, rename identity_detective, prompt debiasing, DB column rename, dashboard user da registry DB, legacy enrollment rimosso",
+  "reason": "Lifelog2 deve essere multi-utente. Ogni nome hardcoded (Roberto/Paola) nel codice attivo o nei prompt rende impossibile usare il sistema con altri account senza modificare il codice.",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-11 - Affinamento grafico di SHIFTER: colori pillole tur...
+```json
+{
+  "timestamp": "2026-06-11T04:00:00.007293+00:00",
+  "category": "REFACTOR",
+  "component": "shifter-ui",
+  "change": "Affinamento grafico di SHIFTER: colori pillole turni vividi/saturi (giallo per M, verde per P, arancione per REC, azzurro per N) e sfondo grigio obsidian/brushed silver",
+  "reason": "Miglioramento del contrasto visivo delle pillole sul tema semitrasparente chiaro/vetro e allineamento con le preferenze di stile dell'utente",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-06-13 - Relaxed weekly consistency constraint and added tr...
+```json
+{
+  "timestamp": "2026-06-13T14:00:45.507677+00:00",
+  "category": "REFACTOR",
+  "component": "SHIFTER/Solver",
+  "change": "Relaxed weekly consistency constraint and added transition penalties",
+  "reason": "Resolve CP-SAT solver infeasibility in Week 25 due to dense holidays overlap",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-17 - Fix carry_out formula in /api/summary/annual: max(...
+```json
+{
+  "timestamp": "2026-06-17T20:38:56.971739+00:00",
+  "category": "BUGFIX",
+  "component": "SHIFTER/main.py",
+  "change": "Fix carry_out formula in /api/summary/annual: max(0, carry_in + H2_WE+FES - H2_REC) da turni_effettivi post-pivot_date",
+  "reason": "Formula delta planned vs effettivi degenerava a zero quando solver scrive su entrambe le tabelle (publish_end_date = fine anno)",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-17 - UX audit: scroll-per-mese con toggle, opacity 0.18...
+```json
+{
+  "timestamp": "2026-06-17T20:42:41.642958+00:00",
+  "category": "FEATURE",
+  "component": "SHIFTER/app.js+main.py",
+  "change": "UX audit: scroll-per-mese con toggle, opacity 0.18 operatori inattivi, ferie H1 storiche in griglia ferie, layout 2-col Analisi Streak, filtro streak da oggi a fine anno",
+  "reason": "Audit completo post-equità H1: tabella MESE ridondante, scroll per mese più ergonomico, operatori inattivi devono essere visivamente distinti, Streak past data irrilevante",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-21 - G/REP tracking: sostituzione → live calendar badge...
+```json
+{
+  "timestamp": "2026-06-21T11:19:25.069739+00:00",
+  "category": "FEATURE",
+  "component": "SHIFTER/solver+frontend+API",
+  "change": "G/REP tracking: sostituzione → live calendar badge; batch endpoint G/REP branch; solver preserva forzature manuali G/REP; admin bypass lock trimestrale; deploy CT204 + openpyxl/python-multipart",
+  "reason": "Operatori gruppo R non gestiti dal solutore; le giornate di sostituzione devono essere visibili nel live calendar e protette da re-run solver",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-22 - Slide-in summary panel + calendar layout refactor ...
+```json
+{
+  "timestamp": "2026-06-22T14:55:52.579563+00:00",
+  "category": "FEATURE",
+  "component": "SHIFTER/frontend",
+  "change": "Slide-in summary panel + calendar layout refactor (column widths, user mode filter, pivot default)",
+  "reason": "Migliorare leggibilità calendario con 31gg visibili e ridurre rumore visivo summary columns (ora on-demand via hover)",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-22 - Deploy workflow migrato da rsync a git: LXC190 dev...
+```json
+{
+  "timestamp": "2026-06-22T14:56:04.506291+00:00",
+  "category": "ARCHITECTURE",
+  "component": "SHIFTER/deploy",
+  "change": "Deploy workflow migrato da rsync a git: LXC190 dev → GitHub S3ph1r/SHIFTER → CT204 pull; struttura src/ formale",
+  "reason": "Garantire allineamento codebase riproducibile tra ambienti e possibilità di rollback via git history",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-06-23 - Dashboard gateway v2 con sezione Cloudflare + CF U...
+```json
+{
+  "timestamp": "2026-06-23T01:04:06.908197+00:00",
+  "category": "FEATURE",
+  "component": "CT202/gateway",
+  "change": "Dashboard gateway v2 con sezione Cloudflare + CF URL sync timer; fix /gateway/ LAN; rimozione typo /lifelo/",
+  "reason": "Dashboard inaccessibile via LAN per server_name priority bug; Cloudflare tunnel non documentato né monitorato",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-06-23 - cf-url-watcher.timer su LXC 190: monitora URL Clou...
+```json
+{
+  "timestamp": "2026-06-23T07:21:44.061187+00:00",
+  "category": "FEATURE",
+  "component": "CT202/gateway",
+  "change": "cf-url-watcher.timer su LXC 190: monitora URL Cloudflare Quick Tunnel e invia notifica Telegram al cambio",
+  "reason": "Quick Tunnel ha URL effimera — senza notifica automatica l'utente non sa quando cambia",
+  "author": "agent",
+  "impact": "low"
+}
+```
+
+### 2026-06-27 - Stage F/G race condition fix: MAX_THREAD_GAP_S 8h→...
+```json
+{
+  "timestamp": "2026-06-27T16:06:00.823949+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/stage_f_grouping + orchestrator",
+  "change": "Stage F/G race condition fix: MAX_THREAD_GAP_S 8h→10min, ended_at=last_atom_at, _covers_trigger moved to _grouping_loop post-drain",
+  "reason": "Stage G (FLUX2) firing before Stage F drain caused ARIA BatchOptimizer to kill qwen3 mid-atom; thread timestamps were set to processing time not atom time; 8h gap created mega-threads across disconnected sessions",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-07-06 - Eliminato bucket condiviso vp_unk_nr (sostituito d...
+```json
+{
+  "timestamp": "2026-07-06T13:05:58.837924+00:00",
+  "category": "REFACTOR",
+  "component": "Lifelog2/stage_c1_gate+stage_d_thread_builder",
+  "change": "Eliminato bucket condiviso vp_unk_nr (sostituito da vp_unk_noemb + MIN_VP_TRUST_DUR_S=1.5s); turn_reliability disaccoppiato dalla durata (puro avg_logprob); gap-enforcement da blocklist statica a state machine dinamica; correzione meccanica thread_type estesa a mono/dialogue oltre a personal/ambient",
+  "reason": "Turni di persone diverse finivano nello stesso bucket vp_unk_nr, spaccando la stessa conversazione in thread diversi a giorni di distanza; il gap-enforcement statico non copriva la creazione di nuovi thread dentro lo stesso batch",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "ac82f21"
+}
+```
+
+### 2026-07-06 - Force-cut dei thread ridisegnato da conteggio turn...
+```json
+{
+  "timestamp": "2026-07-06T13:05:58.869295+00:00",
+  "category": "ARCHITECTURE",
+  "component": "Lifelog2/stage_d_thread_builder",
+  "change": "Force-cut dei thread ridisegnato da conteggio turni (FORCE_CUT_TURNS=180) a budget di volume testo (THREAD_VOLUME_BUDGET_CHARS~21620 char, migration 0028 text_volume_chars); fix propagazione roster/rolling_summary ai thread creati da redirect gap/volume",
+  "reason": "Un thread ambient da 15 turni molto verbosi (46KB, audio ambientale continuo ~54min) sforava il context LLM di Stage E (400 Bad Request, error-swallowing silenzioso) pur restando ben sotto la soglia di conteggio turni — il conteggio non dice nulla sul volume di testo",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "ef284ef"
+}
+```

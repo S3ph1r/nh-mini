@@ -3,7 +3,7 @@ title: "NH-Mini — Control Plane CT190"
 type: entity
 tags: [nh-mini, control-plane, dashboard, framework, ct190]
 sources: []
-updated: 2026-04-24
+updated: 2026-06-11
 ---
 
 # NH-Mini — Control Plane CT190
@@ -26,12 +26,16 @@ NH-Mini è il **centro di controllo e sviluppo** del homelab. Opera su [[ct190-n
 
 ## Dashboard Web
 
-Stack: FastAPI (Python) + Vanilla HTML/JS + warroom CSS (glassmorphism).
+Stack: FastAPI (Python) + Vanilla HTML/JS + warroom CSS (glassmorphism) + vis-network 10.1.0 (self-hosted).
 Accesso: solo LAN — NON esposta via [[ct202-gateway]].
-Pagine: Overview · Infrastructure · Projects · **Services** · ARIA
 
-La pagina **Services** mostra il service catalog live con TCP probe opzionale (`▶ Probe live`).
-Vedi `knowledge/architecture/nh-mini-dashboard.mdc` per dettagli tecnici.
+**Layout**: sidebar sinistra fissa (260px) con brand logo, navigazione centrale e status indicators/refresh in basso.
+
+**Pagine**: Overview · Infrastructure · Projects · Services · ARIA · Alerts · **Topology**
+
+- **Services**: service catalog live con TCP probe (`▶ Probe live`).
+- **Alerts**: heartbeat daemon risultati, alert attivi con severità HIGH/MEDIUM/LOW.
+- **Topology**: grafo interattivo force-directed (vis-network) — 13 nodi colorati per tipo, 12 archi colorati per protocollo. Click su nodo → pannello dettaglio (IP, porte, purpose).
 
 Vedi `knowledge/architecture/nh-mini-dashboard.mdc` per dettagli tecnici.
 
@@ -64,6 +68,9 @@ Vedi `knowledge/architecture/nh-mini-dashboard.mdc` per dettagli tecnici.
 | 2026-04-24 | **Refactor control plane**: dashboard web, service catalog, `system-context.md`, separazione infra reale/legacy |
 | 2026-04-24 | **Tooling progetti**: `nh-new-project.py` (scaffolding), `nh-promote.py` (dev→RT LXC), Services tab dashboard |
 | 2026-04-24 | **ARIA sync**: push PC139 → GitHub, reset mirror CT190 — codebase allineata |
+| 2026-06-11 | **Infra automation**: VMID dinamici da SOT `infrastructure-map.mdc`, heartbeat monitoring, linter allineato |
+| 2026-06-11 | **Sidebar layout**: rimossa topbar, sidebar fissa 260px con status indicators. Fix sfondo bianco in scroll |
+| 2026-06-11 | **Tab Topology**: grafo vis-network force-directed, 13 nodi + 12 archi colorati per protocollo, pannello dettaglio |
 
 ## Relazione con NHI-CORE (obsoleto)
 

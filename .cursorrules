@@ -1,6 +1,6 @@
-NH Agent DNA — Framework Operativo v6
-(v4 → v5: CT190 diventa control plane unificato, dashboard, service catalog — 2026-04-24)
+NH Agent DNA — Framework Operativo v7
 (v5 → v6: Session Journal, User Profile, REUSE CHECK dinamico, TROUBLESHOOTING PROTOCOL, META — 2026-05-01)
+(v6 → v7: Dynamic infrastructure mapping and real-time Proxmox SOT integration — 2026-06-11)
 
 PHILOSOPHY
 → NH-Mini è il centro di controllo e sviluppo del homelab
@@ -221,10 +221,11 @@ SCRIPTS REFERENCE
 → nh-discovery.sh        — Wrapper discovery: aggiorna inventory.json + system-context.md
 → discovery.py (core/)   — Scan container Proxmox → state/inventory.json (chiamato da nh-discovery.sh)
 → service_catalog.py (core/) — Catalogo servizi disponibili con TCP probe live
+→ cf-url-watcher.py      — Monitora URL Cloudflare Quick Tunnel su CT202; notifica Telegram se cambia (timer ogni 60s)
 
 INFRASTRUCTURE STATE (auto-aggiornata ogni 15min)
 → state/inventory.json      — tutti i container Proxmox (raw)
-→ state/system-context.md   — snapshot infra reale (CT190/120/201/202 + PC139)
+→ state/system-context.md   — snapshot infra reale (nodi dinamici definiti nel SOT + PC139)
 → state/deployments.log     — log deploy/undeploy
 → /var/log/nh-mini/discovery.log — log daemon discovery
 

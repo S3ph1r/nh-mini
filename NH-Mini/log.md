@@ -1,8 +1,481 @@
 # Wiki Log — NH-Mini Second Brain
 
 Log append-only di tutte le operazioni sul wiki.  
-Formato entry: `## [YYYY-MM-DD] tipo | titolo`  
-Tip: `grep "^## \[" log.md | tail -10` mostra le ultime 10 operazioni.
+Formato entry: `## [YYYY-MM-DD] tipo | titolo`
+
+## [2026-07-14] dev | upgrade homelab connection to 5G CPE cascade (JC16)
+
+Migrata la connessione internet principale di casa/homelab dal vecchio doppino telefonico ADSL/VDSL (RJ11) al router 5G JC16 CPE (Kena Mobile / TIM). Configurato il D-Link DVA-5592 come router in cascata impostando la porta WAN Ethernet (ETH5), abilitando il client DHCPv4 per ottenere l'IP `192.168.0.2` dal JC16 (`192.168.0.1`), e impostando la Rotta di Default sulla nuova interfaccia. Risolto un blocco di navigazione inserendo via CLI la regola NAPT mancante nella configurazione del D-Link per `"WAN Ethernet"`, e modificando i server DNS del DHCP server locale da quelli statici WindTre a quelli pubblici (`8.8.8.8`, `1.1.1.1`). Linea migrata e pienamente operativa via cavo a ~38 Mbps / 2.80 Mbps (cap di Kena).
+
+## [2026-07-13] dev | Tier2 Alignment — tutti i worker migrati a thread e deployati
+
+Implementata l'intera roadmap [[concepts/lifelog2-tier2-alignment-roadmap]] in una sessione notturna (durante il drain ASR del batch 1200): Identity Detective (marker 0029 + prompt v4), Day Digest (prompt v5), Profile Builder (Strato 1 da open_loops, Z7 per vp_stable_id), geo-attach in Stage E + Place Detective, Saga Builder su sagas.linked_thread_ids (0030), retention_class per thread (0031, solo dato). Commit `3be9254`→`52dfa5b`, migrations applicate su CT105. Dettaglio nel blocco datato della pagina roadmap.
+
+## [2026-07-13] query | Tier2 Alignment Roadmap — worker secondo livello da atom a thread
+
+Analisi della codebase dei 6 worker Tier2 (identity/place detective, day digest, profile builder, profile validator, thread consolidation) contro il nuovo contratto dati thread-native (Stage A→G). Esito: tutti no-op dal 2026-06-29 (memory_atoms vuota), thread_consolidation e day_digest rotti anche a schema (episodes droppata, threads→sagas). Roadmap in 6 punti con priorità, gap geo-attach `location_id`, 3 decisioni aperte. Nuova pagina [[concepts/lifelog2-tier2-alignment-roadmap]]. Fonti: data-architecture-v1 §4, intelligence-addendum-v1, places-intelligence-spec-v1, codice worker.
+
+## [2026-07-06] dev | Lifelog2 — Thread Builder v2: hardening completo, force-cut per volume, doc sync
+
+Sessione lunga (2026-06-29 → 2026-07-06, più volte compattata) di hardening del Thread Builder v2 su dati reali. Documentazione completa in `sviluppi/Lifelog2/docs/lifelog2-thread-builder-hardening-2026-07.md` — questo entry è la sintesi.
+
+- **Redesign identità voiceprint** (2026-07-04): eliminato bucket condiviso `vp_unk_nr` (causava frammentazione di thread — stessa conversazione spaccata in thread diversi a giorni di distanza). Sostituito da `vp_unk_noemb` + soglia `MIN_VP_TRUST_DUR_S=1.5s`. `turn_reliability` disaccoppiato dalla durata del turno, ora puro `avg_logprob`.
+- **Gap-enforcement dinamico** (2026-07-05): da blocklist statica a state machine sequenziale in ordine cronologico reale — copre anche creazione thread dentro lo stesso batch.
+- **Correzione meccanica mono/dialogue** (2026-07-04): `_correct_thread_type_at_closure()` corregge entrambi gli assi (personal↔ambient E mono↔dialogue) ad ogni chiusura thread.
+- **Naming MinIO anti-disastro** (2026-07-05): chiave oggetto codifica timestamp+GPS invece di UUID casuale, sia in staging che archivio permanente.
+- **Validazione end-to-end su dati reali** (2026-07-05/06): 675 segmenti reali da upload telefono, 168 thread con 0 violazioni gap.
+- **Force-cut per volume di testo, non conteggio turni** (2026-07-06): causa radice di un thread da 47KB/15 turni che sforava il context LLM di Stage E (400 Bad Request, error-swallowing silenzioso). `FORCE_CUT_TURNS=180` non si accorgeva mai — il conteggio turni non dice nulla sul volume testo. Nuovo `THREAD_VOLUME_BUDGET_CHARS≈21620`, migration 0028. Bug scoperto in validazione: roster/rolling_summary non propagati ai thread creati da redirect (gap o volume) → Stage E arricchiva da roster vuota → allucinazioni. Fixato in due passi (`touched_thread_ids` + step dedicato post-LLM per l'eredità del rolling_summary).
+- **Doc aggiornati**: `sviluppi/Lifelog2/knowledge/{architecture,memory-model,development-log}.md`, `sviluppi/Lifelog2/docs/lifelog2-thread-refactor-roadmap.md`, `NH-Mini/entities/systems/stack-lifelog2.md`, `NH-Mini/concepts/lifelog2-refactor-roadmap.md`.
+
+## [2026-06-30] dev | Lifelog2 — FASE 2: Session Voiceprint Resolver deployato in Stage C
+
+- Migration 0027: `session_voiceprints` (session_id, stable_vp_id, voiceprint_embedding, person_id, atom_count) + colonna `speaker_turns.vp_stable_id VARCHAR(32)`
+- `_get_or_create_session_id()`: Redis-based, gap<30min=stessa sessione, TTL 90min, usa RawCapture.started_at reale (backfill-safe)
+- `_resolve_voiceprints()`: cosine vs registro sessione; ≥0.82=match, 0.75-0.82 ambiguo=new, <0.75=new; `vp_R` sempre per Roberto, `vp_known_{8chars}` per enrolled, `vp_unk_{6chars}` per unknown
+- Stream payload `c_done` arricchito con `session_id` e `vp_id_map` per Stage D
+- Commit 1c5b10f pushato, LXC 203 sincronizzato; 7 unit test + 2 integration test OK
+- Step 4 (live test cross-atom) pendente: richiede avvio pipeline da utente
+
+## [2026-06-30] dev | Lifelog2 — Architettura thread: Stage D boundary authority, Stage E enrichment, Stage F rimosso
+
+- Revisione architetturale completa del thread model (sessione 2026-06-30)
+- **Stage D ridefinito**: non più enricher per atom, diventa boundary authority cross-atom — gira ad ogni atom, mantiene log thread aperti in DB, decide finalizzazione con LLM semantico
+- **Stage E ridefinito**: thread enrichment batched — consuma thread finalizzati, 1 chiamata LLM per batch fino a 30K token, gestisce too_short/ambient senza LLM
+- **Stage F rimosso**: i thread finalizzati sono l'unità semantica diretta, nessun grouper intermedio
+- **Thread Builder superato**: la comprensione semantica di Stage D rende inutile un grouper deterministico a monte
+- Regole finalizzazione: gap>10min (immediato) | 2 atom senza continuazione (pending→finalized) | 180 turni (force-cut Part N)
+- Context budget Qwen3-14B su 16GB VRAM: ~30K token usabili; caso tipico ~8.7K token; max realistico 5-6 thread aperti simultaneamente (si risolvono entro 2 atom)
+- Thread states: open → pending_finalization → finalized (+ too_short, ambient_incomprehensible)
+- Thread Parts: force-cut produce Part 1/2/3 con parent_thread_id condiviso — card separate in dashboard
+- Aggiornato `concepts/lifelog2-refactor-roadmap.md`: FASE 3 e FASE 4 riscritte, sequenza aggiornata, tabella "Cosa cambia"
+
+## [2026-06-29] dev | Lifelog2 — Cover fix: EpisodeCard bug, Stage D v19 prompt, atom cover backfill
+
+- Bug: `EpisodeCard.svelte` ricostruiva cover URL con vecchio pattern `/api/dashboard/cover/${episode.id}` (endpoint episodi, tabella droppata) invece di usare `episode.cover_url` dall'API → fix: usa `episode.cover_url ?? null`
+- Diagnostica: 1282 atom cover_image_key in DB erano stantie (file MinIO cancellati in sessioni precedenti); MinIO 0 file sotto `covers/atoms/`
+- Stage D v18 → v19: style suffix visual_prompt cambiato da "flat vector illustration style, isometric, muted pastel color palette, clean studio background, minimalist" a "cinematic wide shot, atmospheric lighting, dramatic composition, photorealistic, no people" — allineato allo stile thread (FLUX non rende bene flat vector)
+- SQL backfill: REPLACE suffix su 940 visual_prompt atom esistenti; UPDATE 1282 cover_image_key → NULL
+- Stage G rilanciato: 1282 atom in coda, genera cover con nuovi visual_prompt cinematici
+- config.json aggiornato: stage_d_enrich = v19 (LXC 203 + local dev)
+
+## [2026-06-27] dev | Lifelog2 — Architettura doc: thread types, Tier2 compat, Rilevanza Dinamica, P3 roadmap
+
+- `knowledge/memory-model.md`: schema ConversationThread aggiornato a colonne reali DB (summary, topics, sentiment, coherence_score, data_pool, atom_count); thread_turns schema completo (vp_hash, thread_role, sequence_pos, ecc.); tabella classificazione thread_type; limitazione nota thread_type non aggiornato in _extend_thread(); sezione "Rilevanza Dinamica e Reclassificazione Thread" (data_pool, P3a/P3b/P3c pseudocode, worker visibility, media_passive vs ambient limitation)
+- `knowledge/architecture.md`: sezione "Compatibilità Tier2 con architettura ConversationThread" — identity_detective/place_detective/profile_builder/profile_validator agnostici ✅; day_digest/thread_consolidation LEGACY ⚠️ (referenziano tabella episodes droppata); refactor plan per Day Digest (conversation_threads trusted) e Thread Consolidation (linked_thread_ids); P3 roadmap esteso P3a/P3b/P3c; worker visibility scope by data_pool
+- `NH-Mini/entities/systems/stack-lifelog2.md`: Z3 Episode → ConversationThread; pipeline ASCII F/G aggiornati; Stage G "episodi" → "thread"; thread_turns schema completo; Day Digest legacy warning; nuova sezione "Rilevanza Dinamica dei Thread" (data_pool, retention, P3 back-propagation, limitazione extend)
+- Investigazione: Fix 3 false positive (monitor query contava tutti VPs invece di solo ambient-role); fix post-run SQL progettato e pronto
+- Background task disruption: due DB reset durante backfill (ore 13:48/13:55 CEST) — 134 thread/1014 thread_turns cancellati; DB pulito e pipeline ripartita; backfill completato a 1301/1301 atoms, 1012 thread
+
+## [2026-06-27] lint | Lifelog2 — /lint lifelog2: memory-model + api-contracts aggiornati a FASE 3
+
+- `knowledge/memory-model.md`: Z3 Episode → ConversationThread (schema completo + thread_turns join table); Saga (Z6) rinominata; refactors pending annotati inline
+- `knowledge/api-contracts.md`: Section 5 Web API con legenda ✅/⚠️/🔲; DB snapshot e telemetry aggiornati; sezione 6b "Refactors Pending FASE 3" con 8 refactor prioritizzati
+- 67 ✅, 1 ⚠️ (journal END stantio — normale), 0 ❌
+
+## [2026-06-27] dev | Lifelog2 — Stage F/G fix: race condition orchestratore + ended_at + MAX_THREAD_GAP_S
+
+- Orchestratore: rimosso `_covers_trigger.set()` dal main loop; aggiunto in `_grouping_loop` post-drain; rimosso timer startup 90s da `_covers_loop`. Stage G ora parte SOLO dopo Stage F drain completo.
+- `MAX_THREAD_GAP_S`: 8h → 10 min (uniforme per tutti i thread_type — stesso semantico di CLOSE_AFTER_ATOMS=2)
+- `ended_at`: `NOW()` → `last_atom_at` in tutti i path di chiusura (_close_thread_with_aria + _close_thread_no_turns)
+- DB reset: 2571 thread_turns + 288 conversation_threads; backfill v2 ripartito con 1301 atoms (17:55 LXC 203)
+- Wiki: `stack-lifelog2.md` (Stage F section → conversation_threads), `architecture.md` (orchestrator loops), `development-log.md` (entry 2026-06-27)
+
+## [2026-06-26] dev | Lifelog2 — FASE 3: Stage F riscritto (conversation thread formation)
+
+- `stage_f_grouping.py` completamente riscritto (834 righe) — da episode-based a thread-based
+- Pass 1: voiceprint resolution con centroidi per label WhisperX + vp_hash stabile (sha256/person:UUID)
+- Pass 2: role classification da `speaker_turns.turn_type` (personal/media_passive/dialogue_likely/ambiguous)
+- Pass 3: thread stitching deterministico — hash match + cosine fallback (0.65); split media/personal/ambient
+- Pass 4: ARIA coherence validation solo per personal_dialogue/personal_mono/ambient_dialogue; chiusura silenziosa per media_passive/ambient_mono
+- Timeout: personal 15min, media 8min
+- Deployato su LXC 203 `/opt/Lifelog2/src/backend/lifelog2/services/pipeline/stage_f_grouping.py`
+
+## [2026-06-26] dev | Lifelog2 — FASE 3: migration 0022 + correzioni doc architettura
+
+- Migration 0022 applicata su DB: conversation_threads, thread_turns, sagas (ex threads), drop episodes, vp_hash su speaker_turns
+- Doc lifelog2-conversation-thread-architecture-v1.md: 4 gap corretti dopo walkthrough scenari
+  1. `turn_class` → `turn_type` (nome reale colonna DB in speaker_turns)
+  2. `create_new_threads` splitting logic formalizzata (media → thread separato da personale)
+  3. Pass 4 ARIA: solo thread personal_dialogue / personal_mono / ambient_dialogue; media_passive chiude senza ARIA
+  4. "Thread closed non si riapre mai" reso esplicito in lifecycle e regole chiusura
+  5. canonical_label scope-locale al thread (non globale)
+
+## [2026-06-26] dev | Lifelog2 — doc audit + pulizia pre-FASE 3
+
+- Aggiornato `lifelog2-pipeline-validation-roadmap.md`: M1-M5 ✅ completati/superseded; sezione "Riprendi da qui" sostituita con CHIUSO + sintesi risultati
+- Aggiornato `lifelog2-classification-evolution-blueprint-v1.md`: header stato implementazione P0-P3 ✅ / P4-P5 deferred / P6 superseded; marker inline per ogni P
+- Aggiornato `lifelog2-status-roadmap.md`: Stage F → ⚠️ in riscrittura; Z3 Episode → deprecato; Z6 → FASE 3; FASE 3 sezione aggiunta in roadmap; stato visivo aggiornato; P1-P3 check completati
+- Aggiornato `lifelog2-intelligence-addendum-v1.md`: status → ✅ Implementato FASE 1
+- Aggiornato `lifelog2-identity-resolution-design.md`: status → ✅ Implementato con note issue VOICEPRINT_MATCH_THRESHOLD
+- Aggiornato `index.md`: pipeline-validation-roadmap → CHIUSO; blueprint → P0-P3 done; nuovo entry conversation-thread-architecture-v1
+- Tutti i doc cross-referenziano [[lifelog2-conversation-thread-architecture-v1]] come doc attivo FASE 3
+
+## [2026-06-26] dev | Lifelog2 — Conversation Thread Architecture design
+
+- Progettata architettura `conversation_thread` come unità di analisi post-atom (FASE 3)
+- Documento creato: `docs/lifelog2-conversation-thread-architecture-v1.md`
+- Nuove tabelle: `conversation_threads` + `thread_turns` (vp_hash cross-atom normalization)
+- Stage F riscritto: 4 pass deterministici + ARIA validation alla chiusura
+- Thread sostituisce episode; `threads` → `sagas`; `episodes` → deprecata
+- Worker Tier-2/3 operano su thread (non atom): profile_builder, identity_detective, Day Digest, Z6
+- Invariante chiave: ARIA riceve sempre transcript con canonical_label, mai speaker_label_raw WhisperX
+
+## [2026-06-25] dev | Lifelog2 — validazione pipeline + ghost episode cleanup
+
+- **Validazione end-to-end** completata: atoms trusted tracciati fino ai speaker_turns reali
+- Tutti gli atom `personal_mono` verificati: testo turn Roberto corrisponde al summary LLM
+- **Issue critico identificato**: misattribuzione voiceprint in `real_dialogue` — SPEAKER_01/02 attribuiti a Roberto con conf 0.51–0.56 perché unico voiceprint registrato; `attribution_source=None` su tutti i turn
+- **Ghost cleanup**: `DELETE FROM episodes WHERE episode_id NOT IN (SELECT DISTINCT episode_id FROM memory_atoms WHERE episode_id IS NOT NULL)` → 163 eliminati, 209 rimasti
+- Profile facts: 1001 totali, 944 con source_memory_ids; 16 relation facts senza provenance
+- FASE 2 (Voiceprint Resolver) rimane il fix necessario per la misattribuzione in real_dialogue
+
+## [2026-06-24] dev | Lifelog2 FASE 1 — Completata: Confidence Tier + Dual Pool + Day Digest Filter + Bulk Reenqueue
+
+- **DB Reset completo**: 1301 atoms, 376 episodi, 2 giorni cancellati; 1301 segmenti resettati a `enriching` con `transcript_key` preservata (migration 0021)
+- **Stage C fix 1 — Case 3**: `_annotate_turn_classes()` — turni lunghi (≥45s) in contesto dialogo → `ambiguous` (non `dialogue_likely`)
+- **Stage C fix 2 — rwr<0.10**: `_classify_conversation_type()` — segmenti dove Roberto parla <10% delle parole → `ambient_voices` (non `real_dialogue`)
+- **Prompt v18**: etichette ambiguous con durata `[SPEAKER_XX|?Xs]` + soglie: ≤15s dialogo, ≥45s presumi MEDIA
+- **Migration 0020**: colonne `confidence_score`, `extraction_tier`, `data_pool` su `segments` e `memory_atoms`
+- **Stage C1**: confidence score `logprob×0.5 + snr×0.3 + diarization×0.2`, tier full/standard/minimal, gate dual-pool trusted/flagged
+- **worker_day_digest.py**: episodi filtrati per data_pool (solo trusted atoms in SEZIONE 1); episodi con 0 trusted atoms → SEZIONE 2 ambient
+- **Test batch 2026-06-07**: 32 segmenti, 4 trusted (3 corretti + 1 corretto post-fix DB), digest validato: gaming podcast → SEZIONE 2, conversazioni reali → SEZIONE 1
+- **Bulk reenqueue**: 1269 segmenti (2025-08-01 → 2026-06-24) pushati in `lifelog:stream:c_done`, orchestrator in drenaggio
+- **Script**: `scripts/reenqueue_batch.py` — ricostruzione payload Stage C da DB + transcript_key senza ripetere WhisperX
+
+## [2026-06-24] dev | Lifelog2 — Refactor Roadmap: Confidence Tier, Thread Model, Dual Pool
+
+- **Documento creato**: `NH-Mini/concepts/lifelog2-refactor-roadmap.md` — roadmap operativa con task list spuntabile per 5 fasi
+- **Fase 1**: Confidence Score multi-dimensionale in C1 (`logprob×0.5 + snr×0.3 + diarization×0.2`), tier Full/Standard/Minimal, dual pool Trusted/Flagged, Day Digest filtro data_pool
+- **Fase 2**: Voiceprint Resolver in C1 — stable vp_ID cross-atom via cosine similarity contro session registry (Redis TTL 2h), tabella `session_voiceprints`
+- **Fase 3**: Stage D Thread-Aware per tier=FULL — output `threads[]` con type/vp_set/ops, tabella `atom_threads`, prompt v18
+- **Fase 4**: Thread Registry Redis + Grouper refactor Stage F — episodi semanticamente puri per tipo thread
+- **Fase 5**: Cleanup analisi secondo livello — filtro data_pool in Z4/Z6/Z7, toggle frontend, backfill storico
+- **Documenti aggiornati**: `lifelog2-quality-gate.md`, `lifelog2-turn-classification.md`, `lifelog2-thread-consolidation.md` con riferimento alla roadmap
+- **Motivazione**: test reinject 2025-12-17 → 2026-06-24 ha rilevato gap Case 3 (interleaved media), confermato che i filtri meccanici soli sono insufficienti, identificato necessità di graceful degradation basata su qualità audio
+
+## [2026-06-24] note | Lifelog2 M6 — gap retention/oblio documentati
+
+- **Gap 1**: file `discarded` (nessun atom prodotto) non vengono cancellati da MinIO. `_reject()` Stage B swallows eccezione su `remove_object`; backfill non cancella sorgente. Valore zero, accumulo indefinito.
+- **Gap 2**: `cleanup_ambient_audio.py` copre solo `capture_class='ambient'`. File mixed/personal e staging orfani non hanno policy.
+- **Policy da implementare in M6**: discarded → 24h; consolidated → `retention_class` atom; staging orfani > 30gg → discard + delete.
+- Annotato in `stack-lifelog2.md` sezione M6.
+
+## [2026-06-24] dev | Lifelog2 Stage C — turn-level classification + Day Digest v4
+
+- **`stage_c_asr.py`**: aggiunta `_annotate_turn_classes()` — classifica ogni turno diarizzato come `personal`/`media_passive`/`dialogue_likely`/`ambiguous` tramite logica deterministica (durata + contesto temporale con turni di Roberto). Scritto su `speaker_turns.turn_type` (DB), MinIO blob (`turn_class` per-turn + `turn_classes` dict), Redis emit (`max_other_turn_s`).
+- **`_compute_conversation_metrics()`**: aggiunto `max_other_turn_s` per esporre outlier nascosti dalla media.
+- **`_classify_conversation_type()`**: attivato `hybrid` conversation_type (`max_t > 45s AND avg_t < 60s`). `analysis_tier=2.0` per hybrid.
+- **`worker_day_digest.py`**: prompt v4, atom-level grounding (`_render_episode()` bypassa `narrative_summary` se ci sono atom), query atoms per episodio, `has_ambient` guard, `max_tokens=3000`.
+- **`stage_z4_day_digest_v4.txt`**: nuova versione prompt con sezioni SEZIONE1/SEZIONE2, regole anti-allucinazione ambient, divieto esplicito cross-sezione.
+- **Concept doc creato**: `NH-Mini/concepts/lifelog2-turn-classification.md` — documenta il problema, i tre casi, l'algoritmo, le soglie, i limiti e la roadmap voiceprint.
+- **Deploy**: `stage_c_asr.py` deployato su CT203 (syntax check OK).
+
+## [2026-06-23] dev | CV revision — benchmark con profili reali, ristrutturazione competenze e progetti R&D
+
+- **Benchmark profili z/OS**: Analizzati profili reali di operatori senior italiani ed esteri. Rilevato il consensus sull'evitare codici di errore specifici (-911, B37) in favore di terminologie di processo.
+- **Riorganizzazione Competenze**: Suddivise le skill in Consolidate (TWS, CA7, Control-M, DB2 locks, Helix, ServiceNow, VMware), Pregresse (Cobol, CICS, DB2 development, Endevor, ChangeMan) e R&D (Python, FastAPI, RAG, CP-SAT).
+- **Esperienze Lavorative**: Mantenuta la cronologia e aggiornati i ruoli con i rispettivi stack storici; aggiornato il ruolo MPS Siena come "Operations Transition Coordinator".
+- **Sideproject R&D**: Spostati i progetti homelab (DIAS, SHIFTER, Lifelog2, Stratex) nella sezione "Hobby, Interessi & R&D Personale" come studio architetturale indipendente.
+- **File aggiornati**: `curriculum-vitae.md`, `online-profiles-drafts.md`, `cv-standard.html`, `cv-innovative.html`.
+
+## [2026-06-23] dev | CT202 gateway — Telegram CF URL watcher, wiki aggiornata, service_catalog
+
+- **cf-url-watcher**: `scripts/cf-url-watcher.py` + `cf-url-watcher.timer` su LXC 190 — polling ogni 60s di `http://192.168.1.202/gateway/cf-url.txt`. Se URL Cloudflare cambia → notifica Telegram. State in `state/cf-url-last.txt`.
+- **Wiki gateway**: `ct202-gateway.md` completamente riscritto (era del 2026-04-24): routing table attuale, Authelia, Cloudflare, LAN block.
+- **dependency-map.md**: aggiornato con nuove route e mention Cloudflare.
+- **service_catalog.py**: gateway entry aggiornata — Cloudflare, Authelia, note route.
+
+## [2026-06-23] dev | CT202 gateway — fix /gateway/ LAN, cleanup typo, Cloudflare doc, dashboard v2
+
+- **Fix `/gateway/` LAN**: route mancante nel block `server_name 192.168.1.202` (`shifter-lan.conf`). Aggiunta duplicazione delle 3 location `/gateway/` — dashboard ora raggiungibile da `http://192.168.1.202/gateway/`.
+- **Rimosso typo `/lifelo/`**: route morta rimossa da `lifelog.conf`.
+- **CF URL sync**: script `/usr/local/bin/cf-url-sync.sh` + `cf-url-sync.timer` (ogni 30s) — scrive URL Cloudflare Quick Tunnel in `/var/www/html/gateway/cf-url.txt`.
+- **Dashboard gateway v2**: aggiunta sezione Cloudflare (URL da cf-url.txt, badge effimero), route map statica, aggiornato titolo e stack info.
+- **Documentazione riscritta**: `knowledge/network/internet-gateway-pattern.mdc` — architettura completa, 2 server block, route map, Authelia, Cloudflare Quick Tunnel, operazioni comuni.
+- **Verifica backend**: CT201 DIAS ✅, CT203 Lifelog2 ✅, CT190 Stratex ✅, CT204 SHIFTER ✅, Authelia ✅.
+
+## [2026-06-22] dev | SHIFTER — calendar refactor, slide-in panel, git workflow LXC190→GitHub→CT204
+
+- **Rimozione summary columns**: le colonne statistiche fisse sono state rimosse dal calendario LIVE e PLANNED; il markup e i colgroup corrispondenti sono stati ripuliti da `app.js` e `index.html`.
+- **Pannello slide-in (LIVE only)**: nuovo pannello statistiche sul bordo destro, attivato via hover sulla strip trigger. Stessa struttura tabella del calendario (`cal-row-op` ecc.) per allineamento pixel-perfect delle righe operatore. Sfondo frosted glass `rgba(15,23,42,0.65)`.
+- **Riduzione larghezze colonne**: `cal-left-group` 54→36px, `cal-day-col` 36→32px — 31 giorni del mese ora sempre visibili. `COL_WIDTH = 32` in app.js per scroll offset corretto.
+- **Header "Gr."**: "Gruppo" rinominato "Gr." in tutti e 3 i calendari.
+- **User mode filter**: celle oltre `pivot+3m` renderizzate come punto (nasconde pianificazione futura).
+- **Default pivot**: `today+1` al page load; validazione client-side blocca run su pivot ≤ oggi senza bypass flag.
+- **Git workflow stabilito**: primo commit `ce3d40b` con struttura `src/` su LXC 190 → force-push su `S3ph1r/SHIFTER` → CT204 allineata via `git reset --hard`. Service `WorkingDirectory` aggiornato a `/opt/SHIFTER/src`. Token git non persistito nei config file.
+
+## [2026-06-21] dev | SHIFTER — G/REP tracking, forzatura manuale, bypass lock admin, deploy CT204
+
+- **G/REP nel live calendar**: le celle con `tipo=sostituzione` nella tabella ferie ora mostrano direttamente G (feriale) o REP (weekend/festivo) senza attendere il solutore; `sostMap` costruito al render da `leaves` filtrate.
+- **Fix batch endpoint G/REP**: `/api/schedule/batch` non aveva branch per `fascia in ["G","REP"]` — cadeva silenziosamente senza scrivere nulla nel DB. Aggiunto branch con upsert su `turni_effettivi`.
+- **Solver preserva G/REP manuali**: prima del clear, il solutore salva i `TurnoEffettivo` con fascia G/REP; dopo aver caricato `sostituzione_days`, i giorni manuali vengono aggiunti a `future_leaves` (bloccando M/P/N) e ripristinati nella fase persist.
+- **Admin bypass lock trimestrale**: `isLocked` ora include `!isAdminView` — gli admin possono editare ferie in qualsiasi trimestre.
+- **CSS version bump**: `style.css?v=11`, `app.js?v=21` — forza reload dei badge G/REP in tutti i client.
+- **Deploy CT204**: rsync `backend/*.py` + `frontend/{index.html,app.js,style.css}` → `/opt/SHIFTER/`. Installate dipendenze mancanti dal venv: `openpyxl`, `python-multipart`. Servizio `SHIFTER.service` attivo e verificato (API `/api/operators` HTTP 200).
+
+## [2026-06-17] dev | SHIFTER — Fix carry_out formula, UX audit, layout 2-colonne, raffinamenti wiki
+
+- **Fix formula carry_over_out** (`main.py`): la formula precedente era degenere quando planned=actual (restituiva sempre carry_in). Ora: `carry_out = max(0, carry_in + H2_WE+FES - H2_REC)` con H2 = turni post pivot_date. Tutti gli operatori: carry_out=0 dopo run solutore H2.
+- **Solutore H2 verificato**: saldo corretto — Guareschi carry_in=9 azzerato con 44 REC su 32 WE+FES in H2.
+- **UX**: rimossa tabella MESE (ridondante), scroll calendari ora naviga per mese con toggle mese/giorno, operatori inattivi a fine anno in opacity 0.18, calendario HOLIDAYS rinominato FERIE PIAN. con ferie storiche H1 visibili.
+- **Layout**: pannello Analisi Streak Scambiabili affiancato a Gestione Operatori nella griglia 2-colonne.
+- **Wiki**: documentate design decision (LIVE/PLANNED divergenza voluta), architettura carry-over, blocco ferie trimestrale, backlog R1-R6 in `stack-shifter.md`.
+
+## [2026-06-16] dev | SHIFTER — Modello 16 persone / 13 linee + solutore H2 OPTIMAL
+
+- **Schema DB operatori**: aggiunte colonne `linea` (INTEGER), `data_inizio` (DATE), `data_fine` (DATE); tabella espansa da 13 a 17 righe
+- **Operatori storici inseriti** (id=14-17): Christian Daniel (linea 3, fine 2026-01-31), Martina Vitiello (linea 4, fine 2026-02-28), Dino Brusco (linea 12, fine 2026-01-16), Luca Del Gobbo (linea 13, fine 2026-02-15)
+- **Rimappatura dati**: `turni_effettivi`, `recuperi_effettuati`, `turni_pianificati` corretti per attribuire i turni alla persona fisica corretta per ogni periodo
+- **Pulizia REC spurii**: eliminati 15 recuperi Mouloudi pre-23/03 e 10 recuperi Petrascu pre-01/06 (generati da rec_populate durante periodo di vacanza della linea)
+- **Saldi H1 finali** (tutti OK): Pagano +4, Mouloudi +3, Caniglia +1, Petrascu +1, Pellegrini 0 (CO=5), tutti gli altri +3÷+11
+- **Solver fix 1**: filtro `data_fine IS NULL` in solver.py, main.py (3 endpoint), aggiunto guard `if r.operatore_id in op_hist_rec_dates` per recuperi di operatori storici
+- **Solver fix 2**: rimosso il blocco di pre-assegnazione carry-over REC (causava INFEASIBLE week 27 per Pellegrini: 3 REC forzati in settimana con max 2 WE disponibili); il valore `carry_over_rec` resta nel budget constraint
+- **Solver H2**: OPTIMAL — tutti i 13 operatori attivi hanno saldo ≥ 0 a fine anno; turni distribuiti su Jul-Dec 2026  
+
+## [2026-06-13] dev | SHIFTER — Visual redesign of top navbar, sections, and compact sidebar column renaming
+
+- **Mockup Top Navbar**: Implemented a dark glassmorphic navigation bar touching the top and side boundaries of the viewport, with the interlocking wave S logo, text `SHIFTER`, navigation tabs (`Dashboard`, `Schedule` underlined as active, `Reports`, `Settings`), and a profile avatar (with name `Sarah Kim` and chevron dropdown) on the right.
+- **Month Navigation Capsule**: Moved the today date and month selector capsule from the header to the right of the `LIVE` section header, styling it with matching dark-glass parameters.
+- **Section Headers Renamed**: Updated section titles to `LIVE`, `PLANNED`, and `HOLIDAYS` to improve page organization.
+- **Compact Columns Renamed**: Renamed the carry-over column header `C.O.` to `REC` across the live and planned matrices, and updated the year closure confirmation prompt.
+- **Sidebar Column Expansion**: Expanded the compact left-panel columns from `184px` to `198px` total (`cal-left-group` from `40px` to `54px`) to show the word `Gruppo` in full without clipping. Updated the holidays table sidebar to `162px` width.
+
+## [2026-06-13] dev | SHIFTER — Relaxed weekly consistency constraint and resolved Week 25 infeasibility
+
+- **Relaxed Weekly Consistency Constraint**: Modified the CP-SAT solver in `solver.py` to allow at most 2 shift types per operator per week (instead of a single hard-coded shift type), resolving the mathematical infeasibility in Week 25 where only 10 operators are active due to holidays.
+- **Consecutive Switch Penalties**: Introduced consecutive-day shift type transition penalties (M -> P, M -> N, P -> N consecutively with weight `600`) and a multi-shift type week penalty (weight `2000`) in `solver.py` to maximize streak length and avoid daily shift flipping.
+- **Year-Long Resolution**: Verified that the solver successfully schedules the entire 2026 horizon starting from January 1, 2026.
+
+## [2026-06-13] dev | SHIFTER — Fixed holiday calendar rendering, scroll sync, and removed live calendar leave overlays
+
+- **Holiday Seeder Upgrade (`seed_ferie_v3.py`)**: Re-seeded the `ferie` table to implement the refined business rule where weekend days (Saturdays/Sundays) and Italian national holidays do not deduct from the operator's 21-day balance. Consecutive blocks (2 weeks in peak summer/winter, 1 week scattered) insert calendar days in the DB to block shifts, but only weekdays count towards the 21 days limit. The remaining balance (typically 6 days) is scattered as single, double, or triple ferial days.
+- **Leave Overlays Removed from Live Calendar**: Prevented the frontend from overlaying "FER" or "MAL" badges on the Live calendar grid. The Live calendar now solely displays the operator's actual shifts (M, P, N) and recoveries (REC), keeping the live schedule display clean.
+- **Holiday Calendar Two-Panel Split Layout**: Duplicated the exact double-panel structure (fixed left panel for operators list with avatars and group badges, scrollable right panel for the day grid) from the live and planned matrices. Added CSS styling for `#ferie-left-panel` to ensure layout alignment and width compatibility.
+- **Holiday Calendar Scroll Synchronization**: Enhanced the scroll synchronization mechanism (`scrollToMonth` and `scrollToDate` in `app.js`) to apply horizontal offsets to `#ferie-calendar-container` synchronously along with `#main-calendar-container` and `#planned-calendar-container`.
+- **Consistent Holiday Badges Styling**: Updated the holiday table badge rendering in `app.js` to utilize the existing stylesheet classes `.cell-shift-FER` and `.cell-shift-MAL` for consistent and visually premium rendering.
+
+## [2026-06-13] dev | SHIFTER — Implementation of Option A for carry-over UI inputs and dynamic live badges
+
+- **Option A Carry-Over Separation**: Shifted the starting carry-over (`C.O.`) editable inputs to the Planned (Fixed) Calendar sidebar. The Live Calendar `C.O.` column now displays a read-only dynamic outstanding debt badge (pulses red if >0).
+- **Delta-Based Carry-Over Formula**: Refactored `get_annual_summary` in `main.py` to calculate `carry_over_out` using planned baseline counts as a reference point. This cancels out any boundary effects (e.g. week 53) and ensures that removing a recovery immediately increments the live outstanding debt by +1.
+
+## [2026-06-13] dev | SHIFTER — Analysis of year-boundary effects on YTD carry-over and new equity logic concept
+
+- **Year-End boundary analysis**: Conducted a thorough diagnostic investigation on why Pellegrini's YTD carry-over debt did not increment when the user replaced a baseline recovery (`REC`) with a Morning shift (`M`) on June 16, 2026.
+- **Root Cause Identified**: The CP-SAT solver plans week-by-week using ISO weeks. Week 53 of 2026 spans Dec 28, 2026 to Jan 3, 2027. The weekend shifts fall in 2027 (not counted in 2026 YTD WE), but their ferial recoveries are scheduled in 2026 (counted in 2026 YTD Rec), creating a +2 recovery surplus for Pellegrini in 2026. This surplus absorbs the manual removal of June 16 recovery, keeping the carry-over capped at 0.
+- **Concept Created**: Added [[concepts/shifter-equity-boundary|shifter-equity-boundary]] and updated index.
+
+## [2026-06-13] dev | SHIFTER — Batch manual override API and popover behavior enhancement
+
+- **Batch Manual Overrides Endpoint (`main.py`)**: Created `POST /api/schedule/batch` to process multiple manual shift overrides within a single database transaction. The validation checks for N -> M rule violations are executed after flushing all changes, preventing transient violation errors when shifting an operator's multi-day baseline blocks (e.g. replacing a sick operator with consecutive Night shifts).
+- **Batch Override Frontend Integration (`app.js`)**: Updated `applyShiftRange` to issue a single HTTP POST request to the batch endpoint.
+- **Popover UX Improvement (`app.js`)**: Updated the cell click handler to only trigger the range actions popover on the second click (when a range or double-click single day is completed) rather than immediately on the first click.
+
+## [2026-06-13] dev | SHIFTER — Range selection popover menu, manual overrides, recovery adjustment, and audit logging
+
+- **Interactive Range Selection Popover**: Introduced a dynamic absolute-positioned popover menu (`#range-action-popover`) in `app.js` and `index.html` triggered by selecting a date range (or clicking a single cell) for any operator. The menu exposes quick links to search swaps (`highlightSwapPossibilities`), register leaves/sickness, force manual shifts, or cancel selection.
+- **Unified Shift & Leave Range Application**: Implemented batch update functions `applyLeaveRange` and `applyShiftRange` in `app.js` to process operations across the entire selected date range by sending concurrent API calls to `/api/leaves` and `/api/schedule`.
+- **Backend Overrides & Self-Correcting Carry-Over**: Refactored `save_manual_shift` in `main.py` to support `M, P, N, REC, RIPOSO`. Manual shift assignments (`M, P, N`) automatically delete conflicting recovery records on that date, incrementing the operator's debit. Setting a cell to `REC` deletes the shift and books a manual recovery (`data_weekend_lavorato = None`), decrementing the debit. Setting a cell to `RIPOSO` deletes both shift and recovery.
+- **Date Boundary Constraints**: Blocked all calendar modifications (swaps, manual overrides, and leaves) on dates prior to the current date (`date.today()`) at both the frontend and backend levels.
+- **Event Audit Log (Registro Modifiche)**: Created the `RegistroEventi` table schema in `database.py`. Implemented endpoint `GET /api/audit-log` in `main.py` and dynamic rendering in `app.js` inside a new "Registro Modifiche" tab (`tab-audit`, `#content-audit`) to display a detailed timeline of all manual calendar modifications.
+
+## [2026-06-13] dev | SHIFTER — Baseline calendar annual summary columns replication
+
+- **Summary Columns for Planned Grid**: Replicated the annual totals columns (M, P, N, WE, SAB, REC++, REC+, DÈB.) at the right end of the baseline/planned calendar matrix. Created a client-side dynamic calculator `computePlannedSummary` in `app.js` to compute the baseline statistics for each operator based on `schedule.turni_pianificati`, matching the exact mathematical rules of the backend.
+
+## [2026-06-13] dev | SHIFTER — Enabled weekend and holiday shift swaps
+
+- **Weekend Swap Restriction Removal**: Removed the frontend verification in `app.js` that blocked selecting and swapping weekend/holiday shifts. All swaps (both ferial and weekend) are now evaluated strictly by the backend solver logic (which validates minimum physical presence, maximum consecutive days, and rest periods).
+
+## [2026-06-13] dev | SHIFTER — Same-day single-click swap validation and diagnostics
+
+- **UX Improvement for Same-Day Swaps**: Enhanced the frontend click handler in `app.js` to automatically detect when a user clicks on a different operator's cell on the same day as the active selection start. The app automatically completes the selection range as a single-day streak, performs the API call to fetch swap options, and immediately triggers either the confirmation modal or the incompatibility alert displaying the detailed constraint violation reasons. This avoids requiring a double click on the same cell to select a single-day range first.
+
+## [2026-06-13] dev | SHIFTER — Calendar two-panel split, selector fix, and colgroup alignment
+
+- **Two-Panel Calendar Split**: Completely separated both the live calendar and the planned calendar into two distinct tables: a fixed-width left panel (274px wide, containing operator avatar, name, group badge, and carry-over) and a scrollable right panel (containing only the day grid). This solves visual alignment issues and keeps row heights perfectly aligned (34px via `.cal-row-op`).
+- **Precise Month Selector Alignment**: Populated dynamic `<colgroup>` elements (`main-calendar-colgroup` and `planned-calendar-colgroup`) in the right panels to force a strict `36px` day column width. Removed the `cal-day-col` class from the month colspan header elements, preventing the browser from collapsing month columns and ensuring that `scrollToMonth` maps to the exact pixel offset (`daysBefore * 36`).
+- **Footer Horizontal Alignment Fix**: Removed the obsolete prepended label cells (e.g. `<td colspan="3">` containing descriptive labels) from the right panel's footer rows (`validateShiftRequirements` counts), which were pushing the actual numeric counts to the right by several days. Transferred these descriptive labels to the left fixed panel (`main-left-req-*` rows) for clear alignment.
+- **Incompatible Candidate Explanations & Click Alerts**: Refactored `SwapEngine.get_possibilities` to return incompatible candidates along with the specific reasons (e.g. "Riposo insufficiente (0h) Notte -> Mattina") in a new `candidati_incompatibili` response array. Added interactive alerts in `app.js` click handler to display these reasons when clicking an incompatible candidate, and added custom messages for invalid clicks (Saturdays/Sundays or REC shifts).
+- **Complete Planned Calendar Integration**: Refactored `renderPlannedCalendar` in `app.js` to correctly render the left panel (with operator avatars and group badges) and right panel separately, instead of packing all cells into the right panel which caused structural mismatches.
+- **Refresh Bugfix**: Updated carry-over changes and year closing logic to refresh the annual calendar using `getDaysInYear` rather than shrinking the view to a single month.
+- **Backend Test Suite Green**: Updated `tests/test_solver_logic.py` to import and reference `TurnoEffettivo` instead of the obsolete `Turno` model class, successfully restoring integration test execution functionality.
+
+## [2026-06-12] dev | SHIFTER — Cross-month streak selection support
+
+- **Selezione Persistente tra i Mesi**: Modificato `loadData` in `app.js` per accettare un flag `keepSelection = false`. Nel setup dei pulsanti di cambio mese (dropdown, precedente, successivo), viene ora invocato `loadData(true)` per mantenere lo stato di selezione in memoria durante la navigazione temporale.
+- **Rappresentazione e Ripopolamento Highlights**: Aggiornato il loop di rendering dei giorni in `renderCalendar` per verificare se ciascuna cella appartiene all'intervallo memorizzato in `swapSelection` (anche se iniziato in un altro mese) ed evidenziarla in blu (`own-streak-highlight`) al caricamento del nuovo mese.
+- **Auto-Interrogazione Candidati Inframese**: Estratta la logica di chiamata API per le compatibilità in una funzione asincrona globale `highlightSwapPossibilities`. Se al render del calendario è presente una selezione completa in memoria, viene fatta automaticamente la query asincrona al backend per visualizzare i candidati lampeggianti nel nuovo mese.
+
+## [2026-06-12] dev | SHIFTER — Pulse-swap amber animation and stylesheet caching fixes
+
+- **Animazione di Swap in Arancione (pulse-swap)**: Refactorizzata la classe `.pulse-swap` e l'animazione `@keyframes pulseSwap` in `style.css` per utilizzare l'arancione/ambra (`#f59e0b`). Aggiunto `!important` sul bordo e sull'animazione della pillola per forzarla a sovrascrivere i bordi specifici del turno (es. `.cell-shift-N`), che a loro volta avevano `!important` e impedivano la visualizzazione dell'animazione.
+- **Cache-Busting per Risorse Statiche**: Aggiornato `index.html` per aggiungere il parametro di versione `?v=6` sia all'importazione di `style.css` che a `app.js`, forzando il browser del client ad aggiornare i fogli di stile e i file javascript.
+- **Robustezza Javascript**: Modificato `app.js` per aggiungere un fallback sicuro (`(cand.warnings || [])`) durante la concatenazione dei warning in stringa, prevenendo interruzioni di esecuzione in caso di assenza del campo.
+
+## [2026-06-12] dev | SHIFTER — Streak swap matching fix and manual edit modal disable
+
+- **Filtro Preferenze Corretto**: Risolto un bug nel motore di scambio (`swap_engine.py`) che escludeva i candidati senza preferenze esplicite nel database (come Caniglia). Ora, se `cand_pref_list` è vuoto, l'operatore viene considerato compatibile e non viene scartato a priori.
+- **Disattivazione Modal Forzatura**: Temporaneamente commentata la visualizzazione della modale di modifica manuale (`modalEdit` / "Modifica Turno") nel click handler delle celle del calendario in `app.js`. Questo consente di testare l'evidenziazione e il trigger dello scambio di streak compatibili senza l'interruzione della modale.
+
+## [2026-06-11] dev | NH-Mini Dashboard — Topology tab con grafo interattivo vis-network
+
+- **Nuovo tab "Topology"** nella sidebar: icona rete SVG, voce `data-page="topology"`.
+- **Backend**: endpoint `GET /api/topology` in `web/app.py` — restituisce 13 nodi e 12 archi statici derivati da `infrastructure-map.mdc`. Nodi con type, ip, ports, purpose. Archi con conn_type.
+- **Frontend**: pagina `#page-topology` con:
+  - Canvas `#topology-network` (vis-network force-directed, full-height)
+  - Pannello dettaglio `#topology-detail` (compare al click su un nodo, mostra IP/ports/type/purpose)
+  - Legenda in basso: chip colorati per tipo nodo (Control/Hypervisor/App/Gateway/Infra/GPU/External) e tipo connessione (SSH/HTTP/Redis/Postgres/S3/Monitoring)
+- **vis-network**: caricata via CDN `unpkg.com` senza dipendenze npm. Singleton `_topoNetwork` — si inizializza solo al primo accesso alla tab, poi riutilizza l'istanza.
+- **Dark theme**: nodi con bg scuro `#0f3460…#4c0519` e bordi colorati con glow (`box-shadow`). Archi colorati per protocollo (Redis=amber, HTTP=sky, Postgres=green, S3=teal, SSH=slate dashed, Monitoring=violet).
+- **Physics**: `barnesHut` force-directed, si stabilizza automaticamente e congela per non sprecare CPU. Reset view con pulsante ⊙.
+- **CSS**: `.nh-topology-page`, `.nh-topo-canvas`, `.nh-topo-detail`, `.nh-topo-legend`, `.nh-topo-chip`, `.nh-topo-edge-chip` aggiunti a `dashboard.css`.
+- **Lint**: 62 check passati, 0 errori.
+- **File modificati**: `web/app.py`, `web/static/index.html`, `web/static/js/dashboard.js`, `web/static/css/dashboard.css`.
+
+## [2026-06-11] dev | NH-Mini Dashboard — Sidebar layout & fixed background refactor
+
+- **Layout Riorganizzato**: Rimossa la topbar `<header class="nhi-topbar">` e introdotto un layout a sidebar fissa completa (260px, `position: fixed`, `height: 100vh`) con tre sezioni: brand/logo in cima, menu di navigazione al centro, indicatori di stato e pulsante refresh in fondo.
+- **Fix Sfondo Bianco in Scroll**: Cambiato `.nhi-scene-bg` da `position: absolute` a `position: fixed !important` con dimensioni `100vw / 100vh` per mantenere il gradiente nordico fisso durante lo scroll. Aggiunto `background-color: #0b0f19` su `body` come fallback solido.
+- **Premium Nav Items**: Aggiunto `.nhi-nav-item` con hover subtle (`rgba(255,255,255,0.06)`) e stato attivo accentuato (`rgba(38bdf8,0.1)` + `color: #38bdf8`), transizioni fluide `0.2s ease`.
+- **Responsività Mobile**: Aggiunto `@media (max-width: 768px)` che converte la sidebar in un topbar compatto con navigazione orizzontale wrap, nascondendo gli indicatori di stato.
+- **Glass Enhancement**: Potenziato backdrop-filter su `.nhi-glass` e `.nhi-glass-dark` a `blur(20px) saturate(190%)`.
+- **Scrollbar Sidebar**: Aggiunto stile custom thin (4px) per la scrollbar verticale della sidebar in caso di overflow.
+- **Binding JS Preservato**: Tutti gli ID DOM originali (`status-dot`, `status-text`, `btn-refresh`, `alerts-badge`, `last-discovery`, `nav-alerts-count`) mantenuti nella nuova struttura sidebar; nessuna modifica al controller JS `dashboard.js`.
+- **Lint**: `nh-lint.py` eseguito con 0 errori, 62 check passati.
+- **File modificati**: `web/static/css/dashboard.css`, `web/static/index.html`.
+
+## [2026-06-11] dev | Lifelog2 — Pipeline Validation Roadmap (M0→M5)
+
+- **Documento creato**: `sviluppi/Lifelog2/docs/lifelog2-pipeline-validation-roadmap.md`
+- Piano operativo con 6 milestone (M0→M5) per validare pipeline Ingest→Tier 2 prima di Tier 3
+- Baseline snapshot 2026-06-11 incluso (1281 consolidated, 1497 staged, quality tier A/B/C)
+- M0: audit pre-batch (P0.5, days=0, segment_count, Z7/Detective filter) — stato: in corso
+- M1: batch test 50 segmenti con test SQL per Stage C/D/F/Tier2
+- M2: full batch 1497 con metriche di corpus
+- M3: Tier 2 deep evaluation su tutti i worker
+- M4: fix gap identificati da M3
+- M5: Tier 3 design basato su evidenza empirica
+
+## [2026-06-11] dev | Lifelog2 — Sezione 15 Blueprint: Tier 3 Synthetic Intelligence Layer
+
+- **Documento aggiornato**: `sviluppi/Lifelog2/docs/lifelog2-classification-evolution-blueprint-v1.md`
+- **Sezione 15 aggiunta**: Tier 3 — Synthetic Intelligence Layer
+  - §15.1: memory atom come evidenza variabile (importance stimata al tempo t con contesto parziale)
+  - §15.2: differenza fondamentale Tier 2 vs Tier 3 (cursor+importance vs RAG+frequenza/magnitudo)
+  - §15.3: 6 principi di design Tier 3 (RAG primario, output derivati, autonomia dinamica, non riscrivere passato, periodi di vita, knowledge docs in RAG)
+  - §15.4: tassonomia worker T3-A→F (Relationship Arc, Project Chronicle, Decision Archaeology, Behavioral Pattern, Life Period Detector, Entity Network Mapper)
+  - §15.5: modello dati `knowledge_documents` con schema SQL e indici
+  - §15.6: staleness e batch-triggered refresh (aggiornamento periodico, non real-time)
+  - §15.7: autonomia dinamica — soglie calibrate sulla baseline storica individuale, non parametri hardcoded
+  - §15.8: interazione tra layer (Tier 0→1→2→3→query)
+  - §15.9: roadmap Tier 3 (P6)
+- **Sezione 12 aggiornata**: aggiunto P6 con roadmap Tier 3 sintetica
+- **Sezione 13 aggiornata**: aggiunti invarianti #9 (knowledge documents vs atom) e #10 (profilo utente come sequenza di periodi)
+- **Ragionamento alla base**: il sistema non può sapere il giorno 1 quale importanza avrà nel tempo una relazione, un progetto, o una decisione. Tier 3 costruisce comprensione evolutiva via RAG senza filtri importance, producendo documenti sintetici persistenti che evolvono con la vita dell'utente.
+
+## [2026-06-11] dev | NH-Mini — Dynamic Infrastructure Mapping & Heartbeat Monitoring Automation
+
+- **Dynamic VMID Parsing**: Replaced hardcoded `REAL_VMIDS` with a dynamic extraction helper (`get_real_vmids()`) parsing from `knowledge/containers/infrastructure-map.mdc` as SOT inside the dashboard (`app.py`), the heartbeat daemon (`heartbeat.py`), the linter (`nh-lint.py`), and the system context generator (`nh-discovery.sh`).
+- **Service Catalog Hot-Reload**: Integrated automatic reload of `core.service_catalog` in dashboard endpoints to prevent Uvicorn caching of service definitions.
+- **Heartbeat & Linter Integration**: Updated `heartbeat.py` and `nh-lint.py` to use dynamic VMIDs, preventing false positives and automatically monitoring newly promoted LXCs.
+- **Wiki Documentation**: Created container entity page `ct204-shifter-rt.md`, updated `stack-shifter.md`, and indexed it in `index.md`.
+- **Governance & Configuration Sync**: Upgraded `.cursorrules` to version `v7` by removing hardcoded VMID strings from its reference list. Aligned header comments in `nh-discovery.sh` to reflect the actual 15-minute timer execution.
+
+## [2026-06-11] dev | SHIFTER — Shift pill color adjustments
+
+- **Vibrant Shift Pills**: Adjusted background opacity and gradients for shift badge pills (M=yellow, P=green, N=sky blue/azzurro, REC=orange) to ensure high visibility and contrast on the light frosted-glass background.
+- **Label Color Contrast**: Enhanced contrast for shift text labels (`shift-label-M`, `shift-label-P`, etc.) and modal/equity badge definitions, making them elegant and highly legible.
+
+## [2026-06-11] dev | SHIFTER — Dynamic Operators and Contract Requirements
+
+- **Dynamic Operator Management**: Added endpoints and UI controls to view, add, update (inline name and group), and delete operators with cascading database integrity.
+- **Dynamic Shift Requirements**: Modeled weekday coverage parameters in the DB (`requisiti_turno`), allowing administrators to adjust daily targets directly from the UI.
+- **Feasibility Pre-run Validation**: Integrated checks inside the solver engine to abort execution and report meaningful errors if the operator pool is insufficient (less than 8 total or less than 3 presence operators).
+- **Bugfix on Frontend Requirements Validation**: Refactored the JS calendar validation code to query the dynamic DB requirements rather than hardcoded logic.
+- **Dashboard Initialization Fix**: Removed an obsolete window binding for `deletePreference` in `app.js`, resolving a ReferenceError that crashed JavaScript initialization on dashboard load.
+
+## [2026-06-11] dev | SHIFTER — UI customizations, sorting, and weekend/holiday highlights
+
+- **Differentiated Shift Colors**: Enhanced the visibility of shift cell backgrounds in `style.css` (increased opacity to 35% for M/P/N and 28-30% for REC/FER) to make shift strikes visually distinct.
+- **Thinner Division Grid**: Implemented dedicated CSS rules to make borders between calendar cells extremely thin and semi-transparent (`rgba(255,255,255,0.04)`), allowing shift blocks of the same color to merge cleanly into a continuous strike.
+- **Weekend and Holiday Columns**: Highlighted weekend columns in blue (`rgba(59, 130, 246, 0.10)`) and holiday columns in red (`rgba(239, 68, 68, 0.14)`) across both header and body cells to instantly distinguish rest/holiday periods.
+- **Sorted Operator Lists**: Updated the operator loading logic in `app.js` to sort operators by group (with "smart" group first, and "presenza" second) and alphabetically (A-to-Z) inside each group.
+
+## [2026-06-11] dev | SHIFTER — Rolling week-by-week solver implementation
+
+- **Rolling Solver Refactor**: Restructured the solver in `solver.py` to use a rolling weekly approach. It now schedules 53 weeks sequentially (one week at a time) instead of a single 52-week global model, eliminating search space bloat and timeouts.
+- **Future Recovery Booking**: Programmed the rolling solver to book recoveries into the following week ($W+1$) by saving them to the database. The next week's solver run loads these bookings and enforces them as hard constraints (`off == 1`).
+- **Progressive YTD Equity**: Refactored YTD stats to be loaded dynamically from the SQLite database before each week's run. Spreads for turns (M/P/N), weekends worked, complete weekends, Sabati Singoli, consecutive recovery pairs, and split recoveries are progressively optimized via soft objectives.
+- **Diagnostics and Verification**: The full 2026 calendar (1 Jan to 31 Dec) was successfully generated in ~45 seconds. The diagnostics script verified all 12 months with 0 errors. Equity spreads converged perfectly (max shift spread: 5, max weekend worked spread: 3, max recovery pairs spread: 1).
+
+## [2026-06-11] dev | SHIFTER — Optimization of consecutive and split recovery distribution
+
+- **YTD Split Recovery Balance**: Implemented mathematical tracking of Year-To-Date split recoveries (calculated as `Total Recoveries YTD - 2 * Consecutive Recovery Pairs YTD`) and integrated a balancing objective into the CP-SAT solver.
+- **Equity Spread Penalty Calibration**: Increased the balancing weights for both consecutive recovery pairs and split recoveries YTD to `350`. This successfully reduced the YTD consecutive recovery pairs spread across the 12 operators from 8 to 6, and the YTD split recoveries spread from 20 to 11.
+- **Solver Timeout**: Increased the solver time limit to 30 seconds to allow the solver to search for a highly balanced solution under these tighter equity constraints.
+- **Diagnostics and Validation**: Verified the generated schedule with the diagnostics script. Found 0 violations (100% compliance with presence, coverage, and weekday work rules).
+- **Database Seeding**: Successfully re-seeded the database and populated the optimized calendar.
+
+## [2026-06-10] dev | SHIFTER — Weekend cohesion and strict weekend/holiday staffing
+
+- **Vincoli Weekend**: Aggiunta penalizzazione (`diff_we * 120`) nell'obiettivo del solutore per minimizzare i weekend spezzati, privilegiando weekend interi lavorati o interi liberi.
+- **Staffing Festivo/Weekend Rigido**: Modificato il vincolo di copertura sui fine settimana e sulle festività per limitare il personale assegnato esattamente al minimo previsto (`== reqs[s]`), garantendo il massimo riposo possibile a chi non lavora. Nei giorni feriali ordinari rimane la regola per assorbire il surplus (`>= reqs[s]`).
+- **Solver Time Limit**: Ridotto il tempo massimo di calcolo del solutore da 45 a 15 secondi per garantire feedback veloci all'utente.
+
+## [2026-06-10] dev | SHIFTER — Layout restyling and static preference alignment
+
+- **Layout a Piena Larghezza**: Spostata la matrice del calendario mensile a piena larghezza per migliorare la visibilità orizzontale e spostati i pannelli delle preferenze e delle ferie al di sotto di esso.
+- **Preferenze Gerarchiche**: Allineato il form di inserimento nel frontend per gestire la preferenza gerarchica statica (fascia e scelta 1-2-3) rimuovendo i campi obsoleti data e peso, e aggiornato il relativo rendering nella sidebar (ordinato per operatore e scelta).
+- **Historian Seeder Bilanciato**: Riscritto l'allocatore storico in `seed.py` per distribuire equamente turni, notti e weekend lavorati YTD prima della data Pivot, eliminando sproporzioni ed assicurando la convergenza e fattibilità automatica del solutore pre-run all'avvio.
+- **Solver Bugfix**: Risolto bug di persistenza dei recuperi storici fittizi (`dummy_candidates`) estendendo il ciclo di salvataggio a tutti i giorni feriali futuri.
+
+## [2026-06-10] dev | SHIFTER — ControlRoom 24/7 Shift Manager scaffolding and logic validation
+
+- **Sviluppo Core**: Inizializzato sotto-progetto in `sviluppi/SHIFTER/` con .project-context e requirements.
+- **Database SQLite**: Modelli SQLAlchemy e script di seed con storico turni/ferie/recuperi per i 12 operatori di control room.
+- **Motore di Ottimizzazione**: Sviluppato solutore CP-SAT (Google OR-Tools) con vincoli rigidi (copertura, presenza, unicità, ferie, riposo N->M) e soft (equità annuale, recuperi weekend, recuperi consecutivi, preferenze).
+- **REST API & Frontend**: Endpoint FastAPI e dashboard SPA interattiva (Tailwind CSS, griglia calendario e KPI di validazione turni in tempo reale).
+- **Test logic**: Scritto ed eseguito con successo il test di integrazione per il solutore CP-SAT.
+- **Wiki**: Creata pagina `entities/systems/stack-shifter.md` ed aggiornato `index.md`.
+
+## [2026-06-09] dev | Lifelog2 pipeline hardening — audit/spot_check scripts, Stage D idempotency fix, orchestrator drain e trim
+
+- **scripts/pipeline_audit.py**: audit strutturale per stadi B→G su N segmenti; check post-refactor (colonne, nomi hardcoded)
+- **scripts/pipeline_spot_check.py**: report qualitativo (trascrizione, score D, episode, cover) per campionamento umano
+- **fix Stage D idempotency**: guard esteso a `{"enriched","consolidated","done","embedding"}` — preveniva doppio enrichment su restart (76 atom orfani eliminati)
+- **feat orchestrator _drain_aria_queues**: SIGTERM → drain `aria:q:*:lifelog` prima di kill worker, elimina job ARIA orfani
+- **feat orchestrator stream:enrich trim**: reconciliation ogni 10min → XTRIM maxlen=200 quando lag=0 e pending=0; 2500 entry → 204 (trim manuale validato)
+- **Commits**: `dc028b1`, `9ad5646`, `419d36d`, `0c4db36`, `9b8e8e7`
+
+## [2026-06-09] dev | Lifelog2 user-agnostic refactor — bonifica C2, identity_detective, prompt bias, DB columns, enrollment legacy
+
+- **Stage C2 rimosso**: `stage_c1c2_gate.py` → `stage_c1_gate.py`; 10 prompt v1–v10 cancellati; consumer group `c1c2gate` → `c1gate`
+- **identity_detective**: `worker_detective.py` → `worker_identity_detective.py`; prompt `stage_d_detective` → `identity_detective` v3 (user-agnostic)
+- **Prompt debiasing**: `stage_d_enrich v16`, `stage_z4_day_digest v3`, `stage_z7_profile_validator v2`, `stage_z6_consolidator/synthesis v2` — zero "Roberto" nei prompt attivi
+- **Worker claims dinamici**: `worker_profile_builder`, `worker_day_digest`, `worker_profile_validator` leggono nome utente da registry DB via `_get_active_user_display_name()`
+- **DB migration 0019**: `roberto_word_ratio → owner_word_ratio`, `avg_nonroberto_turn_s → avg_other_turn_s` — applicata su LXC 203
+- **Dashboard**: `_get_active_user_info()` → nome da registry DB; rimosso `{"name": "Roberto"}` hardcoded
+- **stage_f_ambient_break_v1.txt**: prompt inline estratto da `stage_f_grouping.py`
+- **Legacy enrollment rimosso**: `POST /api/v1/devices/register` + `enrollment_secret_roberto/paola` — superseded da `/auth/register`+`/login`
+- **Pagine wiki aggiornate**: `knowledge/architecture.md`, `knowledge/development-log.md`, `stack-lifelog2.md`
+
+## [2026-06-08] dev | Lifelog2 backlog V1 completato + fix ghost episodes + race condition Stage D
+
+- **Backlog V1 smaltito**: 28 cicli B→G completati (07/06 07:18 → 08/06 23:16). 1242 segmenti consolidati, 830 episodi finali. Chiave cifratura roberto aggiornata (new salt + PBKDF2/AES-GCM).
+- **Ghost episodes fix** (`c218817`): 171 episodi duplicati (Aug–Dec 2025) eliminati con `DELETE FROM episodes`. Root cause: Stage F rieseguito su stessi atom da reconciliation re-queue → creava secondo episodio per stessa finestra. Dashboard `/sagas` ora filtra ghost via subquery FK-atom.
+- **Race condition Stage D fix** (`c218817`): `_reconciliation_loop` estesa con Sezione 2 per recovery segmenti stuck in `enriched` con `memory_atom_id IS NOT NULL`. 26 segmenti re-pushati a `stream:embed`, tutti processati da Stage E (vector=True).
+- **Aggiornato**: `knowledge/architecture.md` (reconciliation sezione 2, dashboard ghost filter), `knowledge/development-log.md` (entry 2026-06-08/09). History entries: BUGFIX/Lifelog2/Orchestrator/ReconciliationLoop (high), BUGFIX/Lifelog2/Dashboard/SagasEndpoint (medium).
+- **/lint Lifelog2**: 59 passed, 0 warnings, 0 errors ✅
+
+## [2026-06-07] dev | Wiki refresh: Stage C1, Quality Tiers, Z6 Thread Consolidation, Place Semantics, Telemetry
+
+- **Quality Gate C1 & Quality Tiers**: Creazione di [[concepts/lifelog2-quality-gate|concepts/lifelog2-quality-gate.md]] per mappare la logica meccanica dello Stage C1 (`stage_c1_classifier.py` e `stage_c1c2_gate.py`). Definiti i Transcript Quality Tiers (Tier A >-0.25, Tier B -0.25/-0.40, Tier C -0.40/-0.55), il meccanismo del server-side floor (override a `contextual` e cap importanza a 0.40 su audio degradato) e l'asimmetria biometrica del voiceprint.
+- **Thread Consolidation Z6**: Creazione di [[concepts/lifelog2-thread-consolidation|concepts/lifelog2-thread-consolidation.md]] per mappare il worker di consolidamento `worker_thread_consolidation.py`. Spiegato l'approccio ibrido (Gemini Cloud per il batch mapping e Qwen3 locale per la sintesi testuale), gli embedding 1024d in Postgres (`threads`) e la rolling window di 30 giorni.
+- **Place Semantics & Detective**: Aggiornato [[entities/systems/stack-lifelog2|stack-lifelog2.md]] per includere le logiche del Place Detective (`worker_place_detective.py` con scoring euristico e revisione su `/places` UI) e il geocoding automatico in Stage F.
+- **Identity Resolution**: Mappato l'utilizzo di `is_media_persona` e `speaker_turns.turn_type` per escludere i turni di conduttori TV/radio e podcast dall'inferenza d'identità del Detective.
+- **Telemetry**: Creazione di [[concepts/lifelog2-telemetry|concepts/lifelog2-telemetry.md]] per descrivere l'architettura SQLite fire-and-forget locale (`telemetry.db`), lo schema delle 6 tabelle ed i relativi 6 endpoint API REST `/telemetry/*`.
+- **Aggiornato Index**: Aggiornato [[index.md]] con i link ai nuovi concept e l'incremento delle statistiche del secondo cervello (pagine totali: 64, concepts: 19).
 
 ## [2026-06-07] dev | Lifelog2 — Orchestrator B→G gate, Stage B batch limit, V1 import tooling
 
@@ -1446,3 +1919,143 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 7. Riavviare lifelog2-orchestrator.service
 8. `python scripts/requeue_for_enrichment.py` → re-processa tutti i segmenti
 9. Monitorare Stage D, Z7, Detective
+
+## [2026-06-11] dev | SHIFTER: Gestione Rolling Carry-Forward e Allineamento Debiti
+- **Risoluzione Bug Conteggio Debiti**: Corretto filtro in `main.py` per includere tutti i recuperi (rimossa condizione obsoleta `data_weekend_lavorato != None`), risolvendo il conteggio errato che riportava medie di 66 giorni di debito e 0 recuperi singoli/doppi.
+- **Supporto Carry-Over nel Solver**: Modificato `solver.py` per includere il debito iniziale dell'operatore (`op.carry_over_rec`) nei vincoli di accumulo YTD dei recuperi e penalizzazioni.
+- **Risoluzione Vincoli Database**: Droppate e ricreate le tabelle di database pulite per supportare la nullabilità della colonna `data_weekend_lavorato` nei recuperi.
+- **Ponte Temporale 2027**: Risolto lo sdoppiamento dell'ultima settimana di dicembre correggendo la chiave di raggruppamento settimanale (`(d.isocalendar()[0], d.isocalendar()[1])` invece di `d.year`). Esteso l'orizzonte di pianificazione del solutore fino alla domenica successiva al 31 dicembre (3 gennaio 2027) per garantire che l'ultima settimana contenga il proprio weekend.
+- **Coerenza Storica**: I turni e i recuperi dei primi 3 giorni del 2027 vengono calcolati e salvati nel database per servire da storico continuo per l'anno successivo, eliminando tutti i riposi feriali ingiustificati emersi a fine dicembre.
+- **Layout Dashboard**: Spostata la sezione informativa delle tiles sotto il calendario della matrice mensile per ottimizzare lo scorrimento e la lettura della griglia.
+- **Aggiornamento Servizio**: Riavviato server backend `uvicorn` per applicare a caldo le modifiche.
+
+## [2026-06-11] dev | SHIFTER: Apple Glassmorphism (Neutral Light) & Allineamento Contrasto UI
+- **Generazione Asset di Sfondo**: Generata un'immagine di sfondo personalizzata `obsidian_bg.png` raffigurante una goccia d'acqua che cade in una superficie calma creando onde concentriche ampie e sparse che si espandono su un gradiente bianco-azzurro luminoso e pulito (decentrata in alto a destra).
+- **Stile Glassmorphic Frosted (Light)**: Applicata una trasparenza vetrosa bianca satinata (`glass-panel` con opacity 35% e backdrop blur) a tutte le tiles della dashboard, aumentandone la trasparenza e rifinendo le ombreggiature per light mode.
+- **Pillole Stondate per i Turni**: Sostituite le caselle quadrate della matrice turni con capsule/pillole fluttuanti stondate (`.shift-badge-pill`) con bordi lucidi completi e trasparenza colorata ad effetto vetro. I testi dei turni ereditano tinte scure ad alto contrasto per massima leggibilità.
+- **Colonne Sticky Bianche ad Alto Contrasto**: Le colonne fisse della matrice mensile (sia cells `td` che headers `th`) sono state impostate a sfondo solido bianco (`#ffffff !important`) con testi scuri a contrasto per nascondere lo scorrimento dei dati in background.
+- **Espansione Matrice Mensile**: Rimosso il limite di altezza `max-h-[680px]` e la barra di scroll verticale interna, consentendo alla tabella di allineare tutti i 12 operatori in una singola vista espansa.
+- **Immagini/Avatar degli Operatori**: Aggiunto un generatore SVG in-app che associa a ciascun operatore un avatar circolare unico con gradiente e silhouette personalizzata, visualizzato accanto al nome nella griglia del calendario, lista assenze, configurazione e tabella equità.
+- **Allineamento Dynamic Classes**: Allineato il comportamento di `app.js` per utilizzare classi scure su elementi dinamici (es. text-slate-800, border-black/5), prevenendo problemi di contrasto su sfondi chiari.
+- **Legibilità Griglia e Footer**: Ottimizzati i badge e le tabelle di equità e fabbisogni nel footer per garantire il perfetto contrasto dei colori di stato dei turni e dei warning su sfondo chiaro.
+
+
+---
+
+## [2026-06-11] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-11] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-11] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-13] dev | SHIFTER: Analisi Streak Scambiabili in Dashboard & Gestione Ferie Interattiva
+- **Analisi Streak CLI & API**: Creato lo script parametrizzato [analyze_swaps.py](file:///home/Projects/NH-Mini/sviluppi/SHIFTER/src/backend/analyze_swaps.py) e aggiunto l'endpoint `/api/swaps/analyze` per determinare le streak di turni scambiabili con altri operatori nell'anno 2026 senza violare i vincoli di riposo, presenza in sede o coesione.
+- **Interfaccia In-App Swap Analyzer**: Integrato un pannello vetroso a fondo pagina per impostare operatore + turno ed esporre i risultati direttamente in una tabella interattiva con badge colorati e relativi warning di sicurezza.
+- **Calendario Ferie Interattivo**: Modificata la griglia del calendario ferie per renderla cliccabile, consentendo di aggiungere o rimuovere giorni di ferie per qualsiasi operatore direttamente sulla cella.
+- **Reset Ferie e Pulizia Audit**: Aggiunto un pulsante di cancellazione totale delle ferie (`DELETE /api/leaves`) e implementato la rimozione automatica delle entry di audit log (`RegistroEventi`) a partire dalla data di Pivot all'avvio del ricalcolo del solutore.
+- **Documentazione Secondo Cervello**: Creata la pagina [[concepts/shifter-swap-analysis|shifter-swap-analysis]] e aggiornato l'indice generale [[index]] di NH-Mini.
+
+
+
+---
+
+## [2026-06-13] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-13] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-13] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-13] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-13] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-13] dev | SHIFTER: Manual override constraints, presence validation and carry-over weekend fix
+
+- **Validazione Vincoli Forzature**: Aggiunti controlli per N->P, P->M e per il vincolo dei 6 giorni consecutivi alle forzature manuali singole e batch.
+- **Mancato Incremento C.O.**: Semplificato e corretto il calcolo dei weekend lavorati YTD basandolo sul conteggio effettivo di tutti i sabati/domeniche lavorati (inclusi quelli isolati), risolvendo il mancato aggiornamento del carry-over (REC) nelle forzature domenicali.
+- **Presenza Fisica**: Implementata la verifica del vincolo di presenza fisica minima (min 1 operatore in presenza per turno attivo) sulle forzature e rimozioni manuali (RIPOSO/REC/M/P/N).
+
+
+---
+
+## [2026-06-14] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-06-15] promote | SHIFTER → CT204
+
+**nh-promote.py**: progetto promosso da sviluppi/ a RT LXC
+- Progetto: SHIFTER
+- RT Node: CT204 (192.168.1.204)
+- Codice: rsync src/ → 192.168.1.204:/opt/SHIFTER/
+
+---
+
+## [2026-07-16] dev | Lifelog2 — chiusura refactor atom→thread + allineamento doc
+
+- **Pipeline**: batch ~1200 segmenti drenato end-to-end senza perdite; ora in esercizio realtime. 937 thread (935 enriched), 927 cover, 14 persone/1510 turni linkati, 11 saghe.
+- **Fix `c64a34e`**: started_at/last_turn_at dei thread dal primo turno assegnato (recording time, non processing) — 74 thread riparati via SQL.
+- **Doc repo Lifelog2 allineati** (blocchi datati, storia preservata): status-roadmap (blocco stato 2026-07-16 in testa), hardening doc (§8: backpressure lockstep, retry PEL, soft deadline, GPU lease, date recording), thread-refactor-roadmap (CHIUSA), intelligence-addendum e places-spec (banner superamento atom→thread).
+- **Wiki**: [[concepts/lifelog2-tier2-alignment-roadmap]] chiusa con blocco 2026-07-16; index aggiornato.
+- **Gap noti**: GPS quasi assente dall'app Android (Places a zero), Day Digest catchup storico da lanciare, retention enforcement, drop memory_atoms, ciclo Tier1 a chunk.

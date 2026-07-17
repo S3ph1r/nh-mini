@@ -54,6 +54,10 @@ ROOT = Path(__file__).resolve().parent.parent
 ALERTS_PATH = ROOT / "state" / "alerts.json"
 LOG_PATH = Path("/var/log/nh-mini/heartbeat.log")
 
+# Setup sys.path to import core modules
+sys.path.insert(0, str(ROOT))
+from core.service_catalog import get_real_vmids
+
 # Severity per tipo servizio
 SERVICE_SEVERITY = {
     "redis":       "HIGH",    # bus condiviso: se cade, tutto cade
@@ -61,10 +65,12 @@ SERVICE_SEVERITY = {
     "aria_node":   "MEDIUM",  # on-demand, può essere spento
     "nh_mini_api": "LOW",     # la dashboard stessa
     "dias_api":    "HIGH",    # API runtime DIAS
+    "lifelog2_rt": "HIGH",    # API runtime Lifelog2
+    "shifter_rt":  "HIGH",    # API runtime SHIFTER
     "sops_age":    "LOW",     # locale, non ha TCP probe
 }
 
-REAL_VMIDS = {120, 190, 201, 202}
+REAL_VMIDS = get_real_vmids()
 
 # ── logging ───────────────────────────────────────────────────────────────────
 

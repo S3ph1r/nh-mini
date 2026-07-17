@@ -248,11 +248,11 @@ class NHLXCDeployer:
                 print(f"❌ Failed to setup hosts: {hosts_result.stderr}")
                 return False
 
-            print(f"🔍 Disabling UseDNS in SSH for CT{vmid} to prevent connection timeouts...")
-            dns_cmd = f"pct exec {vmid} -- bash -c \"sed -i 's/^#UseDNS yes/UseDNS no/' /etc/ssh/sshd_config && grep -q '^UseDNS no' /etc/ssh/sshd_config || echo 'UseDNS no' >> /etc/ssh/sshd_config && systemctl restart sshd\""
-            dns_result = self.run_ssh_command(dns_cmd, check=False)
+            print(f"🔍 Configuring SSH settings (UseDNS=no, PermitRootLogin=yes, PubkeyAuthentication=yes) for CT{vmid}...")
+            ssh_setup_cmd = f"pct exec {vmid} -- bash -c \"sed -i 's/^#UseDNS yes/UseDNS no/' /etc/ssh/sshd_config && grep -q '^UseDNS no' /etc/ssh/sshd_config || echo 'UseDNS no' >> /etc/ssh/sshd_config && sed -i 's/^#\\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && sed -i 's/^#\\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && systemctl restart sshd\""
+            dns_result = self.run_ssh_command(ssh_setup_cmd, check=False)
             if dns_result.returncode != 0:
-                print(f"⚠️  Failed to disable UseDNS: {dns_result.stderr}")
+                print(f"⚠️  Failed to configure SSH settings: {dns_result.stderr}")
             
             print(f"✅ SSH access configured for CT{vmid}")
             return True

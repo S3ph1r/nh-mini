@@ -31,7 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-REAL_VMIDS = {120, 190, 201, 202}
+# Import dynamic VMID resolver
+import sys
+sys.path.insert(0, str(ROOT))
+from core.service_catalog import get_real_vmids
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -119,7 +122,7 @@ def overview():
     projects = get_projects()
     containers = inv.get("containers", [])
 
-    real = [c for c in containers if c["vmid"] in REAL_VMIDS]
+    real = [c for c in containers if c["vmid"] in get_real_vmids()]
     running = sum(1 for c in real if c["status"] == "running")
 
     return {
@@ -146,8 +149,8 @@ def infrastructure():
     inv = load_inventory()
     containers = inv.get("containers", [])
 
-    real = [c for c in containers if c["vmid"] in REAL_VMIDS]
-    legacy = [c for c in containers if c["vmid"] not in REAL_VMIDS]
+    real = [c for c in containers if c["vmid"] in get_real_vmids()]
+    legacy = [c for c in containers if c["vmid"] not in get_real_vmids()]
 
     return {
         "real": real,
@@ -201,9 +204,11 @@ def container_stop(vmid: int):
 @app.get("/api/services")
 def services_list(probe: bool = False):
     import sys
+    import importlib
     sys.path.insert(0, str(ROOT))
-    from core.service_catalog import get_catalog
-    catalog = get_catalog(probe=probe)
+    import core.service_catalog
+    importlib.reload(core.service_catalog)
+    catalog = core.service_catalog.get_catalog(probe=probe)
     return catalog
 
 
@@ -261,6 +266,106 @@ def handover():
     if not path.exists():
         return {"content": None, "exists": False}
     return {"content": path.read_text(), "exists": True}
+
+
+@app.get("/api/topology")
+def topology():
+    """
+    Ritorna il grafo dell'infrastruttura (nodi + archi) per vis-network.
+    Dati statici derivati da knowledge/containers/infrastructure-map.mdc.
+    """
+    nodes = [
+        {
+            "id": "proxmox", "label": "Proxmox\nPVE 9.1.1",
+            "type": "hypervisor", "ip": "192.168.1.2",
+            "ports": [], "purpose": "Hypervisor — gestisce tutti i container LXC e VM del homelab.",
+        },
+        {
+            "id": "ct190", "label": "CT190\nNH-Mini ⭐",
+            "type": "control", "ip": "192.168.1.190",
+            "ports": [8080], "purpose": "Dev center + Agent AI framework + Dashboard NH-Mini. Container di controllo principale.",
+        },
+        {
+            "id": "ct120", "label": "CT120\nRedis Hub",
+            "type": "infra", "ip": "192.168.1.120",
+            "ports": [6379], "purpose": "Universal State Bus — Redis condiviso da DIAS, ARIA, Lifelog2. Job queue e state condiviso.",
+        },
+        {
+            "id": "ct201", "label": "CT201\nDIAS RT",
+            "type": "app", "ip": "192.168.1.201",
+            "ports": [8000], "purpose": "DIAS Runtime — Dashboard Svelte 5 con Infinite Scroll + API Hub FastAPI.",
+        },
+        {
+            "id": "ct202", "label": "CT202\nGateway",
+            "type": "gateway", "ip": "192.168.1.202",
+            "ports": [80], "purpose": "Internet gateway — nginx reverse proxy + tunnel ngrok permanente. Unico ingresso HTTP dall'esterno.",
+        },
+        {
+            "id": "ct203", "label": "CT203\nLifelog2",
+            "type": "app", "ip": "192.168.1.203",
+            "ports": [8002, 5173], "purpose": "Lifelog2 Runtime — Memory OS Dashboard + Global Registry Auth. Liquid Brain (Swap-In/Out).",
+        },
+        {
+            "id": "ct204", "label": "CT204\nSHIFTER RT",
+            "type": "app", "ip": "192.168.1.204",
+            "ports": [8000], "purpose": "SHIFTER Runtime — Dashboard pianificazione turni + CP-SAT Solver. SQLite locale.",
+        },
+        {
+            "id": "ct105", "label": "CT105\nPostgres",
+            "type": "infra", "ip": "192.168.1.105",
+            "ports": [5432], "purpose": "PostgreSQL + TimescaleDB + pgvector. DB centralizzato per Stratex, NH-Mini e Lifelog2.",
+        },
+        {
+            "id": "ct107", "label": "CT107\nEmbeddings",
+            "type": "infra", "ip": "192.168.1.107",
+            "ports": [11434], "purpose": "Ollama — embedding service CPU-only. mxbai-embed-large 1024d per Lifelog2 pipeline stage G.",
+        },
+        {
+            "id": "ct103", "label": "CT103\nObservability",
+            "type": "infra", "ip": "192.168.1.103",
+            "ports": [3000], "purpose": "Grafana + Prometheus — monitoring hardware e stato del host fisico Proxmox.",
+        },
+        {
+            "id": "ct104", "label": "CT104\nMinIO",
+            "type": "infra", "ip": "192.168.1.104",
+            "ports": [9000, 9001], "purpose": "Object Storage S3 centralizzato — bucket 'lifelog' per il Parallel Ingest di Lifelog2.",
+        },
+        {
+            "id": "pc139", "label": "PC139\nARIA GPU ⚡",
+            "type": "gpu", "ip": "192.168.1.139",
+            "ports": [8080, 8081, 8082, 8090, 8091],
+            "purpose": "ARIA Node Controller — RTX 5060 Ti 16GB VRAM. TTS Fish, LLM Qwen3-14B, WhisperX ASR, Voice Cloning.",
+        },
+        {
+            "id": "internet", "label": "Internet\n(ngrok)",
+            "type": "external", "ip": "external",
+            "ports": [], "purpose": "Accesso esterno tramite tunnel ngrok permanente su CT202 Gateway.",
+        },
+    ]
+
+    edges = [
+        # Management SSH
+        {"from": "ct190", "to": "proxmox",  "label": "SSH mgmt",         "conn_type": "ssh"},
+        # Gateway → internet
+        {"from": "internet", "to": "ct202",  "label": "ngrok tunnel",     "conn_type": "http"},
+        # Gateway → services
+        {"from": "ct202", "to": "ct201",     "label": "nginx proxy",      "conn_type": "http"},
+        {"from": "ct202", "to": "ct190",     "label": "nginx proxy",      "conn_type": "http"},
+        # Redis bus
+        {"from": "ct201", "to": "ct120",     "label": "Redis :6379",      "conn_type": "redis"},
+        {"from": "ct203", "to": "ct120",     "label": "Redis :6379",      "conn_type": "redis"},
+        {"from": "pc139", "to": "ct120",     "label": "Redis BRPOP/LPUSH","conn_type": "redis"},
+        # Lifelog2 dependencies
+        {"from": "ct203", "to": "ct107",     "label": "Ollama :11434",    "conn_type": "http"},
+        {"from": "ct203", "to": "ct105",     "label": "Postgres :5432",   "conn_type": "postgres"},
+        {"from": "ct203", "to": "ct104",     "label": "MinIO S3 :9000",   "conn_type": "s3"},
+        # CT190 dev → Postgres
+        {"from": "ct190", "to": "ct105",     "label": "Postgres (Stratex)","conn_type": "postgres"},
+        # Monitoring
+        {"from": "ct103", "to": "proxmox",  "label": "Prometheus metrics","conn_type": "monitoring"},
+    ]
+
+    return {"nodes": nodes, "edges": edges}
 
 
 

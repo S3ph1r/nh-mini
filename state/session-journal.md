@@ -1,3 +1,339 @@
+## [2026-07-06 15:40] END — Thread Builder v2 hardening + doc/lint pass completati
+
+**Completato in questa sessione (2026-07-06, seguito diretto del blocco TASK sotto):**
+- Root-cause del thread da 47KB/15 turni: monologo ambientale continuo (~54min, stesso speaker), non merge di conversazioni — turni pre-formati da WhisperX senza cap di durata/testo lato Lifelog2.
+- Force-cut ridisegnato da conteggio turni (`FORCE_CUT_TURNS=180`) a budget di volume testo (`THREAD_VOLUME_BUDGET_CHARS≈21620` char, migration 0028 `text_volume_chars`). Deploy + test su LXC 203, validato: split in Part1/2/3 coerente, nessun turno perso.
+- Bug scoperto in validazione: thread creati da redirect (gap o volume) non ereditavano roster/rolling_summary (mai visti dall'LLM) → Stage E arricchiva da roster vuota → allucinazioni. Fix in due passi (`touched_thread_ids` per la roster, step dedicato post-LLM per l'eredità del rolling_summary — il primo tentativo leggeva sempre `None` per un problema di ordine nel loop). Ri-testato end-to-end: OK.
+- `/doc lifelog2` eseguito: `docs/lifelog2-thread-builder-hardening-2026-07.md` (nuovo, narrativa completa 2026-06-29→07-06), `knowledge/{architecture,memory-model,development-log}.md` risincronizzati (erano stale di 11+ giorni sull'architettura atom-based pre-Thread-Builder-v2), wiki NH-Mini (`stack-lifelog2.md`, `concepts/lifelog2-refactor-roadmap.md`, `index.md`, `log.md`) aggiornato, 2 entry `history_manager.py`.
+- Pulizia repo Lifelog2: confermato che tutto il lavoro "pendente non mio" era in realtà mio (scritto in questa stessa chat, mai committato, dates 2026-05-29→06-30 via mtime). Archiviati 4 moduli pipeline morti (superati dal Thread Builder v2, verificati non referenziati in `orchestrator.py`) + script/prompt dipendenti in `archive/pre-thread-builder-v2/`, committato il resto (design doc originali mai committati, fix anti-allucinazione Day Digest, fix minore EpisodeCard.svelte, 3 script utility). 7 commit pushati, LXC 203 sincronizzato.
+- `/lint lifelog2` eseguito: 67 passed, 1 warning (session-journal stale — questa entry lo risolve). Trovato e fixato `knowledge/api-contracts.md` §3 Redis Streams — era ancora il freeze 2026-05-07 (stream `diarize`/`group`/`digest`/`retention` mai esistiti in quella forma, worker health names non aggiornati dal rename `detective`→`identity_detective` del 06-09) — riscritta verificando ogni xadd nel codice live.
+
+**Incompleto per la prossima sessione:**
+- Variante di nome entità (Tordelli/Tonelli/Tonetti) osservata su dati reali — non ancora affrontata.
+- Error-swallowing generico di Stage E (`except Exception: analysis={}`) — la causa specifica di context-overflow è risolta dal force-cut, ma il pattern resta per altre eventuali cause di fallimento ARIA.
+- Annotazione di stato aggiunta a `docs/lifelog2-classification-evolution-blueprint-v1.md`, dichiarato "immutabile" in `.project-context` — deviazione minore dalla regola letterale, segnalata durante il lint, nessuna decisione presa su come trattarla in futuro.
+
+**Mine per il prossimo agent:** nessuna — i problemi emersi (roster/rolling_summary, ordine rolling_summary, staleness knowledge/wiki, staleness api-contracts.md) sono stati risolti in questa stessa sessione.
+
+**Riferimento**: `sviluppi/Lifelog2/docs/lifelog2-thread-builder-hardening-2026-07.md` per la narrativa tecnica completa causa→decisione→fix→validazione con riferimenti ai commit.
+
+## [2026-06-29 → 2026-07-05] TASK — Lifelog2 Thread Builder v2: bootstrap turn-first + hardening real-data (backfill)
+
+**Contesto:** Entry retroattiva — questo intero arco è stato svolto nella stessa chat, mai spezzata da un `/finalize`, ma compattata più volte dal sistema: il journal non ha mai ricevuto le entry TASK/DECISION corrispondenti. Ricostruita da `git log` (fonte di verità immune a compattazione) + narrativa completa in `docs/lifelog2-thread-builder-hardening-2026-07.md`.
+
+- **06-29/06-30**: bootstrap architettura turn-first — pipeline invertita (C→C1→Turn Log→D Thread Builder LLM→E Thread Enrichment LLM→F Thread Embedding), Stage F atom-grouper rimosso, migration 0026.
+- **06-30→07-01**: stabilizzazione LLM Thread Builder contro il context window ARIA/qwen3 (max_tokens, batch size, alias corti T1/U1 invece di UUID).
+- **07-03/07-04**: redesign identità voiceprint — eliminato bucket condiviso `vp_unk_nr` (causava frammentazione di thread, stessa conversazione spaccata a giorni di distanza) sostituito da `vp_unk_noemb`+`MIN_VP_TRUST_DUR_S=1.5s`; `turn_reliability` disaccoppiato dalla durata; correzione meccanica mono/dialogue estesa oltre personal/ambient; gap-enforcement da blocklist statica a state machine dinamica.
+- **07-05**: naming MinIO anti-disastro (timestamp+GPS nella chiave invece di UUID casuale); validazione end-to-end su 675 segmenti reali da upload telefono, 168 thread con 0 violazioni gap; fix device-sync e riconciliazione a scala.
+
+**DECISION** (esplicita dell'utente, root-cause richiesta prima di ogni fix): niente bucket condivisi per identità vocali non risolte — "se non abbiamo abbastanza dati per creare un vp, quel turno va segnato come junk". Ha guidato l'intero redesign VP di 3.3 in `lifelog2-thread-builder-hardening-2026-07.md`.
+
+## [2026-06-27 17:54] TASK — Lifelog2 Stage F/G: orchestrator race condition fix + thread timestamp fix + DB reset
+
+**Contesto:** Sessione ripresa da contesto precedente compattato. Stage F (conversation_threads, FASE 3) aveva 3 bug:
+1. `_covers_trigger.set()` nel main loop triggherava Stage G durante atom processing → ARIA killava qwen3 con FLUX2
+2. `MAX_THREAD_GAP_S = 8 * 3600` → mega-thread da 7+ ore cross-sessione
+3. `ended_at = NOW()` → data di elaborazione, non data contenuto
+
+**Fix applicati:** orchestratore (trigger da _grouping_loop post-drain, rimosso startup timer 90s), stage_f_grouping.py (MAX_THREAD_GAP_S=10*60, ended_at=:last_atom_at in tutti i path).
+
+**DB reset:** 2571 thread_turns + 288 conversation_threads eliminate. Backfill v2 ripartito (PID 51414, 17:55:31, 1301 atoms).
+
+**Doc:** `/doc lifelog2` — development-log.md, architecture.md, stack-lifelog2.md, log.md, index.md, history_manager.py.
+
+## [2026-06-23 14:00] START — CT202 gateway: debug /gateway/, Cloudflare doc, Telegram URL watcher
+
+**Obiettivo:** Diagnosticare /gateway/ non raggiungibile, documentare sistema di routing CT202 (nginx + ngrok + Cloudflare + Authelia), implementare notifica Telegram per cambio URL Cloudflare Quick Tunnel.
+**Grounding:** CT202 running con nginx + ngrok + cloudflared-quick + authelia.
+
+## [2026-06-23 14:05] TASK — Fix /gateway/ LAN + cleanup typo /lifelo/
+- Identificato bug: server_name 192.168.1.202 (shifter-lan.conf) mancava delle location /gateway/. Nginx sceglie block esplicito su catch-all.
+- Aggiunta duplicazione delle 3 location /gateway/ in shifter-lan.conf (via scp — shell SSH espande $var nei heredoc).
+- Rimosso typo /lifelo/ da lifelog.conf.
+- Verifica: /gateway/ → 200 ✅
+
+## [2026-06-23 14:15] TASK — CF URL sync su CT202 + dashboard gateway v2
+- Script /usr/local/bin/cf-url-sync.sh + cf-url-sync.timer (ogni 30s) su CT202.
+- Scrive URL Cloudflare in /var/www/html/gateway/cf-url.txt.
+- Dashboard gateway aggiornata: sezione Cloudflare, route map, titolo.
+
+## [2026-06-23 14:30] TASK — cf-url-watcher su LXC 190 (Telegram notification)
+- scripts/cf-url-watcher.py: polling http://192.168.1.202/gateway/cf-url.txt ogni 60s.
+- Se URL cambia → notifica Telegram via TelegramBot.send_message().
+- State: state/cf-url-last.txt. Timer: cf-url-watcher.timer su LXC 190.
+- CT202 NON ottiene SSH verso LXC 190 (sicurezza — LXC 190 è control plane).
+
+## [2026-06-23 14:45] TASK — Doc e wiki
+- knowledge/network/internet-gateway-pattern.mdc riscritto completo.
+- NH-Mini/entities/containers/ct202-gateway.md aggiornato (era del 2026-04-24).
+- core/service_catalog.py gateway entry aggiornata.
+- NH-Mini/concepts/dependency-map.md aggiornato con Cloudflare e route attuali.
+
+## [2026-06-23 20:30] END — CT202 gateway + chiusura debiti SHIFTER
+
+**Completato:**
+- **Fix `/gateway/` LAN**: bug nginx server_name priority. Aggiunta location `/gateway/` in `shifter-lan.conf`.
+- **CF URL sync + Telegram watcher**: `cf-url-sync.sh` su CT202 (ogni 30s) + `cf-url-watcher.py` su LXC 190 (ogni 60s) — notifica Telegram se URL Cloudflare Quick Tunnel cambia. Test invio manuale ✅.
+- **Dashboard gateway v2**: sezione Cloudflare, route map, stack info.
+- **Doc**: `internet-gateway-pattern.mdc`, `ct202-gateway.md`, `dependency-map.md`, `service_catalog.py` aggiornati.
+- **Debiti SHIFTER chiusi**: scroll anno con bottoni prev/next ✅ (codice identico a rotella — crossover anno corretto). CT204 smoke test ✅ (200 OK, 20 operatori).
+- **Lint**: 63 ✅, 0 warning, 0 errori.
+
+**Incompleto / Deferred:**
+- Nessuno — tutti i debiti SHIFTER e gateway sono chiusi.
+
+**Mine per il prossimo agent:**
+- Lifelog2: riprendere da `day_digest --days 220` + M1 batch test 50 segmenti (roadmap in `sviluppi/Lifelog2/docs/lifelog2-pipeline-validation-roadmap.md`).
+
+## [2026-06-22 17:14] END
+
+**Completato:**
+- **Fix `/gateway/` LAN**: identificato bug nginx server_name priority (block esplicito batte catch-all). Aggiunta duplicazione location `/gateway/` in `shifter-lan.conf`. Dashboard ora ✅ da `http://192.168.1.202/gateway/`.
+- **Rimosso typo `/lifelo/`**: route morta rimossa da `lifelog.conf`.
+- **CF URL sync (CT202)**: `/usr/local/bin/cf-url-sync.sh` + `cf-url-sync.timer` (ogni 30s) — URL Cloudflare Quick Tunnel scritta in `/var/www/html/gateway/cf-url.txt`.
+- **Telegram URL watcher (LXC 190)**: `scripts/cf-url-watcher.py` + `cf-url-watcher.timer` — polling ogni 60s, notifica Telegram se URL cambia. State in `state/cf-url-last.txt`. Pull model (LXC 190 → CT202 HTTP) — CT202 non ha SSH verso LXC 190.
+- **Dashboard gateway v2**: sezione Cloudflare (URL da cf-url.txt, badge effimero), route map, stack info aggiornato.
+- **Documentazione**: `internet-gateway-pattern.mdc` riscritto, `ct202-gateway.md` riscritto (era 2026-04-24), `dependency-map.md`, `service_catalog.py` aggiornati.
+- **Lint**: 63 ✅, 0 warning, 0 errori.
+- **Smoke test Telegram**: notifica inviata e ricevuta ✅.
+
+**Incompleto / Deferred:**
+- cloudflared versione 2026.6.0 (latest 2026.6.1) — aggiornamento non bloccante, non eseguito.
+
+**Mine per il prossimo agent:**
+- SHIFTER scroll year crossover in user mode con bottoni prev/next (non testato, solo rotella).
+- Verifica CT204 risponde su http://192.168.1.204:8000 dopo migrazione `src/`.
+
+## [2026-06-22 17:14] END — SHIFTER calendar refactor, slide-in panel, git workflow LXC190→GitHub→CT204
+
+**Completato:**
+- **Pannello slide-in summary (LIVE)**: rimosse colonne summary fisse da LIVE e PLANNED; aggiunto pannello hover sul bordo destro con stessa struttura tabella (`cal-row-op` ecc.) per allineamento pixel-perfect. Sfondo frosted glass. Mostra M/P/N/WE/SAB/FES/REC++/REC+/DÈB./FER/MAL per operatore.
+- **Riduzione colonne**: `cal-left-group` 54→36px, `cal-day-col` 36→32px. `COL_WIDTH = 32` aggiornato in app.js. 31 giorni del mese ora sempre visibili.
+- **Header "Gr."**: "Gruppo" → "Gr." in tutti e 3 i calendari.
+- **User mode filter**: celle oltre `pivot+3m` mostrate come punto grigio.
+- **Default pivot + validazione**: `today+1` al load; blocco client-side se pivot ≤ oggi senza bypass flag.
+- **Git workflow stabilito**: primo commit `ce3d40b` su `sviluppi/SHIFTER/` (LXC 190) → force-push `S3ph1r/SHIFTER` GitHub → CT204 `git reset --hard origin/main`. Service `WorkingDirectory=/opt/SHIFTER/src`. Token non persistito.
+- **Wiki + history**: `/doc SHIFTER` eseguito — `stack-shifter.md`, `log.md`, `index.md`, `infrastructure-map.mdc`, `session-journal.md`, `.project-context` aggiornati. 2 entry in `development-history.mdc`.
+- **Lint**: 61 check ✅, 0 errori.
+
+**Incompleto / Deferred:**
+- Scroll year crossover in user mode (con i bottoni prev/next — testato solo con rotella; non confermato funzionante).
+- Smoke test API CT204 (`curl :8000/api/operatori`) non completato per blocco permessi tool — servizio risultava `active (running)` ma risposta non verificata.
+
+**Mine per il prossimo agent:**
+- Verificare scroll anno in user mode con i bottoni (non solo rotella).
+- Verificare CT204 risponde correttamente su http://192.168.1.204:8000 dopo la migrazione `src/`.
+
+## [2026-06-22 12:00] START — SHIFTER: calendar refactor, slide-in panel, git workflow, CT204 align
+
+**Obiettivo:** Completare il refactor del calendario SHIFTER (rimozione summary columns, pannello slide-in, riduzione colonne per 31gg visibili), stabilire workflow git LXC190→GitHub→CT204, allineare produzione.
+**Grounding:** SHIFTER.service operativo su CT204 (192.168.1.204:8000). Ultimo commit `8dfca06` NH-Mini in data 2026-06-01.
+
+## [2026-06-22 12:05] TASK — Refactor calendario LIVE/PLANNED: rimozione summary columns e slide-in panel
+
+- Rimossi colgroup+colonne summary da calendario LIVE e PLANNED in `app.js` e `index.html`.
+- Aggiunto pannello slide-in sul bordo destro del calendario LIVE: trigger strip 20px, pannello con `transform:translateX(100%)` → `0` su hover, stessa struttura tabella/row-class del calendario principale.
+- Pannello usa `cal-row-op`, `cal-hdr-month`, `cal-hdr-day`, `cal-row-foot` per allineamento pixel-perfect con il calendario live.
+- Tecnica riga mese: testo "X" con `color:transparent` per forzare stessa line-height del calendario senza essere visibile.
+- Header "Gruppo" → "Gr." in tutti e 3 i calendari.
+
+## [2026-06-22 12:10] TASK — Riduzione larghezze colonne (31 giorni visibili)
+
+- `cal-left-group`: 54px → 36px (risparmio 18px), `cal-day-col`: 36px → 32px (risparmio 31×4=124px).
+- `COL_WIDTH = 32` in `app.js` (era 36) per allineare scrollToMonth/scrollToDate.
+- Tutti e 4 i colgroup generator in app.js aggiornati a 32px.
+- CSS `style.css` aggiornato per entrambe le classi.
+
+## [2026-06-22 12:15] TASK — User mode filter + default pivot + validazione client-side
+
+- User mode: celle oltre `pivot+3m` renderizzate come punto grigio (non mostrano turni futuri).
+- Default pivot: `today+1` al load della pagina via `init()`.
+- Validazione client-side: blocca run solutore se `pivotDate ≤ today` senza checkbox "Consenti Pivot nel passato" attiva.
+
+## [2026-06-22 12:20] TASK — Git workflow SHIFTER: LXC190 dev → GitHub → CT204 pull
+
+- Creato `.gitignore` (esclude DB, backups, seed, scratch con dati operatori, screenshots).
+- Primo commit `ce3d40b` su `sviluppi/SHIFTER/` (LXC 190): struttura `src/` + tutte le modifiche sessione.
+- Force-push su `S3ph1r/SHIFTER` GitHub (rimpiazza vecchia struttura flat di CT204).
+- CT204: `git reset --hard origin/main` → allineata a nuova struttura `src/`.
+- Service `SHIFTER.service`: `WorkingDirectory` aggiornato a `/opt/SHIFTER/src` — confermato `active (running)`.
+- Token rimosso dal remote URL di CT204 dopo il pull.
+
+## [2026-06-17 22:31] END — SHIFTER carry_out fix, UX audit, layout 2-col, /doc SHIFTER
+
+**Completato:**
+- **Fix carry_out formula** (`main.py`): La vecchia formula `carry_in + (planned_rec - actual_rec) + (actual_we - planned_we)` degenerava a zero quando il solutore scrive sia su `turni_pianificati` che `turni_effettivi`. Sostituita con `max(0, carry_in + H2_WE+FES - H2_REC)` calcolata da turni_effettivi post-pivot_date. Verificato in DB: solver correttamente azzera debiti carry_in con RECs extra.
+- **UX audit completo**: Rimossa tabella MESE (ridondante). Rinominata HOLIDAYS → "FERIE PIAN." con sottotitolo. Ferie storiche H1 (FER da turni_effettivi) visibili nel calendario ferie come badge non editabili (opacity-70). Operatori inattivi a fine anno (data_fine < YYYY-12-31) mostrati a opacity 0.18 in tutti e 3 i calendari.
+- **Scroll wheel per mese** con toggle mese/giorno: `navigateByWheel` con cooldown 350ms, wrap automatico dic→gen e gen→dic. Toggle button con icona calendario/chevron.
+- **Layout 2-colonne**: Analisi Streak Scambiabili spostata come seconda colonna accanto a Gestione Operatori.
+- **Analisi Streak future-only**: filtro `TurnoEffettivo.data >= date.today()` (era `date(year, 1, 1)`) — propone solo scambi futuri.
+- **Wiki blueprint stack-shifter.md**: Aggiornate sezioni Design Decisions, Architettura Carry-Over, Ferie Lock, Backlog R1-R6. `updated: 2026-06-17`.
+- **/doc SHIFTER**: `blueprint.md` aggiornato con sezioni 3.6/3.7 (nuovi endpoint) e punto 6 sezione 2 (formula carry-out). `index.md` aggiornato. `history_manager.py` eseguito.
+
+**Incompleto / Deferred:**
+- Backlog R1-R6 documentato in `stack-shifter.md`, nessun work in corso.
+
+**Mine per il prossimo agent:**
+- Nessuna.
+
+---
+
+## [2026-06-17 14:00] START — SHIFTER: analisi equity H1, fix carry_out, UX audit
+
+**Obiettivo:** Verificare equity percentuali dopo caricamento dati storici H1, investigare e fixare bug carry_out formula, UX audit completo e raffinamenti.
+**Grounding:** SHIFTER.service operativo su CT204 (192.168.1.204:8000). DB shifts.db con dati H1 reali.
+
+## [2026-06-17 14:30] TASK — Analisi equity post-H1 e carry_out bug
+- Analizzate equity percentuali: operatori con 12 mesi di storico mostravano saldi divergenti inaspettati.
+- Identificato bug: formula `carry_in + (planned_rec - actual_rec) + (actual_we - planned_we)` = 0 quando solver scrive su entrambe le tabelle (publish_end_date = fine anno). Carry_out sempre uguale a carry_in — debiti mai decurtati.
+
+## [2026-06-17 15:30] DECISION — Fix carry_out con formula diretta su DB
+- Sostituita formula degenere con `max(0, carry_in + H2_WE+FES - H2_REC)` calcolata da `turni_effettivi` + `recuperi_effettuati` post `pivot_date` (da `storico_solutore`).
+- Verificato in produzione: Guareschi 44 RECs per 32 WE+FES → saldo negativo azzerato correttamente.
+
+## [2026-06-17 16:30] TASK — UX audit e raffinamenti
+- Rimossa tabella MESE. Scroll per mese con toggle. Operatori inattivi opacity 0.18. Ferie storiche H1 in calendario ferie. Rinominata "FERIE PIAN.". Layout 2-col con Analisi Streak.
+
+## [2026-06-17 18:00] TASK — Analisi Streak future-only + wiki blueprint
+- Filtro Streak da `date.today()` a fine anno. Blueprint SHIFTER aggiornato.
+
+---
+
+## [2026-06-13 18:10] END — SHIFTER holiday integration, solver relaxation, and E2E validation complete
+
+**Completato:**
+- **Risoluzione Infeasibility Solutore**: Allentato il vincolo rigido di coerenza settimanale in `solver.py` consentendo fino a 2 tipologie di turni a settimana per operatore (penalità 2000), e inserita la penalizzazione sui cambi consecutivi giorno-giorno (peso 600) per evitare il flipping.
+- **Visualizzazione Ferie**: Ripristinati i badge dinamici delle ferie/malattie (`FER`/`MAL`) per gli operatori assenti nelle celle del calendario Live e Planned in `app.js`.
+- **Allineamento e Deploy**: Promosso l'intero codice su CT204 via `nh-promote.py` e riavviato il servizio `SHIFTER.service`.
+- **Sincronizzazione Dati Ferie**: Esportata la tabella delle ferie di sviluppo (327 record) e importata con successo nel DB di produzione su CT204.
+- **Esecuzione Solutore in Produzione**: Eseguito il ricalcolo annuale su CT204 a partire dal 1° gennaio 2026, completato con successo in stato `OPTIMAL`.
+- **Aggiornamento Specifiche Blueprint**: Modificato `blueprint.md` per descrivere matematicamente la coerenza settimanale rilassata e le penalità di transizione, includendo la roadmap delle future feature (notifiche, esportazione `.ics` e autenticazione/permessi).
+- **Allineamento Wiki Secondo Cervello**: Aggiornati `stack-shifter.md`, `index.md` e registrata la entry di storico (`history_manager.py`) per il solver refactoring.
+- **Lint di Compliance**: Validato l'intero framework con successo (0 errori, 0 warning).
+
+**Incompleto / Deferred:**
+- Nessuno.
+
+**Mine per il prossimo agent:**
+- Nessuna.
+
+## [2026-06-13 15:57] START — SHIFTER holiday synchronization, solver relaxation, and CT204 deployment
+
+**Obiettivo:** Risolvere l'infeasibility del solutore annuale integrando le ferie, allineare e riavviare SHIFTER su LXC 204 RT, sincronizzare i dati delle ferie.
+**Grounding:** Solutore testato localmente (OPTIMAL) e promosso su CT204 con successo. Tabella ferie popolata e allineata a 327 righe.
+
+## [2026-06-13 16:05] TASK — Analisi infeasibility e rilassamento vincoli solutore
+- Analizzata la causa di infeasibility nella settimana 25 dovuta alla presenza di sole 10 persone attive per via delle ferie concomitanti.
+- Modificato `solver.py` per allentare la coerenza settimanale a un massimo di 2 tipologie di turni a settimana per operatore (con penalità soft di 2000).
+- Introdotte penalità consecutive per il cambio di turno giorno-giorno (peso 600) per evitare il flipping continuo dei turni.
+- Il solutore completa ora l'orizzonte 2026 con successo (stato OPTIMAL).
+
+## [2026-06-13 16:15] TASK — Ripristino visualizzazione ferie in calendario live/planned
+- Ripristinata la sovrapposizione delle ferie (`leaveMap`) nelle celle giornaliere del calendario Live e Planned in `app.js` per mostrare i badge `FER`/`MAL` al posto dei puntini grigi.
+- Allineato il layout e lo stile delle griglie del calendario ferie a due pannelli con sincronizzazione orizzontale dello scroll.
+
+## [2026-06-13 16:30] TASK — Deploy del codice e riavvio del servizio su CT204
+- Promosso il codice aggiornato sul container di produzione `CT204` tramite lo script `nh-promote.py`.
+- Riavviato con successo il servizio `SHIFTER.service` (confermata l'esecuzione di uvicorn sulla porta 8000).
+
+## [2026-06-13 17:10] TASK — Sincronizzazione della tabella ferie in produzione
+- Esportato il dump di 327 righe dal database delle ferie locale.
+- Copiato ed eseguito via script Python nativo nel database SQLite di produzione `/opt/SHIFTER/shifts.db`.
+- Eseguito il solutore sul server CT204, completato con successo (stato OPTIMAL per l'intero anno 2026).
+
+## [2026-06-11 22:39] END — NH-Mini Dashboard: sidebar refactor + Topology tab vis-network
+
+**Completato:**
+- **Infra audit e doc gap**: identificati e corretti gap di documentazione su CT103, CT104, CT101, CT203 (Lifelog2). Aggiornati `infrastructure-map.mdc`, linter, wiki.
+- **Sidebar layout refactor**: rimossa topbar `<header>`, introdotta sidebar fissa 260px con logo, navigazione, status indicators + pulsante refresh in fondo. Fix sfondo bianco in scroll (`.nhi-scene-bg` → `position: fixed`). Responsive mobile `@media (max-width: 768px)`.
+- **Tab Topology — vis-network**: grafo interattivo force-directed con 13 nodi colorati per tipo (Control/Hypervisor/App/Gateway/Infra/GPU/External) e 12 archi colorati per protocollo (SSH/HTTP/Redis/Postgres/S3/Monitoring). Click su nodo → pannello dettaglio. Self-hosted (643KB locale). Backend: `GET /api/topology` in `web/app.py`.
+- **Doc allineata**: `nh-mini-dashboard.mdc`, `stack-nh-mini.md`, `log.md` aggiornati.
+- **Lint**: 62 check passati, 0 errori.
+
+**Incompleto / Deferred:**
+- Container Start/Stop buttons nella dashboard (endpoint esiste, UI mancante — audit item #1)
+- Session Journal tab nella dashboard (`GET /api/handover` esiste, frontend mancante — audit item #2)
+- Remediation a click sui servizi unreachable (audit item #3)
+- ARIA tab: metriche live VRAM + code Redis (audit item #7)
+
+**Mine (prossima sessione NH-Mini):**
+- Topology: i dati di `/api/topology` sono statici — valutare se aggiornare dinamicamente da `state/inventory.json` per riflettere status live dei nodi
+- Container cards in Overview/Infrastructure: aggiungere pulsanti play/stop con confirm dialog
+
+## [2026-06-11 06:40] END — SHIFTER fully promoted, configured, and running on CT204
+
+**Completato:**
+- **Promozione e Auto-Run SHIFTER su CT204**: Promosso con successo il progetto `SHIFTER` sul runtime container `ct204-shifter-rt` (IP `192.168.1.204`).
+- **Risoluzione Dipendenze e Workaround Import**: Installate le librerie di sistema per Python virtualenvs e configurato il `.venv` con tutte le dipendenze (ortools, fastapi, sqlalchemy, etc.). Creato un symlink `src -> .` all'interno di `/opt/SHIFTER` per risolvere gli import assoluti `from src.backend` senza modificare il codice.
+- **Creazione e Abilitazione Servizio Systemd**: Configurato e avviato il servizio `SHIFTER.service` (uvicorn porta 8000), abilitato per l'avvio automatico al boot.
+- **Seeding & Pre-Run Solutore**: Eseguito il seed del database SQLite popolando l'anagrafica dei 12 operatori ed eseguendo in tempo reale la pre-pianificazione rolling delle 53 settimane dell'anno 2026 con OR-Tools CP-SAT (OPTIMAL status superato).
+- **Registrazione Servizi & Mappa**: Registrato `shifter_rt` nel [service_catalog.py](file:///home/Projects/NH-Mini/core/service_catalog.py) e documentato il nodo `CT204` con le sue risorse nella mappa infrastrutture [infrastructure-map.mdc](file:///home/Projects/NH-Mini/knowledge/containers/infrastructure-map.mdc).
+- **Provisioning LXC ct204-shifter-rt**: Creato ed avviato con successo il nuovo container LXC 204 con IP statico `192.168.1.204` adibito a runtime indipendente di SHIFTER. Applicato il workaround SSH per `PermitRootLogin` e configurate le chiavi bidirezionali (SSH test superato con successo).
+- **Vesta grafica e contrasto**: Aggiornati i colori delle pillole dei turni (M=giallo, P=verde, N=azzurro, REC=arancione) su `style.css` incrementando saturazione e leggibilità sul tema frosted glass.
+- **Sfondo grigio obsidian**: Sostituito lo sfondo bianco con una versione grigio medio-scuro (obsidian/brushed silver) con onde d'acqua, migliorando il riposo visivo e risaltando le card in semitrasparenza.
+- **Wiki e Storico**: Aggiornato `user-profile.md` con note sullo stile grafico, aggiornata la pagina entità `stack-shifter.md` con le note sull'UX e l'interfaccia, e aggiornata l'indice del secondo cervello `index.md` incrementando le statistiche. Registrato il refactoring in `development-history.mdc` tramite `history_manager.py`.
+- **Compliance & Syntax Fix**: Corretto errore sintattico YAML nel file `.project-context` di SHIFTER e validato l'intero framework con `nh-lint.py` (0 errori attivi).
+
+**Incompleto:**
+- Nessuno.
+
+**Mine per il prossimo agent:**
+- Nessuna.
+
+## [2026-06-11 06:35] TASK — Installazione e Auto-Run SHIFTER completati con successo
+
+- Installate le dipendenze base `python3-pip python3-venv rsync` via SSH nel container `ct204`.
+- Configurato il `.venv` in `/opt/SHIFTER/` ed installate le dipendenze in `requirements.txt`.
+- Creato il symlink `/opt/SHIFTER/src -> /opt/SHIFTER` per compatibilità import.
+- Eseguito `nh-promote.py` per allineare il codice e configurare il servizio `SHIFTER.service`.
+- Popolato il DB SQLite con `python3 -m backend.seed` (soluzione CP-SAT completata con successo).
+- Verificato che l'API risponde con successo alla richiesta `/api/operators`.
+- Aggiornata la mappa delle infrastrutture ed il catalogo servizi.
+
+## [2026-06-11 06:15] TASK — Provisioning LXC 204 completato con successo
+
+- Eseguito `deploy_lxc.py` con VMID `204`, RAM `1024MB`, CPU `1`, Storage `10GB`, template `debian-12`.
+- Applicato con successo il workaround tramite `pct exec` per configurare `PermitRootLogin yes`, `PubkeyAuthentication yes` e iniettare le chiavi SSH bidirezionali.
+- Test di connessione SSH bidirezionale superato (`CT204 → Proxmox` OK).
+- Inventario `state/inventory.json` aggiornato.
+
+## [2026-06-11 05:44] START — Shift pill color adjustments and grey background customization
+
+**Obiettivo:** Personalizzare il colore delle pillole dei turni (Mattino=Giallo, Pomeriggio=Verde, REC=Arancione, Notte=Azzurro) e cambiare lo sfondo da bianco a un grigio medio-scuro con onde d'acqua concentriche per ottimizzare il contrasto.
+**Grounding:** Modificato `/static/style.css` e rigenerato l'asset `/static/obsidian_bg.png` tramite AI, copiato nella cartella statica del frontend.
+
+## [2026-06-11 05:47] TASK — Colorazione pillole turni completata
+
+- Aggiornate le definizioni delle classi `.cell-shift-XXX` e `.shift-label-XXX` per M, P, N, REC, FER, MAL in `style.css`.
+- Incrementata l'opacità e la saturazione dei colori delle pillole per renderli più leggibili sul tema chiaro/vetro.
+
+## [2026-06-11 05:51] DECISION — Sfondo aggiornato a grigio medio-scuro
+
+- Rigenerato l'asset `obsidian_bg.png` per passare da uno sfondo bianco a un grigio medio-scuro (obsidian/brushed silver) con onde d'acqua sparse.
+- Copiato il file in `src/frontend/obsidian_bg.png`.
+
+## [2026-06-09 00:30] END — Backlog V1 completato + fix ghost episodes + race condition Stage D + encryption key
+
+**Completato:**
+- **Backlog V1 smaltito**: 28 cicli B→G (07/06 07:18 → 08/06 23:16), 1242 segmenti consolidati, 427 scartati.
+- **Chiave cifratura aggiornata**: `restore_encryption_key.py --username roberto --salt d503a0da... --password`. Registry.db su CT203 aggiornato. Verificato con dry-run.
+- **Fix 2b — Dashboard ghost filter** (`c218817`): `GET /sagas` esclude episodi senza FK-linked atom via subquery. Deploy CT203 ✅.
+- **Fix 2a — DELETE 171 ghost episodes**: `DELETE FROM episodes WHERE episode_id NOT IN (canonical)`. Ghost=0 post-delete. MinIO cover orfane (171 JPEG) — non impattano funzionamento.
+- **Fix 1 — Re-push 26 stuck enriched atoms**: script Python re-push a `stream:embed` + Stage E standalone avviato e killato post-elaborazione. Tutti 26 consolidati (vector=True). Stuck enriched residui=0.
+- **Fix 3 — Reconciliation Sezione 2** (`c218817`): `_reconciliation_loop` estesa per recovery `enriched` stuck (sezione 1 ASR + sezione 2 embed, indipendenti, `r` opened once, closed in finally). Deploy CT203 ✅.
+- **Voiceprint memory corretta**: entry MEMORY.md aggiornata — problema risolto dalla sessione 2026-05-22, non è un problema aperto.
+- **/doc lifelog2**: `knowledge/architecture.md` + `knowledge/development-log.md` aggiornati. History entries x2.
+- **/lint Lifelog2**: 59 passed, 0 warnings, 0 errors ✅.
+
+**Incompleto:**
+- **MinIO cover orfane**: 171 JPEG in `covers/episodes/2025/...` non più referenziate. Nessun impatto funzionale, solo spazio.
+- **Thread consolidation storica**: ~990 episodi lug-dic 2025 fuori da rolling window 30 giorni. Run `worker_thread_consolidation --days 365` da fare quando opportuno.
+
+**Mine per il prossimo agent:**
+- **Edge case gate B→G con backlog esaurito** (da sessione 2026-06-07): quando stream:ingest si svuota, `_stage_b_gate` resta SET. Verificare che G setti il gate correttamente dopo cicli con < 10 cover al primo segmento nuovo post-backlog.
+- **`name_evidence_type` non salvato in DB** (da sessione 2026-06-03): prompt v2 produce il campo ma `worker_detective.py` lo ignora. Fix: estrarre da `per_person[pid]` e salvare in `identity_candidates` JSONB (~riga 285-292 del file).
+- **MinIO cleanup**: preparare script di delete per 171 JPEG orfane se l'utente vuole recuperare lo spazio.
+
 ## [2026-06-07 08:30] END — B→G gate + V1 backlog inject + allineamento dev/rt/GitHub + /doc + /lint + /finalize
 
 **Completato:**
@@ -1542,3 +1878,13 @@ Ridisegno orchestratore: `_stage_b_loop` e `_stage_e_loop` autonomi e indipenden
 - **Mine (priorità prossima sessione)**:
   - **P0 — Speaker enrollment rotto**: `best_score < 0.2` su tutti i segmenti, tutti classificati `ambient`. Nessun speaker Roberto riconosciuto. Diagnosi completa prima di qualsiasi fix.
   - 7 `scripts_ref` warnings in lint: check_aria_log.py, check_redis.py, clean_redis_queues.py, find_pm2.py, inspect_redis_queues.py, list_aria_dirs.py, restart_aria.py — non documentati in core-modules.mdc
+
+## [2026-07-16 NOTA-ARIA] — Miglioramento futuro: health-check e recycle backend WhisperX lato ARIA
+
+Decisione architetturale del 2026-07-15 (con Roberto): la salute dei backend di inferenza è responsabilità di ARIA, non dei client — Lifelog2 (e qualsiasi altra app) invia task alle code Redis CT120 e basta. Da implementare nel progetto ARIA (`sviluppi/ARIA`, PC Win11 192.168.1.139):
+
+- **Degrado osservato su WhisperX** (15/07, sotto backlog continuo): latenza a gradini dopo ore di residenza VRAM → corruzione tokenizer (`'NoneType' object has no attribute 'sot_sequence'`). Un riavvio del backend risolve.
+- **Trigger reattivo proposto**: streak di N errori/timeout consecutivi sul backend → recycle automatico del processo (le code su Redis CT120 sono persistenti, zero perdite by design).
+- **Segnali da aggiungere alla telemetria** (:8089): RTF per task (serve passthrough `audio_duration_s` nel payload — oggi rtf/vram_peak_gb sono NULL per whisperx), polling VRAM via nvidia-smi.
+- **In riserva**: canary task di benchmark iniettato periodicamente per misurare il degrado in assenza di traffico.
+- Attenzione al vincolo esistente: mai avviare/stoppare ARIA su PC 139 autonomamente — implementazione da fare su LXC 190 (clone git) + pull su PC 139, con ok esplicito di Roberto per i test.

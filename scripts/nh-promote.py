@@ -46,8 +46,9 @@ def ask(prompt: str, default: str = "") -> str:
 
 
 def ssh(ip: str, cmd: str, check: bool = True) -> subprocess.CompletedProcess:
-    full = f"ssh {SSH_OPTS} root@{ip} '{cmd}'"
-    return subprocess.run(full, shell=True, capture_output=True, text=True, check=check)
+    opts = [opt for opt in SSH_OPTS.split() if opt]
+    args = ["ssh"] + opts + [f"root@{ip}", cmd]
+    return subprocess.run(args, capture_output=True, text=True, check=check)
 
 
 def rsync(src: str, ip: str, dst: str) -> bool:
@@ -58,7 +59,11 @@ def rsync(src: str, ip: str, dst: str) -> bool:
         "__pycache__",
         ".pytest_cache",
         ".git",
-        ".DS_Store"
+        ".DS_Store",
+        "src",
+        "*.db",
+        "*.sqlite",
+        "*.sqlite3"
     ]
     exclude_args = " ".join([f"--exclude='{e}'" for e in excludes])
     cmd = f"rsync -az --delete {exclude_args} -e 'ssh {SSH_OPTS}' {src} root@{ip}:{dst}"

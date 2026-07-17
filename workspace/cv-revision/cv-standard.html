@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curriculum Vitae - Roberto Guareschi (Standard)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f766e;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --border: #cbd5e1;
+            --bg-light: #f8fafc;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-dark);
+            line-height: 1.5;
+            background-color: #f1f5f9;
+            padding: 40px 20px;
+            font-size: 14px;
+        }
+        
+        .cv-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 50px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border-radius: 4px;
+        }
+        
+        header {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .profile-photo {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary);
+            flex-shrink: 0;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.025em;
+            margin-bottom: 5px;
+        }
+        
+        .contact-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        
+        .contact-info span {
+            display: flex;
+            align-items: center;
+        }
+        
+        .contact-info a {
+            color: var(--text-light);
+            text-decoration: none;
+        }
+        
+        .contact-info a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        
+        section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        
+        h2 {
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+        
+        p.profile-text {
+            text-align: justify;
+        }
+        
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .skills-category h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-dark);
+        }
+        
+        .skills-category p {
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        
+        .job-entry {
+            margin-bottom: 18px;
+            page-break-inside: avoid;
+        }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
+        
+        .job-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .job-company {
+            font-style: italic;
+            color: var(--primary);
+        }
+        
+        .job-dates {
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        
+        .job-desc {
+            list-style-type: square;
+            margin-left: 20px;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+        
+        .job-desc li {
+            margin-bottom: 3px;
+        }
+        
+        .sideproject-entry {
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+        
+        .sideproject-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .sideproject-stack {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--primary);
+            margin-bottom: 3px;
+        }
+        
+        .sideproject-desc {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+        
+        .languages-list {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .languages-list span {
+            font-size: 13px;
+        }
+        
+        .privacy-clause {
+            font-size: 10px;
+            color: var(--text-light);
+            margin-top: 30px;
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+            text-align: center;
+        }
+        
+        @media print {
+            @page {
+                size: A4;
+                margin: 15mm 18mm;
+            }
+
+            body {
+                background-color: #fff;
+                padding: 0;
+                font-size: 11.5px;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .cv-container {
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+                border-radius: 0;
+            }
+
+            header {
+                gap: 20px;
+            }
+
+            .profile-photo {
+                width: 80px;
+                height: 80px;
+                border-width: 2px;
+            }
+            
+            section {
+                margin-bottom: 18px;
+            }
+
+            .job-entry {
+                page-break-inside: avoid;
+            }
+
+            .sideproject-entry {
+                page-break-inside: avoid;
+            }
+            
+            .privacy-clause {
+                margin-top: 15px;
+            }
+
+            a {
+                color: var(--text-light) !important;
+                text-decoration: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="cv-container">
+    <header>
+        <img src="profile-photo.jpg" alt="Roberto Guareschi" class="profile-photo">
+        <div class="header-text">
+            <h1>Roberto Guareschi</h1>
+            <div class="contact-info">
+                <span>Parma, Italia</span>
+                <span>Tel: +39 324 5485745</span>
+                <span><a href="mailto:guareschi.roberto@gmail.com">guareschi.roberto@gmail.com</a></span>
+                <span><a href="https://www.linkedin.com/in/roberto-guareschi-06a5594b/">linkedin.com/in/roberto-guareschi-06a5594b</a></span>
+            </div>
+        </div>
+    </header>
+
+    <section>
+        <h2>Profilo Professionale</h2>
+        <p class="profile-text">
+            Specialista Senior in IT Systems & Mainframe Operations con oltre 15 anni di esperienza nella gestione operativa H24/7, monitoraggio e presidio di infrastrutture enterprise mission-critical (Mainframe z/OS e Sistemi Distribuiti) e 10 anni di esperienza pregressa nello sviluppo software e analisi funzionale in ambito mainframe bancario. Comprovata affidabilità nella gestione di sistemi bancari ad alta criticità, incident management e coordinamento di escalation. Forte orientamento alla diagnostica delle anomalie batch, risoluzione di contese e stalli di risorsa database e coordinamento di progetti di transizione e outsourcing di control room. Il background da analista programmatore fornisce una comprensione approfondita delle logiche applicative, che arricchisce la capacità diagnostica in ambito operativo.
+        </p>
+    </section>
+
+    <section>
+        <h2>Competenze & Skill</h2>
+        <div class="skills-grid">
+            <div class="skills-category">
+                <h3>Competenze Consolidate (Uso corrente / recente)</h3>
+                <p><strong>Mainframe z/OS:</strong> TSO/ISPF, JES2/JES3, SDSF, monitoraggio console MVS, utility z/OS (IDCAMS repro, rename, space adjustment). <br><strong>Schedulazione:</strong> TWS (Tivoli/IWS), Control-M, CA7. <br><strong>Database & Middleware:</strong> Diagnostica contese, lock e deadlock DB2, monitoraggio transazioni CICS, code MQSeries. <br><strong>Sistemi Distribuiti & ITSM:</strong> VMware vSphere, Helix, ServiceNow, BMC Remedy.</p>
+            </div>
+            <div class="skills-category">
+                <h3>Competenze Pregresse (Base logica / Storiche)</h3>
+                <p><strong>Sviluppo Mainframe:</strong> Cobol, CICS (programmazione), SQL-DB2 (sviluppo), Pacbase. <br><strong>Versionamento & Debug:</strong> Endevor, ChangeMan, Xpediter. <br><strong>Linguaggi Storici:</strong> C, C++, C#, Assembler, Java, VBScript (competenze logiche pregresse, non correnti).</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Esperienza Professionale</h2>
+        
+        <div class="job-entry">
+            <div class="job-header">
+                <span class="job-title">Tecnico Sistemi Informatici (Consulente Control Room - H24/7)</span>
+                <span class="job-dates">Marzo 2014 – Attuale (con sospensione nel periodo 2016-2018)</span>
+            </div>
+            <div class="job-company">Mauden SpA (c/o Banca Intesa Sanpaolo / Cedacri) — Parma/Milano</div>
+            <ul class="job-desc">
+                <li>Garantire l'operatività H24/7 di tutti i sistemi informatici enterprise e dei servizi bancari ad alta criticità.</li>
+                <li>Presidio e monitoraggio proattivo degli ambienti Mainframe z/OS e delle server farm Windows/Linux tramite console di virtualizzazione (VMware vSphere, RDP, CyberArk).</li>
+                <li><strong>Incident Management</strong>: Diagnostica autonoma di primo/secondo livello su anomalie batch (ABEND), ottimizzazione e modifica JCL per ripristino catene batch, rilanci di workflow.</li>
+                <li><strong>Troubleshooting Database & Middleware</strong>: Analisi e risoluzione di contese di risorse database (lock, deadlock, timeout) su ambienti DB2, presidio di transazioni CICS e code MQ.</li>
+                <li><strong>Ticketing & Tools</strong>: Gestione incidenti e problematiche tramite Helix, ServiceNow e BMC Remedy.</li>
+                <li><strong>Schedulazione</strong>: Gestione flussi batch tramite schedulatori TWS, CA7 e Control-M.</li>
+            </ul>
+        </div>
+
+        <div class="job-entry">
+            <div class="job-header">
+                <span class="job-title">Operations Transition Coordinator (Sottocommessa MPS)</span>
+                <span class="job-dates">Gennaio 2016 – Dicembre 2018</span>
+            </div>
+            <div class="job-company">Mauden SpA (distaccato in loco c/o Monte dei Paschi di Siena) — Siena</div>
+            <ul class="job-desc">
+                <li>Inserito nel gruppo di start-up responsabile del subentro e dell'esternalizzazione della Control Room di MPS da gestione interna a esterna (Mauden SpA in loco a Siena).</li>
+                <li>Coordinamento delle attività operative quotidiane di control room e formazione del nuovo personale sui flussi batch.</li>
+                <li>Allineamento e stesura delle procedure operative standard (Runbook e SOP) per armonizzare la gestione storica MPS con il modello operativo Mauden.</li>
+                <li><strong>Ticketing & Schedulazione</strong>: BMC Remedy, TWS, CA7.</li>
+            </ul>
+        </div>
+
+        <div class="job-entry">
+            <div class="job-header">
+                <span class="job-title">Tecnico Sistemi Informatici (Consulente Control Room)</span>
+                <span class="job-dates">Gennaio 2010 – Settembre 2013</span>
+            </div>
+            <div class="job-company">Partners Associates (in consulenza c/o Banca Intesa Sanpaolo / Cedacri) — Parma</div>
+            <ul class="job-desc">
+                <li>Consulenza esterna di gestione operativa e monitoraggio dei sistemi mainframe e distribuiti.</li>
+                <li>Monitoraggio console MVS/JES2, transazioni CICS, database DB2 ed elaborazioni batch.</li>
+                <li>Gestione di segnalazioni ed alert su server farm Windows/Linux virtualizzate (VMware).</li>
+                <li><strong>Ticketing & Schedulazione</strong>: Remedy, TWS, Control-M.</li>
+            </ul>
+        </div>
+
+        <div class="job-entry">
+            <div class="job-header">
+                <span class="job-title">Analista Programmatore Mainframe (Sviluppo & Manutenzione)</span>
+                <span class="job-dates">Gennaio 1999 – Dicembre 2009</span>
+            </div>
+            <div class="job-company">Sinext S.p.A. — Parma</div>
+            <ul class="job-desc">
+                <li>Analisi tecnica, disegno funzionale e sviluppo software in ambito bancario su sistemi centralizzati Mainframe.</li>
+                <li>Manutenzione correttiva ed evolutiva dei moduli software relativi a procedure di core banking (Entrate Patrimoniali, gestione Mutui, coperture Assicurative).</li>
+                <li>Sottomissione JCL di prova, debugging applicativo (Xpediter), gestione pacchetti di rilascio (ChangeMan, Endevor) e allineamento librerie.</li>
+                <li><strong>Stack</strong>: Cobol, CICS (programmazione transazionale), SQL-DB2, Pacbase, JCL, TSO/ISPF, Endevor, ChangeMan, Xpediter.</li>
+            </ul>
+        </div>
+
+        <div class="job-entry">
+            <div class="job-header">
+                <span class="job-title">Tecnico Informatico</span>
+                <span class="job-dates">Luglio 1998 – Giugno 1999</span>
+            </div>
+            <div class="job-company">Itacad srl — Parma</div>
+            <ul class="job-desc">
+                <li>Assistenza tecnica hardware e software. Configurazione, installazione e cablaggio di reti aziendali LAN.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section>
+        <h2>Hobby, Interessi & R&D Personale</h2>
+        <p style="font-size: 13px; color: var(--text-light); margin-bottom: 12px; font-style: italic;">
+            Attività di studio e progettazione architetturale indipendente (sviluppo prototipale assistito da agenti AI).
+        </p>
+        
+        <div class="sideproject-entry">
+            <div class="sideproject-title">DIAS (Cinematic Audiobook Pipeline)</div>
+            <div class="sideproject-stack">Stack: Python, Redis Bus, modelli TTS/ASR locali, Blackwell GPU</div>
+            <div class="sideproject-desc">Progettazione di una pipeline di produzione audio in 10 stadi basata su modelli AI locali (TTS/ASR con biometria vocale) e sound design generativo automatizzato.</div>
+        </div>
+
+        <div class="sideproject-entry">
+            <div class="sideproject-title">SHIFTER (Shift Optimizer)</div>
+            <div class="sideproject-stack">Stack: Python, FastAPI, Google OR-Tools CP-SAT, PostgreSQL</div>
+            <div class="sideproject-desc">Sviluppo di un solutore a vincoli matematici per la pianificazione e l'ottimizzazione automatica dei turni lavorativi H24/7, basato su preferenze dei dipendenti e regole di equità.</div>
+        </div>
+
+        <div class="sideproject-entry">
+            <div class="sideproject-title">Lifelog2 (Personal Memory OS)</div>
+            <div class="sideproject-stack">Stack: Python, FastAPI, SQLite, MinIO S3, LLM locali/cloud</div>
+            <div class="sideproject-desc">Architettura di ingestion e telemetria per l'analisi comportamentale ed il tracciamento dei dati quotidiani basata su sistemi RAG ibridi.</div>
+        </div>
+
+        <div class="sideproject-entry">
+            <div class="sideproject-title">Stratex (Wealth Intelligence System)</div>
+            <div class="sideproject-stack">Stack: Python, FastAPI, SQLite</div>
+            <div class="sideproject-desc">Sistema RAG per il tracciamento, il parsing automatico e la gestione di report finanziari tramite l'integrazione di AI ibrida.</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Istruzione e Formazione</h2>
+        <div class="job-entry">
+            <div class="job-header">
+                <span class="job-title">Tecnico Automazione Industriale</span>
+                <span class="job-dates">1996 – 1997</span>
+            </div>
+            <div class="job-company">FSE IRECOP Emilia Romagna — Parma</div>
+        </div>
+        <div class="job-entry" style="margin-bottom: 0;">
+            <div class="job-header">
+                <span class="job-title">Diploma di Perito Informatico</span>
+                <span class="job-dates">1991 – 1996</span>
+            </div>
+            <div class="job-company">ITIS Leonardo da Vinci — Parma</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Lingue</h2>
+        <div class="languages-list">
+            <span><strong>Italiano</strong>: Madrelingua</span>
+            <span><strong>Inglese</strong>: Livello B2 (Lettura/Ascolto/Orale), B1 (Scrittura)</span>
+            <span><strong>Spagnolo</strong>: Livello Avanzato (C1)</span>
+        </div>
+    </section>
+
+    <div class="privacy-clause">
+        Autorizzo il trattamento dei miei dati personali ai sensi del D.Lgs. 196/2003 e del Regolamento UE 2016/679 (GDPR).
+    </div>
+</div>
+
+</body>
+</html>

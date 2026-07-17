@@ -1,7 +1,7 @@
 # Infrastructure Map — Container Proxmox
 
 type: resource_declaration
-last_updated: 2026-05-13
+last_updated: 2026-06-11
 auto_source: state/inventory.json + discovery.py
 
 ## Infrastruttura Reale (SOT)
@@ -110,6 +110,43 @@ Tutto il resto è legacy/reference — vedi sezione sotto.
 - **progetto**: Lifelog2 (sviluppi/Lifelog2/) — pipeline stage G embedding
 - **nota**: Promosso da legacy a infra reale 2026-05-06. Ollama già installato e running. Voiceprint (192d SpeechBrain) rimane su ARIA PC139.
 
+### CT204 — shifter-rt 🟢 RUNTIME SHIFTER
+- **type**: applicazione (runtime)
+- **engine**: Python FastAPI (Uvicorn)
+- **location**: ct204 (192.168.1.204)
+- **purpose**: SHIFTER Runtime — Dashboard ed API di pianificazione turni ed equità della control room.
+- **isolation_model**: instance
+- **ports**: 8000 (API & Dashboard)
+- **resources**: 1024MB RAM, 1 CPU, 10GB storage
+- **os**: Debian 12 (Standard)
+- **progetto**: SHIFTER (sviluppi/SHIFTER/) — repo GitHub: S3ph1r/SHIFTER
+- **deployed**: 2026-06-11
+- **deploy_workflow**: LXC190 `git push` → CT204 `git reset --hard origin/main`; `WorkingDirectory=/opt/SHIFTER/src`
+- **nota**: symlink 'src' rimosso (ora struttura reale `src/`). DB `shifts.db` in `/opt/SHIFTER/` fuori da git.
+
+### CT103 — observability 🟢 MONITORING SYSTEM
+- **type**: infrastructure (monitoring)
+- **engine**: Grafana + Prometheus
+- **location**: ct103 (192.168.1.103)
+- **purpose**: Dashboard di monitoraggio hardware e stato del host fisico Proxmox.
+- **isolation_model**: instance
+- **ports**: 3000 (Grafana)
+- **resources**: 2048MB RAM, 2 CPU, 10GB storage
+- **os**: Debian 12 (Standard)
+- **deployed**: 2026-04-24
+
+### CT104 — minio-lxc 🟢 OBJECT STORAGE
+- **type**: infrastructure (storage)
+- **engine**: MinIO
+- **location**: ct104 (192.168.1.104)
+- **purpose**: Object Storage S3 centralizzato — bucket `lifelog` per il Parallel Ingest di Lifelog2.
+- **isolation_model**: instance
+- **ports**: 9000 (API), 9001 (Console)
+- **resources**: 2048MB RAM, 1 CPU, 30GB storage
+- **os**: Debian 12 (Standard)
+- **progetto**: Lifelog2
+- **deployed**: 2026-04-24
+
 ---
 
 ## Mappa Dipendenze (Infra Reale)
@@ -144,6 +181,11 @@ CT105 (Postgres Hub)
   → serve `stratex` DB per progetto Stratex
   → serve `neural_home` per persistenza generica NH-Mini
   → serve `lifelog_roberto` per Lifelog2 (pending creation)
+
+CT204 (SHIFTER RT)
+  → Database locale SQLite (shifts.db)
+  → Google OR-Tools per Constraint Programming (CP-SAT Solver)
+  → Serve Dashboard ed API su porta 8000
 ```
 
 ---
@@ -157,13 +199,9 @@ come riferimento finché non servono le risorse. Non vanno considerati nell'arch
 |------|------|--------|------|
 | VM100 | vm-ubuntu | running | Primo sistema Proxmox — obsoleto, origine di tutto |
 | CT101 | chromadb-lxc | running | Vector DB — test iniziale, non integrato nell'architettura attuale |
-| CT103 | observability | running | Grafana + Prometheus — reference, non configurato per infra attuale |
-| CT104 | minio-lxc | running | Object storage S3 — bucket `lifelog` per **Parallel Ingest** (Blind Staging) |
 | CT106 | WarRoom | stopped | Primo progetto pre-NH-Mini — da rifare con filosofia NH-Mini |
-| CT107 | nhi-embeddings | running | ⬆️ Promosso a infra reale 2026-05-06 — vedi sezione sopra |
 | CT160 | NHI-CORE-v1.1 | running | Vecchia versione NH-Mini con dashboard — dashboard da portare su CT190, poi ritirare |
 | CT170 | nhi-backup | stopped | Backup NHI stack — precedente sistema |
-| CT202 | ct202-gateway | running | Internet gateway (nginx + ngrok) |
 
 **Nota per l'agent:** Quando pianifichi nuovi sviluppi, considera SOLO i container della sezione
 "Infrastruttura Reale". I container legacy non devono essere integrati in nuove architetture.

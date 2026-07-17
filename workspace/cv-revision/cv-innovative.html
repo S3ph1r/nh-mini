@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roberto Guareschi - AI Solutions & Systems Architect (Innovative CV)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(20, 30, 55, 0.45);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #00f2fe;
+            --primary-glow: rgba(0, 242, 254, 0.15);
+            --secondary: #4facfe;
+            --accent-green: #00ff87;
+            --accent-orange: #ff9f43;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --blur: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            padding: 60px 20px;
+            position: relative;
+        }
+
+        /* Northern Lights Aurora Background */
+        .aurora-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .aurora-blob {
+            position: absolute;
+            width: 50vw;
+            height: 50vw;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            mix-blend-mode: screen;
+        }
+
+        .blob-1 {
+            background: radial-gradient(circle, var(--primary) 0%, transparent 80%);
+            top: -10%;
+            left: -10%;
+            animation: float 25s infinite alternate;
+        }
+
+        .blob-2 {
+            background: radial-gradient(circle, var(--accent-green) 0%, transparent 80%);
+            bottom: -10%;
+            right: -10%;
+            animation: float 30s infinite alternate-reverse;
+        }
+
+        .blob-3 {
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 80%);
+            top: 40%;
+            left: 50%;
+            animation: float 28s infinite alternate;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(5%, 10%) scale(1.1); }
+            100% { transform: translate(-5%, -5%) scale(0.95); }
+        }
+
+        .cv-wrapper {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        /* Frosted Glass Card Base */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(var(--blur));
+            -webkit-backdrop-filter: blur(var(--blur));
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 242, 254, 0.25);
+            box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.08);
+        }
+
+        /* Header Card styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 30px;
+            margin-bottom: 30px;
+        }
+
+        .header-main h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 30%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .header-main .title-badge {
+            display: inline-block;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .contact-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .contact-details a {
+            color: var(--text-main);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .contact-details a:hover {
+            color: var(--primary);
+        }
+
+        h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::after {
+            content: '';
+            flex-grow: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+        }
+
+        p.intro-text {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        /* Interactive Tabs */
+        .tab-navigation {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -11px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Timeline / Job Entry */
+        .timeline {
+            position: relative;
+            padding-left: 20px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 35px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--bg-color);
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        .timeline-item.special-project::before {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 8px var(--accent-orange);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .timeline-role {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .timeline-dates {
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .timeline-item.special-project .timeline-dates {
+            color: var(--accent-orange);
+        }
+
+        .timeline-company {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .timeline-desc {
+            list-style-type: none;
+            padding-left: 0;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .timeline-desc li {
+            position: relative;
+            padding-left: 15px;
+            margin-bottom: 6px;
+        }
+
+        .timeline-desc li::before {
+            content: '▫';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+
+        .timeline-item.special-project .timeline-desc li::before {
+            color: var(--accent-orange);
+        }
+
+        /* Project Cards Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .project-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(0, 242, 254, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .project-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .project-badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .stack-badge {
+            font-size: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .stack-badge.highlight {
+            background: rgba(79, 172, 254, 0.1);
+            border-color: rgba(79, 172, 254, 0.3);
+            color: var(--secondary);
+        }
+
+        .project-card:hover .stack-badge.highlight {
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 5px rgba(0, 242, 254, 0.1);
+        }
+
+        .project-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* Skills grid */
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .skills-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .skills-col h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .skill-tag {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .skill-tag:hover {
+            background: rgba(0, 242, 254, 0.08);
+            border-color: rgba(0, 242, 254, 0.3);
+            color: var(--primary);
+        }
+
+        .languages-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .language-item {
+            font-size: 14px;
+        }
+
+        .language-item strong {
+            color: #fff;
+        }
+
+        .privacy-info {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Stampa PDF layout */
+        @media print {
+            body {
+                background: #fff;
+                color: #000;
+                padding: 0;
+                font-size: 11px;
+            }
+
+            .aurora-bg {
+                display: none;
+            }
+
+            .glass-card {
+                background: none;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                border: none;
+                padding: 0;
+                margin-bottom: 20px;
+                box-shadow: none;
+            }
+
+            .glass-card:hover {
+                box-shadow: none;
+            }
+
+            .header-main h1 {
+                background: none;
+                -webkit-text-fill-color: initial;
+                color: #000;
+                font-size: 26px;
+            }
+
+            .header-main .title-badge {
+                border-color: #000;
+                color: #000;
+                background: none;
+            }
+
+            .contact-details {
+                color: #555;
+            }
+
+            h2 {
+                color: #000;
+                font-size: 15px;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 3px;
+            }
+
+            h2::after {
+                display: none;
+            }
+
+            p.intro-text, .project-desc, .timeline-desc {
+                color: #333;
+            }
+
+            .tab-navigation {
+                display: none;
+            }
+
+            /* In print, show BOTH tab contents sequentially */
+            .tab-content {
+                display: block !important;
+                opacity: 1 !important;
+                transform: none !important;
+                margin-bottom: 20px;
+            }
+
+            .tab-content::before {
+                content: attr(data-print-title);
+                display: block;
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 16px;
+                font-weight: 600;
+                margin-top: 15px;
+                margin-bottom: 10px;
+                color: #000;
+                border-bottom: 1px dashed #ccc;
+                padding-bottom: 2px;
+            }
+
+            .timeline-role {
+                color: #000;
+            }
+
+            .timeline-dates {
+                color: #444;
+            }
+
+            .timeline-item::before {
+                border-color: #000;
+                box-shadow: none;
+                background: #000;
+            }
+
+            .project-card {
+                border: 1px solid #ddd;
+                background: none;
+                page-break-inside: avoid;
+                margin-bottom: 10px;
+                padding: 15px;
+            }
+
+            .project-title {
+                color: #000;
+            }
+
+            .stack-badge {
+                border-color: #ccc;
+                color: #555;
+                background: none;
+            }
+
+            .skill-tag {
+                border: 1px solid #ccc;
+                color: #333;
+                background: none;
+            }
+
+            .skills-col h3 {
+                color: #000;
+            }
+
+            .privacy-info {
+                color: #555;
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="aurora-bg">
+    <div class="aurora-blob blob-1"></div>
+    <div class="aurora-blob blob-2"></div>
+    <div class="aurora-blob blob-3"></div>
+</div>
+
+<div class="cv-wrapper">
+    <!-- Header -->
+    <div class="glass-card">
+        <header>
+            <div class="header-main">
+                <h1>Roberto Guareschi</h1>
+                <span class="title-badge">Senior IT Systems & Mainframe Operations Specialist</span>
+            </div>
+            <div class="contact-details">
+                <span>📍 Parma, Italia</span>
+                <span>📞 +39 324 5485745</span>
+                <span>✉️ <a href="mailto:guareschi.roberto@gmail.com">guareschi.roberto@gmail.com</a></span>
+                <span>🔗 <a href="https://www.linkedin.com/in/roberto-guareschi-06a5594b/">linkedin.com/in/roberto-guareschi-06a5594b</a></span>
+            </div>
+        </header>
+
+        <h2>Profilo</h2>
+        <p class="intro-text">
+            Specialista Senior in IT Systems & Mainframe Operations con oltre 15 anni di esperienza nella gestione operativa H24/7, monitoraggio e presidio di infrastrutture enterprise mission-critical (Mainframe z/OS e Sistemi Distribuiti) e 10 anni di esperienza pregressa nello sviluppo software e analisi funzionale in ambito mainframe bancario. Comprovata affidabilità nella gestione di sistemi bancari ad alta criticità, incident management e coordinamento di escalation. Forte orientamento alla diagnostica delle anomalie batch, risoluzione di contese e stalli di risorsa database e coordinamento di progetti di transizione e outsourcing di control room. Il background da analista programmatore fornisce una comprensione approfondita delle logiche applicative, che arricchisce la capacità diagnostica in ambito operativo.
+        </p>
+    </div>
+
+    <!-- Interactive Tabs section -->
+    <div class="glass-card">
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab(event, 'core-business')">Core Business (Operations)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'sideprojects')">Interessi & R&D Personale (Hobby)</button>
+        </div>
+
+        <!-- TAB 1: Core Business -->
+        <div id="core-business" class="tab-content active" data-print-title="Esperienza Professionale (Core Business)">
+            <div class="timeline">
+                
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-role">Tecnico Sistemi Informatici (Consulente Control Room - H24/7)</span>
+                        <span class="timeline-dates">Marzo 2014 – Attuale (con sospensione 2016-2018)</span>
+                    </div>
+                    <div class="timeline-company">Mauden SpA (c/o Banca Intesa Sanpaolo / Cedacri) — Parma/Milano</div>
+                    <ul class="timeline-desc">
+                        <li>Garantire l'operatività H24/7 di tutti i sistemi informatici enterprise e dei servizi bancari ad alta criticità.</li>
+                        <li>Presidio e monitoraggio proattivo degli ambienti Mainframe z/OS e delle server farm Windows/Linux tramite console di virtualizzazione (VMware vSphere, RDP, CyberArk).</li>
+                        <li><strong>Incident Management</strong>: Diagnostica autonoma di primo/secondo livello su anomalie batch (ABEND), ottimizzazione e modifica JCL per ripristino catene batch, rilanci di workflow.</li>
+                        <li><strong>Troubleshooting Database & Middleware</strong>: Analisi e risoluzione di contese di risorse database (lock, deadlock, timeout) su ambienti DB2, presidio di transazioni CICS e code MQ.</li>
+                        <li><strong>Ticketing & Tools</strong>: Gestione incidenti e problematiche tramite Helix, ServiceNow e BMC Remedy.</li>
+                        <li><strong>Schedulazione</strong>: Gestione flussi batch tramite schedulatori TWS, CA7 e Control-M.</li>
+                    </ul>
+                </div>
+
+                <div class="timeline-item special-project">
+                    <div class="timeline-header">
+                        <span class="timeline-role">Operations Transition Coordinator (Sottocommessa MPS)</span>
+                        <span class="timeline-dates">Gennaio 2016 – Dicembre 2018</span>
+                    </div>
+                    <div class="timeline-company">Mauden SpA (distaccato in loco c/o Monte dei Paschi di Siena) — Siena</div>
+                    <ul class="timeline-desc">
+                        <li>Inserito nel gruppo di start-up responsabile del subentro e dell'esternalizzazione della Control Room di MPS da gestione interna a esterna (Mauden SpA in loco a Siena).</li>
+                        <li>Coordinamento delle attività operative quotidiane di control room e formazione del nuovo personale sui flussi batch.</li>
+                        <li>Allineamento e stesura delle procedure operative standard (Runbook e SOP) per armonizzare la gestione storica MPS con il modello operativo Mauden.</li>
+                        <li><strong>Ticketing & Schedulazione</strong>: BMC Remedy, TWS, CA7.</li>
+                    </ul>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-role">Tecnico Sistemi Informatici (Consulente Control Room)</span>
+                        <span class="timeline-dates">Gennaio 2010 – Settembre 2013</span>
+                    </div>
+                    <div class="timeline-company">Partners Associates (in consulenza c/o Banca Intesa Sanpaolo / Cedacri) — Parma</div>
+                    <ul class="timeline-desc">
+                        <li>Consulenza esterna di gestione operativa e monitoraggio dei sistemi mainframe e distribuiti.</li>
+                        <li>Monitoraggio console MVS/JES2, transazioni CICS, database DB2 ed elaborazioni batch.</li>
+                        <li>Gestione di segnalazioni ed alert su server farm Windows/Linux virtualizzate (VMware).</li>
+                        <li><strong>Ticketing & Schedulazione</strong>: Remedy, TWS, Control-M.</li>
+                    </ul>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-role">Analista Programmatore Mainframe (Sviluppo & Manutenzione)</span>
+                        <span class="timeline-dates">Gennaio 1999 – Dicembre 2009</span>
+                    </div>
+                    <div class="timeline-company">Sinext S.p.A. — Parma</div>
+                    <ul class="timeline-desc">
+                        <li>Analisi tecnica, disegno funzionale e sviluppo software in ambito bancario su sistemi centralizzati Mainframe.</li>
+                        <li>Manutenzione correttiva ed evolutiva dei moduli software relativi a procedure di core banking (Entrate Patrimoniali, gestione Mutui, coperture Assicurative).</li>
+                        <li>Sottomissione JCL di prova, debugging applicativo (Xpediter), gestione pacchetti di rilascio (ChangeMan, Endevor) e allineamento librerie.</li>
+                        <li><strong>Stack</strong>: Cobol, CICS (programmazione transazionale), SQL-DB2, Pacbase, JCL, TSO/ISPF, Endevor, ChangeMan, Xpediter.</li>
+                    </ul>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-role">Tecnico Informatico</span>
+                        <span class="timeline-dates">Luglio 1998 – Giugno 1999</span>
+                    </div>
+                    <div class="timeline-company">Itacad srl — Parma</div>
+                    <ul class="timeline-desc">
+                        <li>Assistenza tecnica hardware e software. Configurazione, installazione e cablaggio di reti aziendali LAN.</li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 2: Sideprojects R&D -->
+        <div id="sideprojects" class="tab-content" data-print-title="Interessi & R&D Personale (Hobby)">
+            <p style="font-size: 13px; color: var(--text-light); margin-bottom: 15px; font-style: italic; padding: 0 10px;">
+                Attività di studio e progettazione architetturale indipendente (sviluppo prototipale assistito da agenti AI).
+            </p>
+            <div class="projects-grid">
+                
+                <div class="project-card">
+                    <div class="project-title">DIAS (Cinematic Audiobook Pipeline)</div>
+                    <div class="project-badge-container">
+                        <span class="stack-badge highlight">Python</span>
+                        <span class="stack-badge">Redis Bus</span>
+                        <span class="stack-badge">Modelli TTS/ASR locali</span>
+                        <span class="stack-badge">Blackwell GPU</span>
+                    </div>
+                    <div class="project-desc">
+                        Progettazione di una pipeline di produzione audio in 10 stadi basata su modelli AI locali (TTS/ASR con biometria vocale) e sound design generativo automatizzato.
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-title">SHIFTER (Shift Optimizer)</div>
+                    <div class="project-badge-container">
+                        <span class="stack-badge highlight">Python</span>
+                        <span class="stack-badge">FastAPI</span>
+                        <span class="stack-badge highlight">Google OR-Tools CP-SAT</span>
+                        <span class="stack-badge">PostgreSQL</span>
+                    </div>
+                    <div class="project-desc">
+                        Sviluppo di un solutore a vincoli matematici per la pianificazione e l'ottimizzazione automatica dei turni lavorativi H24/7, basato su preferenze dei dipendenti e regole di equità.
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-title">Lifelog2 (Personal Memory OS)</div>
+                    <div class="project-badge-container">
+                        <span class="stack-badge highlight">Python</span>
+                        <span class="stack-badge">FastAPI</span>
+                        <span class="stack-badge">SQLite</span>
+                        <span class="stack-badge">MinIO S3</span>
+                        <span class="stack-badge highlight">LLM locali/cloud</span>
+                    </div>
+                    <div class="project-desc">
+                        Architettura di ingestion e telemetria per l'analisi comportamentale ed il tracciamento dei dati quotidiani basata su sistemi RAG ibridi.
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-title">Stratex (Wealth Intelligence System)</div>
+                    <div class="project-badge-container">
+                        <span class="stack-badge highlight">Python</span>
+                        <span class="stack-badge">FastAPI</span>
+                        <span class="stack-badge">SQLite</span>
+                    </div>
+                    <div class="project-desc">
+                        Sistema RAG per il tracciamento, il parsing automatico e la gestione di report finanziari tramite l'integrazione di AI ibrida.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Skills and Languages -->
+    <div class="glass-card">
+        <h2>Competenze & Lingue</h2>
+        <div class="skills-container">
+            <div class="skills-col">
+                <h3>Consolidate (Uso Corrente)</h3>
+                <div class="skills-list">
+                    <span class="skill-tag">z/OS Mainframe</span>
+                    <span class="skill-tag">JCL / JES2</span>
+                    <span class="skill-tag">TSO/ISPF / SDSF</span>
+                    <span class="skill-tag">TWS Scheduler</span>
+                    <span class="skill-tag">CA7 / Control-M</span>
+                    <span class="skill-tag">DB2 Lock Diagnostics</span>
+                    <span class="skill-tag">CICS (Monitoraggio)</span>
+                    <span class="skill-tag">MQSeries Monitoring</span>
+                    <span class="skill-tag">VMware vSphere</span>
+                    <span class="skill-tag">Helix / ServiceNow</span>
+                    <span class="skill-tag">BMC Remedy</span>
+                </div>
+            </div>
+            <div class="skills-col">
+                <h3>Pregresse (Base Logica)</h3>
+                <div class="skills-list">
+                    <span class="skill-tag">Cobol Development</span>
+                    <span class="skill-tag">CICS Programming</span>
+                    <span class="skill-tag">SQL-DB2 Sviluppo</span>
+                    <span class="skill-tag">Pacbase</span>
+                    <span class="skill-tag">Endevor</span>
+                    <span class="skill-tag">ChangeMan</span>
+                    <span class="skill-tag">Xpediter Debugger</span>
+                    <span class="skill-tag">C / C++ (pregresso)</span>
+                    <span class="skill-tag">C# (pregresso)</span>
+                    <span class="skill-tag">Assembler / Java</span>
+                    <span class="skill-tag">VBScript</span>
+                </div>
+            </div>
+            <div class="skills-col">
+                <h3>R&D / Studio Personale</h3>
+                <div class="skills-list">
+                    <span class="skill-tag">AI Agent Orchestration</span>
+                    <span class="skill-tag">Data Ingestion Pipelines</span>
+                    <span class="skill-tag">LLM Integration</span>
+                    <span class="skill-tag">RAG Architectures</span>
+                    <span class="skill-tag">CP-SAT (OR-Tools)</span>
+                    <span class="skill-tag">Redis Universal Bus</span>
+                    <span class="skill-tag">FastAPI</span>
+                    <span class="skill-tag">PostgreSQL/SQLite</span>
+                    <span class="skill-tag">SOPS/Age Credentials</span>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; margin-top: 30px; margin-bottom: 12px; color: var(--primary);">Lingue</h3>
+        <div class="languages-container">
+            <div class="language-item">
+                <strong>Italiano</strong>: Madrelingua
+            </div>
+            <div class="language-item">
+                <strong>Inglese</strong>: Livello B2 (Lettura/Ascolto/Orale), B1 (Scrittura)
+            </div>
+            <div class="language-item">
+                <strong>Spagnolo</strong>: Livello Avanzato (C1)
+            </div>
+        </div>
+    </div>
+
+    <!-- Education -->
+    <div class="glass-card">
+        <h2>Istruzione</h2>
+        <div class="timeline">
+            <div class="timeline-item" style="margin-bottom: 20px;">
+                <div class="timeline-header">
+                    <span class="timeline-role">Tecnico Automazione Industriale</span>
+                    <span class="timeline-dates">1996 – 1997</span>
+                </div>
+                <div class="timeline-company">FSE IRECOP Emilia Romagna — Parma</div>
+            </div>
+            <div class="timeline-item" style="margin-bottom: 0;">
+                <div class="timeline-header">
+                    <span class="timeline-role">Diploma di Perito Informatico</span>
+                    <span class="timeline-dates">1991 – 1996</span>
+                </div>
+                <div class="timeline-company">ITIS Leonardo da Vinci — Parma</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="privacy-info">
+        Autorizzo il trattamento dei miei dati personali ai sensi del D.Lgs. 196/2003 e del Regolamento UE 2016/679 (GDPR).
+    </div>
+</div>
+
+<script>
+    function switchTab(evt, tabName) {
+        // Get all elements with class="tab-content" and hide them
+        var tabContent = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContent.length; i++) {
+            tabContent[i].classList.remove("active");
+        }
+
+        // Get all elements with class="tab-btn" and remove the class "active"
+        var tabBtns = document.getElementsByClassName("tab-btn");
+        for (var i = 0; i < tabBtns.length; i++) {
+            tabBtns[i].classList.remove("active");
+        }
+
+        // Show the current tab, and add an "active" class to the button that opened the tab
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+</script>
+</body>
+</html>

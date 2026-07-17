@@ -36,6 +36,31 @@ def _load_inventory() -> list[dict]:
     return data.get("containers", [])
 
 
+def get_real_vmids() -> set[int]:
+    """Scansiona infrastructure-map.mdc per estrarre dinamicamente i VMID reali."""
+    vmids = {120, 190, 201, 202}  # Fallback standard
+    map_path = PROJECT_ROOT / "knowledge" / "containers" / "infrastructure-map.mdc"
+    if not map_path.exists():
+        return vmids
+    try:
+        content = map_path.read_text(encoding="utf-8")
+        parsed_vmids = set()
+        for line in content.splitlines():
+            if "## Container Legacy" in line:
+                break
+            if line.startswith("### CT"):
+                parts = line.split()
+                if len(parts) > 1:
+                    vmid_str = parts[1].replace("CT", "")
+                    if vmid_str.isdigit():
+                        parsed_vmids.add(int(vmid_str))
+        if parsed_vmids:
+            return parsed_vmids
+    except Exception:
+        pass
+    return vmids
+
+
 STATIC_CATALOG: dict[str, dict] = {
     "redis": {
         "name": "Redis Universal State Bus",
@@ -54,11 +79,12 @@ STATIC_CATALOG: dict[str, dict] = {
         "container": "CT202 (ct202-gateway)",
         "host": "192.168.1.202",
         "port": 80,
-        "purpose": "Unico punto di ingresso HTTP dall'esterno via ngrok + nginx reverse proxy.",
-        "pattern": "nginx routing per path → target container. ngrok tunnel permanente.",
-        "notes": "Aggiungere route in nginx.conf per esporre nuove app. 256MB RAM.",
+        "purpose": "Unico punto di ingresso HTTP dall'esterno. Due tunnel attivi: ngrok (dominio statico) + Cloudflare Quick Tunnel (URL effimera). Auth via Authelia per route protette.",
+        "pattern": "nginx routing per path → target container. ngrok statico + cloudflared-quick. Authelia SSO su /shifter/ e /stratex/.",
+        "notes": "Route attive: /dias/ /lifelog/ /lifelog-ui/ /shifter/ (auth) /stratex/ (auth) /authelia /gateway/ (LAN). URL Cloudflare effimera — cambia al riavvio. Monitorata da cf-url-watcher.timer su LXC 190.",
         "ngrok_url": "obliging-fitting-cheetah.ngrok-free.app",
-        "diagnostic": "ssh root@192.168.1.202 'journalctl -u nginx -n 15 --no-pager'",
+        "cloudflare_url_file": "state/cf-url-last.txt",
+        "diagnostic": "ssh root@192.168.1.202 'journalctl -u nginx -u cloudflared-quick -n 15 --no-pager'",
         "remediation": "ssh root@192.168.1.202 'systemctl restart nginx'",
     },
     "aria_node": {
@@ -139,6 +165,17 @@ STATIC_CATALOG: dict[str, dict] = {
         "notes": "Target runtime per Lifelog2. SOT per la memoria dell'utente.",
         "diagnostic": "ssh root@192.168.1.203 'journalctl -u lifelog2-api -n 15 --no-pager'",
         "remediation": "ssh root@192.168.1.203 'systemctl restart lifelog2-api'",
+    },
+    "shifter_rt": {
+        "name": "SHIFTER Runtime API",
+        "container": "CT204 (shifter-rt)",
+        "host": "192.168.1.204",
+        "port": 8000,
+        "purpose": "ControlRoom 24/7 Shift Manager — Dashboard e API di pianificazione turni.",
+        "pattern": "FastAPI (8000) + SQLite (shifts.db) + OR-Tools (CP-SAT)",
+        "notes": "Target runtime per la pianificazione automatica ed equità turni. 1024MB RAM.",
+        "diagnostic": "ssh root@192.168.1.204 'journalctl -u SHIFTER -n 15 --no-pager'",
+        "remediation": "ssh root@192.168.1.204 'systemctl restart SHIFTER'",
     },
     "sops_age": {
         "name": "SOPS+Age Credential Manager",

@@ -1,6 +1,6 @@
 #!/bin/bash
 # nh-discovery.sh — wrapper per il daemon di discovery Proxmox
-# Eseguito da systemd ogni ora per aggiornare state/inventory.json
+# Eseguito da systemd ogni 15 minuti per aggiornare state/inventory.json
 # e generare il contesto AI aggiornato.
 
 set -e
@@ -26,14 +26,16 @@ fi
 # 2. Genera state/system-context.md — snapshot leggibile dall'agent
 python3 - << 'EOF' >> "$LOG_FILE" 2>&1
 import json
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
 root = Path("/home/Projects/NH-Mini")
-inventory = json.loads((root / "state/inventory.json").read_text())
+sys.path.insert(0, str(root))
+from core.service_catalog import get_real_vmids
 
-real_vmids = {190, 120, 201, 202}
-real_names = {"NH-Mini", "dias-brain", "ct201-dias-rt", "ct202-gateway"}
+inventory = json.loads((root / "state/inventory.json").read_text())
+real_vmids = get_real_vmids()
 
 lines = [
     "# NH-Mini System Context — Auto-generated",
@@ -46,7 +48,7 @@ lines = [
 ]
 
 for c in inventory["containers"]:
-    if c["vmid"] in real_vmids or c["name"] in real_names:
+    if c["vmid"] in real_vmids:
         ip = c.get("ip_address") or "—"
         lines.append(f"| {c['vmid']} | {c['name']} | {c['status']} | {ip} |")
 

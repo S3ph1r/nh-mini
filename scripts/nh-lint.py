@@ -93,7 +93,13 @@ def check_projects(result: LintResult):
 
 def check_infrastructure(result: LintResult):
     """Ogni container SOT (VMID in REAL_VMIDS) deve essere in infrastructure-map.mdc."""
-    REAL_VMIDS = {120, 190, 201, 202}
+    try:
+        sys.path.insert(0, str(ROOT))
+        from core.service_catalog import get_real_vmids
+        REAL_VMIDS = get_real_vmids()
+    except ImportError as e:
+        result.error("infrastructure", f"Impossibile importare service_catalog: {e}")
+        return
     inv_path = ROOT / "state" / "inventory.json"
     if not inv_path.exists():
         result.warning("infrastructure", "state/inventory.json non trovato — esegui nh-discovery.sh")

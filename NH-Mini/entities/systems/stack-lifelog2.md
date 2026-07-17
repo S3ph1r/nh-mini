@@ -3,7 +3,7 @@ title: "Stack — Lifelog2"
 type: entity
 tags: [stack, lifelog, memory, pipeline, embedding, identity]
 sources: [lifelog2-project-context.md, lifelog2-identity-resolution.md]
-updated: 2026-05-24
+updated: 2026-07-06
 ---
 
 # Stack — Lifelog2
@@ -57,17 +57,17 @@ L'interfaccia di Lifelog2 è stata evoluta da un modello glassmorphism generico 
 | Z0 | Raw Evidence | RawCapture | Secondi |
 | Z1 | Transcript/Turns | Segment, SpeakerTurn | Secondi–minuti |
 | Z2 | Memory Atom | MemoryAtom + embedding(1024) | Minuti |
-| Z3 | Episode | Episode | Ore |
+| Z3 | Conversation Thread | ConversationThread + thread_turns | Minuti–ore |
 | Z4 | Day Digest | Day | Giorno |
 | Z5 | Week/Month Review | (materialized views) | Settimana/mese |
-| Z6 | Saga / Long Arc | Thread + topic_embedding(1024) | Mesi–anni |
+| Z6 | Saga / Long Arc | Saga + topic_embedding(1024) | Mesi–anni |
 | Z7 | Life Map | UserProfileFact | Anni–decenni |
 
 ## Embedding Architecture
 
 - **MemoryAtom.embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
 - **Thread.topic_embedding**: `vector(1024)` — mxbai-embed-large via CT107 Ollama
-- **Person.voiceprint_embedding**: `vector(256)` — WeSpeakerResNet34 embedding via ARIA PC139. Roberto: **3-sample weighted centroid** (norm=1.5062, dal 17.3s, 15.5s e 25.1s .m4a in `D:\LifeLogData\user_data\`). 149 speaker_turns assegnati con cosine ≥ 0.75. ✅ Live 2026-05-24.
+- **Person.voiceprint_embedding**: `vector(256)` — WeSpeakerResNet34 embedding via ARIA PC139. Roberto: **centroid di 17 segmenti** L2-normalizzati (norm=1.000, 256d). Re-enrollment massivo 2026-05-22: 1175 segmenti processati, **582 speaker_turns** matched con cosine ≥ 0.72 (max_sim=0.9371). ✅ Live 2026-05-22.
 
 CT107 promosso da legacy a infra reale: LXC always-on, CPU, Ollama con mxbai-embed-large già installato.
 
@@ -81,26 +81,48 @@ V2 implementa il paradigma **Swap-In / Swap-Out**:
 
 Questo garantisce che il server NH-Mini sia un "guscio vuoto" senza dati personali quando l'utente non è attivo.
 
-## Pipeline (A–G)
+## Pipeline (A–Z) — Thread Builder v2, turn-first (dal 2026-06-29)
+
+> ⚠️ Il pipeline A→G qui sotto è la versione **corrente** (post Thread Builder v2). Le sezioni
+> "Stage D — Enrichment Architecture" e "Stage F — Conversation Thread Grouping" più sotto in
+> questa pagina descrivono ancora la versione **precedente** (atom-based, pre-2026-06-29) — non
+> sono state riscritte per non perdere il riferimento storico, ma sono superate. Storia completa
+> del redesign: `sviluppi/Lifelog2/docs/lifelog2-thread-builder-hardening-2026-07.md`.
 
 ```
 A (Ingest Android M4A) 
 → B (Preprocess WAV 16kHz — LXC 203)
-→ C (ASR + Diarize + Voiceprint 256d — PC 139 WhisperX large-v3 [primary] / Qwen3-ASR-1.7b [standby])
-→ D (MemoryAtom LLM — PC 139 qwen3-14b-q4km, prompt v11: capture_class-aware + sentiment + transcript_quality + media_fingerprint + conversation_type)
-→ E (Text Embedding 1024d — LXC 107 mxbai + mode_timeline construction)
-→ F (Grouping/Episodes + visual_prompt LLM — LXC 203 deterministica tramite State Machine Pass 1b con soft break)
-→ G (Episode Cover Generation — PC 139 FLUX.2-klein-4B)
-→ H (Retention/Oblivion — futuro)
+→ C (ASR + Diarize + Voiceprint 256d — PC 139 WhisperX large-v3 [primary])
+→ C1 (Turn Classifier — LXC 203, vp_stable_id + turn_reliability meccanici, no LLM → Turn Log)
+→ D (Thread Builder LLM — PC 139 qwen3-14b-q4km — decide confini semantici cross-atom sui turn)
+→ E (Thread Enrichment LLM — PC 139 qwen3-14b-q4km — title/summary/topics sul thread chiuso)
+→ F (Thread Embedding — LXC 107 mxbai 1024d, thread-level o thread_chunks se >20 turn)
+→ G (Thread Cover Generation — PC 139 FLUX.2-klein-4B)
+→ Z6 (Thread Consolidation — LXC 203 consolidamento saghe, ibrido: Gemini Cloud mapping + Qwen3 Locale sintesi)
+
+**Identità voiceprint per turno** (`vp_stable_id`, redesign 2026-07-04): `vp_R` (self) ·
+`vp_known_XXXXXXXX` (enrollata) · `vp_unk_XXXXXX` (identità distinta, coniata solo se durata
+embedding ≥ 1.5s) · `vp_unk_noemb` (embedding inutilizzabile, mai identità — sostituisce il
+vecchio bucket condiviso `vp_unk_nr` che causava frammentazione di thread). `turn_reliability`
+(HIGH/LOW/JUNK) è puro `avg_logprob`, disaccoppiato dalla durata del turno.
+
+**Chiusura thread** (tutta deterministica): gap >10min (state machine dinamica, non blocklist) ·
+media_passive ≥30s (hard boundary) · **force-cut per volume di testo** (non più conteggio turni
+— un thread con pochi turni ma ciascuno enorme, es. audio ambientale continuo, può sforare il
+context LLM di Stage E anche restando sotto qualunque soglia di conteggio; taglia in Part N+1
+quando il budget di caratteri disponibile nel contesto si esaurirebbe, mai a metà di un turno).
 
 [Worker indipendenti]
-→ Day Digest & Temporal Aggregation (giornaliero 01:00, Qwen3 su ARIA → Day Z4)
-→ Thread Consolidation (mensile 1° del mese 03:30, timer systemd, ibrido: Gemini cloud via ARIA per mapping + Qwen3 locale per sintesi → Z6 Saga)
-→ Profile Builder (domenica 04:00, Strato 1+2 zero-LLM → UserProfileFact Z7)
+→ Identity Detective (ogni 15min, Qwen3 su ARIA → speaker → Person resolution)
+→ Day Digest & Temporal Aggregation (giornaliero 01:00, Qwen3 su ARIA → Day Z4 divisi in Personal e Ambient)
+→ Place Semantics & Detective (ogni 6h, LXC 203 euristica pura → PlaceHypothesis)
+→ Profile Builder (ogni 6h, Strato 1+2 zero-LLM → UserProfileFact Z7)
+→ Profile Validator — Strato V (ogni 24h, LLM gray-zone confidence 0.40–0.75)
 ```
 
 
-### Stage D — Enrichment Architecture
+
+### Stage D — Enrichment Architecture — ⚠️ SUPERATA (pre-2026-06-29, vedi Pipeline A–Z sopra)
 
 Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SPEAKER_XX`) fino a Stage E.
 
@@ -108,7 +130,7 @@ Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SP
 - **Task ARIA**: queue `aria:q:llm:local:qwen3-14b-q4km:lifelog`
 - **Output MemoryAtom**: summary, topics, entities, decisions, action_items, sentiment, transcript_quality
 - **Prompt versioning**: `prompts/config.json` → `prompts/stage_d_enrich_v{n}.txt` (nessun prompt hardcoded)
-- **Prompt v10** (corrente): `capture_class` passato come ground truth — `ambient` → `action_items=[]`, `decisions=[]` assoluto. Aggiunge `sentiment` (positive/negative/neutral/mixed) e `transcript_quality` (0.0–1.0, gate ephemeral < 0.20). Scoring tier per capture_class: ambient ≤ 0.50, mixed 0.30–0.70, personal 0.40–0.90.
+- **Prompt v15** (corrente): `extraction_level` a tre livelli (`full` / `contextual` / `metadata_only`). `metadata_only` attivato se quality score < 0.30 o < 30 parole o loop artifact: produce solo struttura, zero semantica, title = "Registrazione audio non elaborabile". `hallucination_flags` per rilevare loop e nomi inventati. `capture_class` ground truth invariato.
 - **Noise filter**: `_NOISE_PHRASES` frozenset — filtra risposte LLM tipo "nessuna decisione esplicita".
 - **`_parse_str_list()`**: normalizza str/list, applica noise filter per topics, action_items, decisions.
 - **Timing warm**: ~49s totali (35s GPU switch + 12s inferenza)
@@ -122,47 +144,48 @@ Stage D produce un **MemoryAtom** per segmento. Gli speaker restano anonimi (`SP
 | Worker Detective | Inferenza identità da discourse | LLM solo (no ASR) — max 8 segmenti/call, ogni ora | LLM cold |
 | Retroactive Indexer | Cosine similarity voiceprint 256d | CPU pura, scipy — < 5s su 1000+ segmenti | No GPU |
 
-### Stage F — Episode Grouping (4-Pass Sliding Window)
+### Stage F — Conversation Thread Grouping — ⚠️ SUPERATA (atom-based, pre-2026-06-29)
 
-La continuità temporale da sola non è sufficiente a definire un episodio. Stage F usa un'architettura a 4 pass con LLM semantico.
+> Sostituita dal Thread Builder v2 turn-first (Stage D nella pipeline corrente, vedi sopra):
+> non più raggruppamento di atom per pass successivi, ma assegnazione diretta dei turn diarizzati
+> via LLM. La "Limitazione nota" a fine sezione (thread_type non ricalcolato su extend) **è stata
+> risolta** il 2026-07-04 con `_correct_thread_type_at_closure()`, che corregge entrambi gli assi
+> (personal↔ambient E mono↔dialogue) ad ogni chiusura, non solo alla creazione.
 
-**Pass 1 — Temporal Pre-filter (no LLM)**
-- Gap > `AUTO_BREAK_MINUTES` (60 min) tra capture consecutive → rottura automatica, nessuna chiamata LLM
-- Produce `candidate_groups`: liste di atom temporalmente adiacenti
+Stage F v2 raggruppa memory atoms in `conversation_threads` in base al voiceprint roster degli speaker. Sostituisce il vecchio approccio 4-pass sliding window + episodes.
 
-**Pass 2 — Sliding Window LLM Boundary Detection**
-- Ogni atom viene valutato rispetto all'episodio corrente via LLM (qwen3-14b)
-- Input: `running_episode_summary` (max 180 token, compresso) + metadata del nuovo atom (~200-300 token)
-- Output: `continue | break_before | break_within` + `updated_episode_summary`
-- Segnali di rottura (priorità decrescente): cambio `event_type` (forte), GPS > 1km (forte), set persone disjoint (forte), gap > 30min (medio), cambio topic (medio), cambio `capture_class` (debole — inaffidabile su telefonate)
-- Continuità forte garantita: `monologue + personal + gap < 15min` → sempre `continue`
-- Prompt: `stage_f_boundary_v1.txt` (versioned)
+**Thread types:**
 
-**Pass 3 — Precise Split (solo se `break_within`)**
-- Attivato solo quando la transizione avviene *dentro* un atom
-- Legge il trascritto completo da MinIO, trova il turn index esatto
-- Output: `AtomRef(from_turn, to_turn)` per sub-atom references
-- Prompt: `stage_f_split_v1.txt` (versioned)
+| Tipo | Condizione |
+|------|-----------|
+| `personal_dialogue` | Roberto + ≥1 interlocutore confermato |
+| `personal_mono` | Solo Roberto |
+| `media_passive` | Solo speaker media (TV/podcast), no Roberto |
+| `ambient_dialogue` | Dialogo senza Roberto (o senza voiceprint) |
+| `ambient_mono` | Mono ambientale |
 
-**Pass 4 — Episode Synthesis**
-- Atom singolo: riusa `title`/`summary` esistente
-- Multi-atom: LLM genera `title` (max 8 parole) + `narrative_summary` (3-5 frasi) + **`visual_prompt`** (v2+)
-- `visual_prompt`: 20-40 parole inglese, stile flat minimalista senza volti/testo — usato da Stage G
-- Prompt: `stage_f_episode_v2.txt` (corrente) — v1 senza visual_prompt (legacy)
+**Pass 1 — vp_hash**: Per ogni speaker_turn, calcola sha256 del centroide voiceprint (o `person:{UUID}` per Roberto). Hashes persistiti su `speaker_turns.vp_hash`.
 
-**AtomRef dataclass**: `memory_id, row, from_turn, to_turn, is_partial` — permette referenze sub-atom (dal minuto X al minuto Y dell'atom N).
+**Pass 2 — Role classification**: Classifica ogni turn come `roberto`, `interlocutor`, `media`, `ambient` da `speaker_turns.turn_type`. Costruisce il roster atom `{vp_hash → role}`.
 
-**Cutoff**: atom con `ended_at < NOW() - 10min` — l'ultimo episodio rimane "aperto" per estensione al run successivo.
+**Pass 3 — Thread stitching**: Confronta roster atom con `voiceprint_roster` dei thread aperti. Match: vp_hash diretto o cosine ≥ `VP_COSINE_THRESHOLD=0.65` (fallback embedding). Roberto-anchor rule: thread `personal_*` richiedono Roberto presente. Thread tipo determinato dalla combinazione di ruoli nel roster.
 
-**Geocoding (2026-05-22)**: Stage F geocodifica automaticamente ogni episodio creato. Calcola lat/lon media delle raw_captures degli atom → chiama `find_or_create_place()` → aggiorna `episodes.place_ids` (JSONB) + `memory_atoms.location_id`. Backfill script `scripts/backfill_geocoding.py` per episodi esistenti. Nominatim OSM, 200m merge radius, 1 req/s rate limit.
+**Pass 4 — ARIA closure**: Per ogni thread chiuso, chiama qwen3-14b per titolo + classificazione (`coherent`/`ambiguous`/`split_required`) + `visual_prompt` (40-60 parole, per Stage G). Geocoding: avg lat/lon atom → `find_or_create_place()`.
 
-**Bug storico risolto (2026-05-15)**: `_temporal_prefilter` non aggiornava `current_end` all'apertura di un nuovo gruppo → tutti i gap venivano calcolati rispetto al primo atom → 17 gruppi invece di 8.
+**Meccanismi di chiusura (doppio — stesso semantico):**
+- `CLOSE_AFTER_ATOMS = 2`: 2 atom consecutivi senza match roster VP → chiusura atom-based (~10 min)
+- `MAX_THREAD_GAP_S = 10 * 60`: gap temporale tra atom > 10 min → chiusura inline (usa timestamp atom, non wall clock — intercetta atom scartati a monte per bassa qualità che avrebbero creato falsi gap "silenzio=0")
+- `atoms_without_turn`: counter per thread; incrementa solo su atom processato senza match, non su atom scartati/silenzio → ecco perché serve il timestamp-gap
 
-**Capture-class elevation**: `personal > mixed > ambient > unknown` — l'episodio prende la classe dominante tra i suoi atom.
+**Correttezza timestamp (fix 2026-06-27):** `ended_at = last_atom_at` (timestamp contenuto atom, mai `NOW()`).
+
+**Tabelle DB (migrations 0022–0024):**
+- `conversation_threads`: thread_id, thread_type, thread_status, started_at, ended_at, last_atom_at, last_atom_at, voiceprint_roster (JSONB), atoms_without_turn, title, summary, topics, sentiment, coherence_score, atom_count, data_pool, place_id, visual_prompt, cover_image_key
+- `thread_turns`: id, thread_id, memory_id, turn_id, vp_hash, person_id, canonical_label, thread_role, sequence_pos, atom_sequence, turn_offset_ms — join N:M atoms↔threads con metadati ruolo
 
 ### Stage G — Episode Cover Generation (FLUX.2-klein-4B)
 
-Worker batch: trova episodi con `visual_prompt IS NOT NULL AND cover_image_key IS NULL`, genera PNG via ARIA e salva URL MinIO.
+Worker batch: trova `conversation_threads` con `visual_prompt IS NOT NULL AND cover_image_key IS NULL`, genera PNG via ARIA e salva URL MinIO.
 
 **Stack ARIA:**
 - Backend: `backends/flux_imagegen/server.py` — FastAPI porta 8092
@@ -184,7 +207,9 @@ Worker batch: trova episodi con `visual_prompt IS NOT NULL AND cover_image_key I
 
 Un worker periodico (`worker_day_digest.py`) esegue l'aggregazione giornaliera a livello di zoom Z4, sintetizzando l'intera giornata dell'utente.
 
-- **Estrazione dei dati (Europe/Rome)**: Estrae tutti gli `Episodes` e `MemoryAtoms` registrati per una data specifica. I metadati temporali vengono convertiti in base alla timezone di Roma, mentre le interrogazioni al database Postgres avvengono in UTC per coerenza infrastrutturale.
+> ⚠️ **LEGACY**: Il worker Day Digest referenzia ancora la tabella `episodes` (rimossa con migration 0022 — FASE 3 June 2026). Esce immediatamente senza elaborare nulla. Refactor pianificato: riscrivere per operare su `conversation_threads` (data_pool='trusted') + `memory_atoms`. Vedi [[concepts/lifelog2-thread-consolidation]].
+
+- **Estrazione dei dati (Europe/Rome)**: Estrae tutti i `conversation_threads` (tipo `personal_*`) e `MemoryAtoms` registrati per una data specifica. I metadati temporali vengono convertiti in base alla timezone di Roma, mentre le interrogazioni al database Postgres avvengono in UTC per coerenza infrastrutturale.
 - **Aggregazione Metadati**: Estrae persone incontrate (tramite join su `speaker_turns`), luoghi fisici e semantici visitati (tramite `places` geocodificati) e argomenti deduplicati del giorno.
 - **Generazione LLM (Aria Qwen3)**: Costruisce un prompt testuale unificato e interroga Qwen3 per produrre:
   - `daily_digest`: Paragrafo narrativo in italiano fluido e intimo.
@@ -216,6 +241,8 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 
 **Stage F (parallelo)**: gira come `asyncio.create_task` indipendente ogni `GROUPING_INTERVAL_S` = 30 minuti. Primo run dopo 60s di startup delay. Usa `asyncio.create_subprocess_exec` (non `subprocess.Popen`) per compatibilità async. Un `asyncio.Event` (`_grouping_trigger`) permette trigger manuale interrompendo il sleep.
 
+**`_reconciliation_loop`** (ogni 10min): **Sezione 1** — ri-emette su `stream:asr` segmenti stuck in `asr`/`preprocessed` (Stage B/C xadd fallito). **Sezione 2** (2026-06-08) — ri-emette su `stream:embed` segmenti stuck in `enriched` con `memory_atom_id IS NOT NULL` (Stage D race condition commit-before-xadd). Le due sezioni sono indipendenti.
+
 **Comandi via Redis** (`LPUSH lifelog:orchestrator:cmd`):
 - `{"cmd": "restart", "worker": "stage_c"}` — restart manuale worker
 - `{"cmd": "run_grouping"}` — trigger immediato Stage F
@@ -241,12 +268,12 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 | M0 — Foundation/Product Spec | ✅ Done | Blueprint, memory model, API contracts frozen (2026-05-07) |
 | M1 — Infrastructure + API Ingest | ✅ Done | CT105 DB live, MinIO bucket live, FastAPI su CT190:8002, 4 endpoint Android testati, 20 segmenti V1 in pipeline |
 | M2 — Pipeline Stage B (Preprocess) | ✅ Done | Consumer Redis `lifelog:stream:ingest`, ffmpeg WAV 16kHz, quality gate, MinIO `normalized-audio/`, emit `lifelog:stream:asr` (2026-05-07) |
-| M3 — Pipeline Stage C (ASR) | ✅ Done | Refactored 2026-05-12: `capture_class`, user-first voiceprint, drain loop fix. **2026-05-14: WhisperX large-v3 (porta 8091) come backend primario** — sostituisce Qwen3-ASR-1.7B (standby). Timing Stage C: ~24s warm (vs ~55s). Pipeline A→E: 91s totali su 299s audio (3.3× realtime). |
+| M3 — Pipeline Stage C (ASR) | ✅ Done | Refactored 2026-05-12: `capture_class`, user-first voiceprint, drain loop fix. **2026-05-14: WhisperX large-v3 (porta 8091) come backend primario** — sostituisce Qwen3-ASR-1.7B (standby). Timing Stage C: ~24s warm (vs ~55s). Pipeline A→E: 91s totali su 299s audio (3.3× realtime). **2026-06-24: Turn-level classification** — `_annotate_turn_classes()` assegna `turn_class` (`personal`/`media_passive`/`dialogue_likely`/`ambiguous`) a ogni turno diarizzato. Nuovo campo `max_other_turn_s` in metriche; `hybrid` conversation_type attivato quando `max_t>45s AND avg_t<60s`. Scritto su `speaker_turns.turn_type`, MinIO blob e Redis emit. Vedi [[lifelog2-turn-classification]]. |
 | M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | **Prompt v10** (corrente, 2026-05-22): capture_class-aware + sentiment + transcript_quality + scoring tier. v8 (2026-05-20): prime versioni capture_class-aware. v5 (2026-05-15): action_items + decisions. Noise filter `_NOISE_PHRASES`. |
 | M4.5 — Stage E (Embedding + WAV cleanup) | ✅ Done 2026-05-13 | mxbai-embed-large 1024d via CT107, `memory_atoms.embedding` aggiornato, WAV MinIO eliminato, pipeline_status="consolidated". Fast Pipeline A→E operativa. |
-| M5 — Episode/Day Grouping | ✅ Done | Stage F **live** 2026-05-15 — 4-pass sliding window, 8 gruppi → 12 episodi su 19 atom, bug prefilter fixato. **Orchestratore integrato** — Stage F ogni 30min, trigger `run_grouping`. **Worker Detective** live 2026-05-16 — identity inference LLM ogni 15min, Redis checkpoint. **Stage G live 2026-05-16** — cover generation FLUX.2-klein-4B, ogni 60min, trigger `run_covers`. |
+| M5 — Conversation Thread Grouping | ✅ Done | Stage F v1 live 2026-05-15 (episodes, 4-pass sliding window). **FASE 3 (2026-06-26):** Stage F v2 RISCRITTO — `conversation_threads` (5 tipi), VP roster per thread, `CLOSE_AFTER_ATOMS=2` + `MAX_THREAD_GAP_S=10min`, `ended_at=last_atom_at` (fix 2026-06-27). Migrations 0022-0024. Stage G trigger: da `_grouping_loop` post-drain (fix 2026-06-27 — rimossa race condition ARIA FLUX2/qwen3). DB reset + backfill v2: 1301 atoms, 2026-06-27. **Thread Builder v2 (2026-06-29 → 07-06, migration 0026/0028):** riscritto turn-first — D=Thread Builder LLM, E=Thread Enrichment LLM, F=Thread Embedding. Redesign identità VP (`vp_unk_nr`→`vp_unk_noemb`), gap-enforcement dinamico, correzione meccanica mono/dialogue, naming MinIO anti-disastro, force-cut per volume testo (non conteggio turni) — validato su 675 segmenti reali da telefono. Dettagli: `docs/lifelog2-thread-builder-hardening-2026-07.md`. |
 | M5.5 — Thread Consolidation (Stage Z6) | ✅ Done 2026-05-26 | Worker periodico con approccio ibrido (Gemini cloud via ARIA per mapping in batch di max BATCH_SIZE=15 + Qwen3 locale per la sintesi dei singoli thread). Embedding 1024d salvati su Postgres. Testato e validato in produzione. |
-| M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico |
+| M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico. **Gap noti da risolvere in M6**: (1) `discarded` segments (audio senza atom prodotto) non vengono cancellati da MinIO — `_reject()` in Stage B tenta la cancellazione ma swallows l'eccezione; backfill non cancella mai il sorgente. File a valore zero si accumulano indefinitamente. (2) `cleanup_ambient_audio.py` copre solo `capture_class='ambient'`; nessuna policy per mixed/personal o staged abbandonati. (3) Policy corretta da implementare: `discarded` → cancellazione entro 24h; `consolidated` → retention basata su `retention_class` atom (ephemeral/counted/summarized/remembered/preserved); `staging` orfani > 30gg → discard + cancellazione. |
 | M7 — Frontend SvelteKit | ✅ Done | **Cinematic UI** live su CT203:5173. Views: Dashboard, Day, Map, People, Sagas, Timeline, Transcript, Pipeline, Tasks, Profile. Audio playback MP3 su transcript. Sfondo bg.jpg + oklch. |
 | M8 — Intelligence Layer Z7 | 🔧 In progress | **Profile Builder Strato 1+2 live** (2026-05-22). Strato V + Cerchia Tier B + HNSW index: P2 roadmap. `lifelog2-status-roadmap.md` come checklist periodica. |
 
@@ -274,7 +301,7 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 | `/dashboard/summary` | GET | Hero episode + filmstrip |
 | `/dashboard/day/{date}` | GET | Episodi + atom per data (YYYY-MM-DD, tz Rome) |
 | `/dashboard/map?days=N` | GET | Punti GPS da MemoryAtom + RawCapture join |
-| `/dashboard/sagas` | GET | Episodi paginati, filtro capture_class + tag |
+| `/dashboard/sagas` | GET | Episodi paginati, filtro capture_class + tag — esclude episodi ghost (no FK-atom) via subquery (2026-06-08) |
 | `/dashboard/people` | GET | Persone + stats identity level + episode count |
 | `/dashboard/transcript/{atom_id}` | GET | Transcript MinIO con speaker_turns formattati |
 | `/dashboard/recent` | GET | Atom recenti |
@@ -284,7 +311,6 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 **Transcript pipeline**: `raw_transcript_key` (MinIO path) su `MemoryAtom` → endpoint legge JSON con `speaker_turns: [{speaker, start_ms, end_ms, text}]` → frontend mappa `SPEAKER_00→Voce A`.
 
 **API live su CT190:8002** (dev — da migrare su CT203 quando approvato):
-- `POST /api/v1/devices/register` ✅
 - `GET /api/v1/devices/me/policy` ✅
 - `POST /api/v1/uploads/segments` ✅
 - `GET /api/v1/uploads/segments/{key}/status` ✅
@@ -334,6 +360,13 @@ Lo stack di certezza si applica a ogni `Person` riconosciuta dal sistema:
 | 2 | Confermato utente | Azione esplicita UI | `confirmed_by="user"` + back-propagation SpeakerTurn |
 | 3 | Enrolled | Registrazione voiceprint intenzionale | Certezza assoluta, back-propagation immediata |
 
+### Gestione Media & Podcast
+Per evitare che conduttori TV, host di podcast o personaggi ricorrenti dei media vengano inseriti nel clustering delle persone reali a livello Z7, il modello Postgres prevede:
+- `persons.is_media_persona` (Boolean): Flagga se la persona è una voce media.
+- `persons.media_source_hint` (Text): Nota descrittiva della sorgente media (es. "Podcast XYZ host").
+- `speaker_turns.turn_type` (String): Mappa la tipologia di turno (`speech`, `media`, `unknown`). I turni classificati come `media` vengono ignorati dal Worker Detective per l'inferenza d'identità.
+
+
 **Regola assoluta**: nessun processo automatico (LLM, euristica, cosine similarity) può transitare da Livello 1 a Livello 2.
 
 ### Migration 0005 — ✅ Applicata 2026-05-16
@@ -368,11 +401,58 @@ Il campo `disambiguation_tag` ("collega", "amico") è solo presentazionale.
 
 ---
 
+## Place Semantics & Place Detective
+
+Il worker periodico `worker_place_detective.py` (eseguito la domenica notte su LXC 203) analizza le abitudini dell'utente e deduce le tipologie di luoghi frequentati.
+- **Inference Senza LLM**: Utilizza un sistema di scoring basato su euristiche e dati statistici (fasce orarie di presenza, giorni feriali vs festivi, durata della visita, tag semantici dei topic, e tipologia di persone presenti).
+- **Classificazioni**: Mappa i luoghi in `home`, `work`, `social`, o `transit`.
+- **Revisione Utente**: Le predizioni vengono salvate come `place_hypotheses` (stato `pending`). L'utente può confermare o modificare le ipotesi tramite l'interfaccia web `/places`.
+
+---
+
+## Rilevanza Dinamica dei Thread
+
+Il contenuto di un thread è **immutabile** (le trascrizioni non cambiano), ma la sua **accessibilità** cambia nel tempo man mano che il sistema apprende nuove identità tramite VP enrollment.
+
+### data_pool e visibilità worker
+
+| data_pool | Contenuto | Worker Z4+ visibili |
+|-----------|-----------|---------------------|
+| `trusted` | Thread con Roberto confermato | Tutti (Day Digest, Profile Builder, Sagas, ecc.) |
+| `flagged` | Media/ambient senza Roberto | Solo identity_detective, place_detective |
+| `flagged_reclassifiable` | Flagged ma con VP ora confermati | identity_detective + reclassification_worker (P3c) |
+
+### Categorizzazione retention
+
+- **Trusted (personal_*)**: incluso in Day Digest, sagas, profile
+- **Flagged reclassificabile**: riprocessabile con nuovi VP; può diventare `trusted` dopo conferma detective
+- **Flagged permanente**: solo contesto contestuale (dove ero, cosa stava succedendo intorno), mai in digest personale
+
+### P3 — VP Back-Propagation ai Thread
+
+```
+P3a (esistente): segment reclassification → speaker_turns.turn_type aggiornato
+P3b (pianificato): VP confirm → thread_type + data_pool aggiornati su thread esistenti
+P3c (pianificato): reclassification_worker batch → ripesca flagged_reclassifiable
+```
+
+**Vincolo Day Digest**: i digest già prodotti (Z4) sono storici stabili e NON vengono rielaborati. Solo i thread futuri o non ancora digeriti beneficiano del reclassification pass.
+
+**Limitazione risolta (2026-07-04)**: `thread_type` viene ora ricalcolato ad ogni chiusura tramite `_correct_thread_type_at_closure()` (non solo alla creazione) — corregge sia l'asse personal↔ambient sia mono↔dialogue leggendo il roster reale del thread. Vedi `sviluppi/Lifelog2/docs/lifelog2-thread-builder-hardening-2026-07.md` §3.4.
+
+**Schema completo**: [[concepts/lifelog2-thread-consolidation]] | [[sources/memory-model]]
+
+---
+
 ## Link Correlati
 
 - [[stack-nh-mini]]
 - [[stack-aria]]
 - [[ct105-postgres]]
 - [[ct120-redis]]
+- [[concepts/lifelog2-quality-gate|Quality Gate & Tiers]]
+- [[concepts/lifelog2-thread-consolidation|Thread Consolidation Z6]]
+- [[concepts/lifelog2-refactor-roadmap|Thread Builder v2 — roadmap e hardening]]
 - [[sources/lifelog2-project-context|lifelog2-project-context]]
 - [[sources/lifelog2-identity-resolution|lifelog2-identity-resolution]]
+

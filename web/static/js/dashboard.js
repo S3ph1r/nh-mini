@@ -25,6 +25,7 @@ document.querySelectorAll('.nhi-nav-item').forEach(link => {
     if (page === 'projects') loadProjects();
     if (page === 'services') loadServices();
     if (page === 'alerts') loadAlerts();
+    if (page === 'topology') loadTopology();
   });
 });
 
@@ -259,6 +260,17 @@ document.addEventListener('click', e => {
     navigate('alerts');
     loadAlerts();
   }
+  // Topology reset view
+  if (e.target.id === 'btn-topo-reset' && _topoNetwork) {
+    _topoNetwork.setOptions({ physics: { enabled: true } });
+    setTimeout(() => _topoNetwork.setOptions({ physics: { enabled: false } }), 2000);
+    _topoNetwork.fit({ animation: { duration: 700, easingFunction: 'easeInOutQuad' } });
+  }
+  // Topology detail panel close
+  if (e.target.id === 'topo-detail-close') {
+    document.getElementById('topology-detail').style.display = 'none';
+    if (_topoNetwork) _topoNetwork.unselectAll();
+  }
 });
 
 // ── Alerts ───────────────────────────────────────────────────────────────────
@@ -345,6 +357,169 @@ async function loadAlerts() {
 
   } catch (e) {
     console.error('Alerts load failed:', e);
+  }
+}
+
+// ── Topology ──────────────────────────────────────────────────────────────────
+
+let _topoNetwork = null;  // singleton vis.Network instance
+let _topoData = null;     // cached {nodes, edges} from API
+
+const NODE_COLORS = {
+  control:    { bg: '#0f3460', border: '#38bdf8', font: '#e0f2fe' },
+  hypervisor: { bg: '#2d1b69', border: '#8b5cf6', font: '#ede9fe' },
+  app:        { bg: '#064e3b', border: '#34d399', font: '#d1fae5' },
+  gateway:    { bg: '#431407', border: '#f97316', font: '#ffedd5' },
+  infra:      { bg: '#1e3a5f', border: '#60a5fa', font: '#dbeafe' },
+  gpu:        { bg: '#4c0519', border: '#f43f5e', font: '#ffe4e6' },
+  external:   { bg: '#1f2937', border: '#6b7280', font: '#d1d5db' },
+};
+
+const EDGE_COLORS = {
+  ssh:        '#94a3b8',
+  http:       '#38bdf8',
+  redis:      '#fbbf24',
+  postgres:   '#34d399',
+  s3:         '#2dd4bf',
+  monitoring: '#a78bfa',
+};
+
+async function loadTopology() {
+  const container = document.getElementById('topology-network');
+  if (!container) return;
+
+  // If already rendered, trigger a resize + fit in case the container changed size
+  if (_topoNetwork) {
+    _topoNetwork.redraw();
+    _topoNetwork.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+    return;
+  }
+
+  container.innerHTML = '<div style="color:var(--nhi-text-muted);font-size:0.85rem;padding:2rem">⟳ Loading graph...</div>';
+
+  try {
+    const data = await fetch(`${API}/api/topology`).then(r => r.json());
+    _topoData = data;
+    container.innerHTML = '';  // clear loader
+
+    // Build vis nodes
+    const visNodes = data.nodes.map(n => {
+      const c = NODE_COLORS[n.type] || NODE_COLORS.external;
+      return {
+        id: n.id,
+        label: n.label,
+        title: n.purpose,
+        color: {
+          background: c.bg,
+          border: c.border,
+          highlight: { background: c.bg, border: '#ffffff' },
+          hover: { background: c.bg, border: '#ffffff' },
+        },
+        font: { color: c.font, size: 13, face: 'Inter, system-ui, sans-serif', multi: true },
+        shape: 'box',
+        borderWidth: 2,
+        borderWidthSelected: 3,
+        shadow: { enabled: true, color: c.border + '55', size: 12, x: 0, y: 0 },
+        margin: { top: 10, bottom: 10, left: 14, right: 14 },
+        // store metadata for detail panel
+        _meta: n,
+      };
+    });
+
+    // Build vis edges
+    const visEdges = data.edges.map((e, i) => {
+      const col = EDGE_COLORS[e.conn_type] || '#64748b';
+      return {
+        id: i,
+        from: e.from,
+        to: e.to,
+        label: e.label,
+        color: { color: col, highlight: '#ffffff', hover: col + 'cc' },
+        font: {
+          color: col,
+          size: 10,
+          face: 'Inter, system-ui, sans-serif',
+          background: 'rgba(11,15,25,0.85)',
+          strokeWidth: 0,
+          align: 'middle',
+        },
+        arrows: { to: { enabled: true, scaleFactor: 0.7, type: 'arrow' } },
+        smooth: { type: 'curvedCW', roundness: 0.15 },
+        width: 1.5,
+        selectionWidth: 3,
+        hoverWidth: 2.5,
+        dashes: e.conn_type === 'ssh',
+      };
+    });
+
+    const options = {
+      layout: { improvedLayout: true },
+      physics: {
+        enabled: true,
+        stabilization: { iterations: 200, updateInterval: 10 },
+        barnesHut: {
+          gravitationalConstant: -9000,
+          centralGravity: 0.3,
+          springLength: 160,
+          springConstant: 0.04,
+          damping: 0.15,
+        },
+      },
+      interaction: {
+        hover: true,
+        tooltipDelay: 300,
+        zoomView: true,
+        dragView: true,
+        navigationButtons: false,
+        keyboard: false,
+      },
+      nodes: { chosen: true },
+      edges: { chosen: true },
+    };
+
+    _topoNetwork = new vis.Network(
+      container,
+      { nodes: new vis.DataSet(visNodes), edges: new vis.DataSet(visEdges) },
+      options
+    );
+
+    // Once stabilized, freeze physics to save CPU
+    _topoNetwork.once('stabilizationIterationsDone', () => {
+      _topoNetwork.setOptions({ physics: { enabled: false } });
+      _topoNetwork.redraw();
+      _topoNetwork.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+    });
+
+    // Node click → show detail panel
+    _topoNetwork.on('click', params => {
+      const detail = document.getElementById('topology-detail');
+      if (params.nodes.length === 0) {
+        detail.style.display = 'none';
+        return;
+      }
+      const nodeId = params.nodes[0];
+      const node = data.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      document.getElementById('topo-detail-label').textContent = node.label.replace('\n', ' ');
+      document.getElementById('topo-detail-ip').textContent = node.ip;
+      document.getElementById('topo-detail-type').textContent = node.type;
+
+      const portsRow = document.getElementById('topo-ports-row');
+      if (node.ports && node.ports.length > 0) {
+        document.getElementById('topo-detail-ports').textContent = node.ports.join(', ');
+        portsRow.style.display = 'flex';
+      } else {
+        portsRow.style.display = 'none';
+      }
+
+      document.getElementById('topo-detail-purpose').textContent = node.purpose;
+      detail.style.display = 'flex';
+    });
+
+  } catch (e) {
+    container.innerHTML = '<div style="color:#fc8181;padding:2rem">Failed to load topology</div>';
+    console.error('Topology load failed:', e);
   }
 }
 

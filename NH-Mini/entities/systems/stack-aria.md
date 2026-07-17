@@ -50,33 +50,38 @@ GUI configurazione: `settings_gui.py` (customtkinter)
 
 ### Backend AI (ambienti Conda separati)
 
-| Backend | Model ID | Porta | VRAM | Stato |
-|---------|----------|-------|------|-------|
-| Qwen3-TTS | `qwen3-tts-1.7b` | 8083 | ~5 GB | ✅ Operativo |
-| Fish S1-mini | `fish-s1-mini` | 8080 | ~4 GB | ✅ Operativo |
-| Voice Cloning | (companion Fish) | 8081 | CPU | 🔄 Da ricreare |
-| LLM | `qwen3.5-35b-moe-q3ks` | 8085 | ~13 GB | 🔲 In sviluppo |
-| Cloud Gemini | `gemini-flash-lite-latest` | — | cloud | ✅ Routing attivo |
-| ACE-Step Music | `acestep-1.5-xl-sft` | 8084 | ~8 GB | ✅ Per DIAS D2 |
-| Lifelog ASR | `qwen3-asr-1.7b` | 8087 | ~9 GB | ✅ Operativo (Blackwell) |
-| Lifelog LLM | `qwen3-14b-q4km` | 8090 | ~9 GB | ✅ Operativo — llama-server.exe b9119 (CUDA 13.1 sm_120) |
+Tutti i backend AI sono erogati in modalità on-demand (JIT) dall'orchestratore e possono essere richiamati da qualsiasi applicazione client tramite code Redis dedicate.
+
+| Backend | Model ID | Porta | VRAM | Stato | Note |
+|---------|----------|-------|------|-------|------|
+| **Qwen3-TTS** | `qwen3-tts-1.7b` | 8083 | ~5 GB | ✅ Operativo | Narrativo audiobook |
+| **Fish S1-mini** | `fish-s1-mini` | 8080 | ~4 GB | ✅ Operativo | TTS espressivo con emotion tagging |
+| **Fish Voice Cloning** | (companion Fish) | 8081 | CPU | ✅ Operativo | Encoder VQGAN per cloni vocali |
+| **ACE-Step Music** | `acestep-1.5-xl-sft` | 8084 | ~8 GB | ✅ Operativo | Sound engine e orchestrazione musicale |
+| **Qwen3.5 35B MoE** | `qwen3.5-35b-moe-q3ks` | 8085 | ~13 GB | ✅ Operativo | Ragionamento complesso (llama.cpp) |
+| **Audiocraft** | `audiocraft-medium` | 8086 | ~5 GB | ✅ Operativo | Generazione sfx/ambience/sting |
+| **ASR / STT Qwen3** | `qwen3-asr-1.7b` | 8087 | ~9 GB | ⏸️ Standby | ASR alternativo + forced aligner |
+| **Dense LLM 14B** | `qwen3-14b-q4km` | 8090 | ~9 GB | ✅ Operativo | llama-server.exe (CUDA 13.1, sm_120) |
+| **ASR / STT WhisperX** | `whisperx-large-v3` | 8091 | ~10 GB | ✅ Operativo | Trascrizione, diarizzazione e voiceprint |
+| **FLUX.2-klein-4B** | `flux2-klein-4b` | 8092 | ~12.8 GB | ✅ Operativo | Generatore immagini (optimum-quanto INT8) |
+| **Cloud Gemini** | `gemini-flash-lite-latest` | — | cloud | ✅ Attivo | Routing automatico/fallback cloud |
 
 ### HTTP Asset Server
 
-Micro-server HTTP nativo integrato nell'orchestratore. Espone `outputs/` su porta 8082 in sola lettura.
+Micro-server HTTP nativo integrato nell'orchestratore. Espone `outputs/` e `assets/` su porta 8082 in sola lettura LAN. Supporta il verbo `DELETE` per eliminazione sicura post-download da parte dei client.
 
 ```
-PC 139: salva WAV → %ARIA_ROOT%\data\outputs\{job_id}.wav
-        serve    → http://192.168.1.139:8082/outputs/{job_id}.wav
+PC 139: salva WAV ➔ %ARIA_ROOT%\data\outputs\{job_id}.wav
+        serve    ➔ http://192.168.1.139:8082/outputs/{job_id}.wav
 ```
 
 ## Principi Fondamentali
 
 1. **Non-blocking sempre** — `submit_task()` ritorna in <100ms in qualsiasi scenario
 2. **Zero perdita di task** — task su Redis è persistente; crash recovery all'avvio
-3. **Un modello alla volta in VRAM** — BatchOptimizer gestisce il cambio modello
-4. **Agnosticismo del client** — il client invia intenti (voice_id, intent_id), ARIA risolve asset
-5. **Privacy totale** — nessun dato lascia la rete locale
+3. **Un modello alla volta in VRAM** — BatchOptimizer gestisce il cambio modello (GPU Exclusivity)
+4. **Agnosticismo dei backend** — ogni modello eroga capacità generaliste riutilizzabili da n app
+5. **Privacy totale** — nessun dato sensibile lascia la rete locale
 
 ## Semaforo GPU
 
@@ -93,12 +98,13 @@ Backend JIT: avviati on-demand al primo task, fermati automaticamente dopo `IDLE
 
 - `mark_idle(mid)` — marca un backend come idle (timestamp)
 - `shutdown_idle_backends()` — killa i backend idle da > 45 min
-- **Fix 2026-05-09**: il branch `if not decision:` ora itera `_procs.keys()` invece di `known_models`. Quando le code Redis sono vuote (client in pausa), `known_models` è vuoto ma `_procs` contiene i backend caricati — senza il fix `mark_idle()` non veniva mai chiamato.
+- **Fix 2026-05-09**: il branch `if not decision:` ora itera `_procs.keys()` invece di `known_models`. Quando le code Redis sono vuote (client in pausa), `known_models` is empty but `_procs` contains i backend caricati — senza il fix `mark_idle()` non veniva mai chiamato.
 
-## Consumatori Attuali
+## Consumatori Attuali ed Esempi di Flusso
 
-- **[[stack-dias|DIAS]]** — TTS (voce scene) + ACE-Step (sound design)
-- **[[stack-lifelog2|Lifelog2]]** — STT (trascrizione audio + diarizzazione, coda `aria:q:stt:local:qwen3-asr-1.7b:lifelog`)
+- **[[stack-dias|DIAS]]** — Utilizza `qwen3-tts-1.7b` (voci), `acestep-1.5-xl-sft` (colonne sonore) e `audiocraft-medium` (effetti sonori).
+- **[[stack-lifelog2|Lifelog2]]** — Utilizza `whisperx-large-v3` (coda `stt` per trascrizione, diarizzazione e voiceprint), `qwen3-14b-q4km` (coda `llm` per estrazione MemoryAtom) e `flux2-klein-4b` (coda `imagegen` per copertine episodi).
+- **Nuove Integrazioni (es. [[stack-stratex|Stratex]])** — Possono ereditare istantaneamente l'accesso alle code `llm:local:qwen3-14b-q4km:stratex` per estrazione dati finanziari senza alcuna riconfigurazione hardware.
 
 ## Vedi anche
 

@@ -1,117 +1,201 @@
 ---
 type: network_exposure
-pattern: nginx-ngrok-gateway
+pattern: nginx-ngrok-cloudflare-gateway
 container: ct202
-last_updated: 2026-04-20
+last_updated: 2026-06-23
 ---
 
-# 🌐 Pattern: Internet Gateway via nginx + ngrok
+# Pattern: Internet Gateway (CT202)
 
-## Cosa fa questo pattern
+CT202 è il **reverse proxy applicativo** del homelab. Espone servizi interni su internet tramite due tunnel (ngrok + Cloudflare) e su LAN tramite accesso diretto a `192.168.1.202`.
 
-Espone servizi interni dell'homelab su internet tramite un tunnel ngrok permanente,
-con routing HTTP gestito da nginx su un container dedicato.
+**NON è un gateway di rete** (quello è il router 192.168.1.1). Gestisce solo traffico HTTP/HTTPS applicativo.
 
-**NON è un gateway di rete** (quello è il router 192.168.1.1/Proxmox).
-È un **reverse proxy applicativo** che gestisce solo traffico HTTP/HTTPS
-in ingresso attraverso il tunnel ngrok.
+---
+
+## Architettura
 
 ```
 Internet
     │
-    ▼  (tunnel HTTPS permanente)
-ngrok → CT202:80
-    │
-    ▼  (reverse proxy nginx)
-nginx  ──/dias/────→ CT201:8000   (DIAS Dashboard)
-       ──/grafana/──→ CT103:3000   (Grafana)
-       ──/nhi/──────→ CT160:8000   (NHI Core)
-       ──/minio/────→ CT104:9001   (MinIO Console)
+    ├── ngrok (dominio statico fisso)    ──┐
+    └── cloudflared (URL effimera)       ──┤
+                                           │
+                                        CT202:80 (nginx catch-all, server_name _)
+                                           │
+                         ┌─────────────────┼──────────────────┐
+                         │                 │                  │
+                  /dias/ (pubblico)  /shifter/ (Authelia)  /lifelog/
+                  CT201:8000         CT204:8000             CT203:8002
+
+LAN 192.168.1.202 ──→ CT202:80 (nginx LAN block, server_name 192.168.1.202)
+                           │
+                     /shifter/ (admin, senza auth)
+                     /gateway/ (dashboard LAN-only)
 ```
 
-## Responsabilità di CT202
+---
 
-| Fa | Non fa |
-|---|---|
-| nginx reverse proxy HTTP | Applicazioni o logica business |
-| ngrok tunnel agent (autostart) | Database o state |
-| Routing per path | Autenticazione app-level |
-| SSL termination (via ngrok) | Network gateway (è il router) |
+## Servizi attivi su CT202
 
-**Principio**: CT202 può essere riavviato, aggiornato o ricreato senza impatto sulle app.
-Le app non sanno di essere esposte — CT202 sa tutto di loro, loro non sanno niente di lui.
+| Servizio | Comando / Systemd | Porta | Note |
+|----------|-------------------|-------|------|
+| nginx | `nginx.service` | 80 | Reverse proxy principale |
+| ngrok | `ngrok.service` | — | Tunnel verso CT202:80; API locale :4040 |
+| cloudflared | `cloudflared-quick.service` | — | Quick Tunnel verso CT202:80; URL effimera |
+| authelia | `authelia.service` | 127.0.0.1:9091 | SSO / auth-request per shifter + stratex |
+| cf-url-sync | `cf-url-sync.timer` (ogni 30s) | — | Scrive URL CF in `/var/www/html/gateway/cf-url.txt` |
 
-## Struttura nginx
+---
+
+## Tunnel attivi
+
+### ngrok (dominio statico)
+- **URL**: `obliging-fitting-cheetah.ngrok-free.app`
+- **Tipo**: dominio statico permanente (free plan)
+- **API locale**: `http://127.0.0.1:4040/api/tunnels` (metriche, URL, latency)
+- **Authtoken**: in SOPS — `python3 scripts/credential_manager.py get ngrok authtoken`
+- **Limiti free plan**: 1 tunnel, 40 conn/min, 20 sessioni simultanee
+
+### Cloudflare Quick Tunnel
+- **URL**: generata automaticamente da `trycloudflare.com` — **cambia ad ogni restart**
+- **URL attuale**: leggibile da `/var/www/html/gateway/cf-url.txt` (aggiornata ogni 30s)
+  o via `journalctl -u cloudflared-quick | grep trycloudflare`
+- **Comando**: `cloudflared tunnel --url http://localhost:80`
+- **Nessuna local API** (a differenza di ngrok non ha :4040)
+- **Upgrade a Named Tunnel**: richiede dominio Cloudflare — consente URL stabile e persistente
+
+---
+
+## Route Map (nginx)
+
+### Block catch-all (`server_name _`) — accessibile via ngrok + cloudflare
+
+| Path | Backend | Auth | Note |
+|------|---------|------|------|
+| `/` | redirect → `/dias/` | — | |
+| `/health` | 200 OK | — | healthcheck |
+| `/authelia` | `127.0.0.1:9091` | — | login UI Authelia |
+| `/_authz` | `127.0.0.1:9091` | internal | subrequest auth (non diretto) |
+| `/debug-headers` | inline 200 | — | debug headers |
+| `/dias/` | `CT201:8000` | aperto | DIAS Dashboard (SvelteKit) |
+| `/lifelog/` | `CT203:8002` | aperto | Lifelog2 API (FastAPI) |
+| `/lifelog-ui/` | `CT203:5173` | aperto | Lifelog2 UI (Vite dev server) |
+| `/shifter/` | `CT204:8000` | ✅ Authelia | SHIFTER — richiede login |
+| `/stratex/` | `CT190:8001` | ✅ Authelia | Stratex — richiede login |
+| `/gateway/` | `/var/www/html/gateway/` | LAN only | dashboard telemetria CT202 |
+| `/gateway/nginx/status` | stub_status | LAN only | metriche nginx raw |
+| `/gateway/ngrok/api/` | `127.0.0.1:4040` | LAN only | ngrok API proxy |
+
+### Block LAN-direct (`server_name 192.168.1.202`) — `conf.d/shifter-lan.conf`
+
+| Path | Backend | Auth | Note |
+|------|---------|------|------|
+| `/shifter/` | `CT204:8000` | nessuna | headers admin hardcoded (Roberto) |
+| `/gateway/` | `/var/www/html/gateway/` | LAN only | dashboard (duplicato per priorità server_name) |
+| `/gateway/nginx/status` | stub_status | LAN only | |
+| `/gateway/ngrok/api/` | `127.0.0.1:4040` | LAN only | |
+
+> **Perché due server block?** nginx sceglie il block con `server_name` esplicito rispetto al catch-all.
+> Le route nel catch-all non sono mai raggiunte dalla LAN quando si usa l'IP `192.168.1.202`.
+> Il block LAN-direct esiste per accedere a SHIFTER senza Authelia (admin locale) e per la dashboard gateway.
+
+---
+
+## File nginx su CT202
 
 ```
 /etc/nginx/conf.d/
-    └── gateway.conf            ← server block unico (non toccare)
-/etc/nginx/locations.d/
-    ├── _template.disabled      ← copia per aggiungere nuovi servizi
-    ├── dias.conf               ← /dias/ → CT201:8000
-    └── grafana.disabled        ← /grafana/ → CT103:3000 (abilitare quando pronto)
+    ├── gateway.conf          ← server block catch-all (porta 80, server_name _)
+    └── shifter-lan.conf      ← server block LAN-direct (porta 80, server_name 192.168.1.202)
+
+/etc/nginx/locations.d/       ← incluso dal catch-all via "include locations.d/*.conf"
+    ├── _template.disabled    ← template per nuovi servizi
+    ├── authelia.conf         ← /authelia + /_authz
+    ├── debug.conf            ← /debug-headers
+    ├── dias.conf             ← /dias/
+    ├── gateway-status.conf   ← /gateway/ (LAN only)
+    ├── grafana.disabled      ← /grafana/ (disabilitato)
+    ├── lifelog.conf          ← /lifelog/ + /lifelog-ui/
+    ├── shifter.conf          ← /shifter/ (con Authelia)
+    └── stratex.conf          ← /stratex/ (con Authelia)
 ```
 
-`gateway.conf` fa `include /etc/nginx/locations.d/*.conf` — solo i `.conf` vengono caricati.
-
-**Per disabilitare**: `mv service.conf service.disabled && nginx -s reload`
+**Per disabilitare una route**: `mv service.conf service.disabled && nginx -s reload`
 **Per abilitare**: `mv service.disabled service.conf && nginx -t && nginx -s reload`
 **Per aggiungere**: `cp _template.disabled myapp.conf` → edita → `nginx -t && nginx -s reload`
 
-## Template nginx per nuovo servizio
+---
 
-```nginx
-# /etc/nginx/conf.d/_template.conf.disabled
-# Copia questo file, rinomina (es: myapp.conf), rimuovi .disabled
+## Authelia
 
-location /NOME-SERVIZIO/ {
-    proxy_pass          http://192.168.1.XXX:PORTA/;
-    proxy_set_header    Host              $host;
-    proxy_set_header    X-Real-IP         $remote_addr;
-    proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header    X-Forwarded-Proto $scheme;
-    proxy_read_timeout  300s;
-}
-```
+Authelia gira su CT202 (`authelia.service`, porta 127.0.0.1:9091). Protegge `/shifter/` e `/stratex/`.
+
+- Config: `/etc/authelia/configuration.yml`
+- Users: `/etc/authelia/users_database.yml`
+- Flusso: nginx fa `auth_request /_authz` → Authelia valida sessione → se 401 redirect a `/authelia/?rd=...`
+- **Non esposta direttamente**: solo tramite nginx (`/authelia` path)
+
+---
+
+## Dashboard gateway (`/gateway/`)
+
+Accessibile solo da LAN: `http://192.168.1.202/gateway/`
+
+Mostra in tempo reale:
+- Metriche nginx (connessioni, rate, reading/writing/waiting)
+- Ngrok: URL pubblica, req/s, latency P50/P90/P99
+- Cloudflare: URL Quick Tunnel (aggiornata da `cf-url-sync.timer`)
+- Route map statica
+
+File: `/var/www/html/gateway/index.html`
+CF URL file: `/var/www/html/gateway/cf-url.txt` (aggiornato ogni 30s)
+
+---
 
 ## Sub-path configuration per ogni app
 
-Ogni app deve sapere che è servita da un sotto-percorso. Configurazione una-tantum:
+Ogni app deve sapere che è servita da un sotto-percorso:
 
 | App | Configurazione richiesta |
-|---|---|
-| **DIAS** (FastAPI) | `root_path="/dias"` in uvicorn, `base="/dias"` in SvelteKit |
-| **Grafana** | `GF_SERVER_ROOT_URL=https://DOMINIO/grafana` + `GF_SERVER_SERVE_FROM_SUB_PATH=true` |
-| **NHI** (FastAPI) | `root_path="/nhi"` in uvicorn |
-| **MinIO Console** | `MINIO_BROWSER_REDIRECT_URL=https://DOMINIO/minio` |
-| **Prometheus** | `--web.route-prefix=/prometheus` |
+|-----|--------------------------|
+| **DIAS** (SvelteKit + FastAPI) | `root_path="/dias"` uvicorn, `base="/dias"` SvelteKit |
+| **Lifelog2** (FastAPI) | nessuna (nginx strip path con trailing slash) |
+| **SHIFTER** (FastAPI) | `X-Script-Name: /shifter` header inoltrato da nginx |
+| **Stratex** (FastAPI) | nessuna config speciale se usa root_path |
+| **Grafana** (se abilitato) | `GF_SERVER_ROOT_URL=.../grafana` + `GF_SERVER_SERVE_FROM_SUB_PATH=true` |
 
-## ngrok authtoken
+---
 
-L'authtoken ngrok è in SOPS:
+## Operazioni comuni
+
 ```bash
-python3 scripts/credential_manager.py get ngrok authtoken
+# Verificare stato tunnel
+systemctl status ngrok cloudflared-quick
+
+# Vedere URL Cloudflare attuale
+cat /var/www/html/gateway/cf-url.txt
+# oppure:
+journalctl -u cloudflared-quick | grep trycloudflare | tail -1
+
+# Ricaricare nginx dopo modifica config
+nginx -t && nginx -s reload
+
+# Aggiornare cloudflared
+apt update && apt install cloudflared
+
+# Vedere log accessi nginx
+tail -f /var/log/nginx/gateway_access.log
+
+# Authelia: riavviare dopo modifica users
+systemctl restart authelia
 ```
 
-Setup ngrok sul container (da eseguire una volta):
-```bash
-ngrok config add-authtoken <TOKEN>
-```
+---
 
-## Endpoint pubblico attuale
+## Principio architetturale
 
-- **Dominio**: `obliging-fitting-cheetah.ngrok-free.app`
-- **Auth**: nessuna (accesso libero) — da proteggere con basic_auth nginx per ambienti sensibili
-- **Rate limiting**: nessuno — ngrok free plan ha limiti propri (40 connessioni/min)
-
-## Limitazioni ngrok free plan
-
-| Limite | Valore |
-|---|---|
-| Tunnel simultanei | 1 |
-| Dominio statico | 1 (obliging-fitting-cheetah.ngrok-free.app) |
-| Connessioni/min | 40 |
-| Sessioni simultanee | 20 |
-
-Se servono più domini separati (es. `dias.tuodominio.com`, `grafana.tuodominio.com`),
-considerare Cloudflare Tunnel (gratuito con dominio Cloudflare).
+CT202 è **stateless**: può essere riavviato, ricreato o aggiornato senza impatto sulle app.
+Le app non sanno di essere esposte — CT202 sa tutto di loro, loro non sanno niente di lui.
+Tutta la documentazione e la conoscenza operativa di CT202 vive su **LXC 190 (NH-Mini)**,
+non sul container stesso.

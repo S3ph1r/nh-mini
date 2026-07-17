@@ -82,7 +82,13 @@ Quando l'agente riceve uno di questi trigger, DEVE sospendere la conversazione i
 3. **Per ogni entry**, valuta se il `doc_trigger` è soddisfatto dalle entries TASK/DECISION del session-journal della sessione corrente.
 4. **Aggiorna** i file con `doc_trigger` soddisfatto: apri il file, aggiungi o modifica la sezione pertinente con le informazioni emerse dalla sessione. Usa il contesto del journal come fonte — non inventare.
 5. **Aggiorna** la source page corrispondente in `NH-Mini/sources/{app}-*.md` se il contenuto del file di progetto è cambiato significativamente.
-6. **Conferma:** Elenca separatamente i file NH-Mini e i file progetto modificati.
+6. **Aggiorna Wiki Obsidian** — pagina entità `NH-Mini/entities/systems/stack-{app-kebab-lowercase}.md`:
+   - Cerca il file (es. `Lifelog2` → `stack-lifelog2.md`, `ARIA` → `stack-aria.md`, `DIAS` → `stack-dias.md`).
+   - Aggiorna `updated:` nel frontmatter con la data odierna.
+   - Aggiorna le sezioni che riflettono le modifiche della sessione: versioni componenti, architettura, nuove feature, bug fix rilevanti. Usa le entries TASK/DECISION del journal come fonte — non inventare, non riscrivere sezioni non toccate.
+   - Se la pagina non esiste, crea una pagina base con frontmatter `type: entity` e le sezioni minime (architettura, pipeline, stato sviluppo).
+   - Aggiorna `NH-Mini/index.md` → riga `_Ultimo aggiornamento_` con la data odierna.
+7. **Conferma:** Elenca separatamente i file NH-Mini (wiki + knowledge framework) e i file progetto modificati.
 
 **Nota su sessioni multi-app** (es. lavoro su DIAS e ARIA nella stessa sessione):
-Esegui `/doc DIAS` e `/doc ARIA` in sequenza. La forma base viene eseguita una sola volta (al primo `/doc`), i passi 2-5 si ripetono per ogni app.
+Esegui `/doc DIAS` e `/doc ARIA` in sequenza. La forma base viene eseguita una sola volta (al primo `/doc`), i passi 2-6 si ripetono per ogni app.

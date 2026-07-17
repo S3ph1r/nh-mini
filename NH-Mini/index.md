@@ -2,7 +2,7 @@
 
 Catalogo master di tutte le pagine wiki. Aggiornato ad ogni ingest.  
 Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
-_Ultimo aggiornamento: 2026-06-07_
+_Ultimo aggiornamento: 2026-07-06_
 
 ---
 
@@ -29,6 +29,7 @@ _Ultimo aggiornamento: 2026-06-07_
 | [[ct201-dias-rt]] | 201 | DIAS runtime — dashboard + API | running |
 | [[ct202-gateway]] | 202 | Internet gateway (nginx + ngrok) | running |
 | [[ct203-lifelog]] | 203 | lifelog-v2 runtime — dashboard + API | active |
+| [[ct204-shifter-rt]] | 204 | SHIFTER runtime — dashboard + API | running |
 
 ---
 
@@ -41,6 +42,7 @@ _Ultimo aggiornamento: 2026-06-07_
 | [[entities/systems/stack-nh-mini\|stack-nh-mini]] | NH-Mini — control plane CT190 (dashboard, service catalog, discovery daemon) |
 | [[entities/systems/stack-stratex\|stack-stratex]] | Stratex — Wealth Intelligence System (gestione patrimoniale, AI ibrida, RAG) |
 | [[entities/systems/stack-lifelog2\|stack-lifelog2]] | Lifelog2 — Personal memory OS (pipeline A→F+Detective+G, gate B→G, 8 viste frontend, identity resolution) |
+| [[entities/systems/stack-shifter\|stack-shifter]] | SHIFTER — ControlRoom 24/7 Shift Manager (solutore CP-SAT, ferie, preferenze ed equità) |
 | [[entities/services/service-asr-blackwell\|service-asr-blackwell]] | ASR Blackwell Service — Backend di trascrizione e biometria su PC 139 |
 
 ---
@@ -64,7 +66,16 @@ _Ultimo aggiornamento: 2026-06-07_
 |--------|-------------|
 | [[concepts/lifelog2_dev-pattern\|lifelog2_dev-pattern]] | Pattern dev Lifelog2 — orchestrator B→E+Detective, Stage F, API, MinIO, Redis, frontend workflow |
 | [[concepts/lifelog2-places-intelligence\|lifelog2-places-intelligence]] | Places Intelligence — apprendimento luoghi (Place Detective, cover AI, /places dashboard) |
-| `sviluppi/Lifelog2/docs/lifelog2-classification-evolution-blueprint-v1.md` | **Design doc — Classification & Temporal Evolution Blueprint v1** (2026-06-01): problema capture_class, tassonomia conversation_type, 8 scenari vita reale, modello temporale evolutivo, retroazione reclassification_queue, roadmap P1-P5. Companion a master blueprint. |
+| [[concepts/lifelog2-quality-gate\|lifelog2-quality-gate]] | Quality Gate & Tiers — Regole Stage C1, Quality Tiers A/B/C, server-side floor ed asimmetria biometria/ASR |
+| [[concepts/lifelog2-telemetry\|lifelog2-telemetry]] | Telemetry — Sistema di telemetria SQLite locale (6 tabelle) ed API REST per le statistiche della pipeline |
+| [[concepts/lifelog2-thread-consolidation\|lifelog2-thread-consolidation]] | Thread Consolidation Z6 — Consolidamento episodi in saghe a lungo termine via Gemini Cloud + Qwen3 Locale |
+| [[concepts/lifelog2-turn-classification\|lifelog2-turn-classification]] | Turn-Level Classification — algoritmo deterministico per classificare singoli turni diarizzati (personal/media_passive/dialogue_likely/ambiguous), problema mixed segment, soglie e limiti |
+| [[concepts/lifelog2-refactor-roadmap\|lifelog2-refactor-roadmap]] | **Refactor Roadmap 2026-06-24** — Confidence Tier (Full/Standard/Minimal), dual pool Trusted/Flagged, Voiceprint Resolver C1, Stage D Thread-Aware, Grouper thread-based, cleanup analisi secondo livello. Task list spuntabile per 5 fasi. |
+| [[concepts/lifelog2-tier2-alignment-roadmap\|lifelog2-tier2-alignment-roadmap]] | **Tier2 Alignment Roadmap — ✅ CHIUSA 2026-07-16** — Allineamento worker secondo livello al modello thread: migrazione completata 2026-07-13 (migrations 0029-0031), batch 1200 drenato senza perdite, primo giro Tier2 reale ok. Gap residui: GPS dall'app, Day Digest catchup, retention enforcement, drop memory_atoms. |
+| `sviluppi/Lifelog2/docs/lifelog2-pipeline-validation-roadmap.md` | **✅ CHIUSO** — Piano operativo M0→M5 completato (2026-06-25). FASE 1 completata, 1301 segmenti processati, ghost cleanup, validazione pipeline. M5 superseded da conversation_thread_architecture. |
+| `sviluppi/Lifelog2/docs/lifelog2-classification-evolution-blueprint-v1.md` | **P0-P3 ✅ Completati** — conversation_type, quality tier, dual pool, Z7/Detective filters, back-propagation. P4-P5 deferred. P6 superseded da [[lifelog2-conversation-thread-architecture-v1]]. |
+| `sviluppi/Lifelog2/docs/lifelog2-conversation-thread-architecture-v1.md` | **✅ IMPLEMENTATA (FASE 3 completata 2026-07-16, vedi thread-refactor-roadmap chiusa)** — Architettura conversation_threads: schema conversation_threads + thread_turns, Stage F 4-pass rewrite (voiceprint resolution → thread assignment → cross-atom stitching → ARIA validation), lifecycle, vp_hash, canonical_label, migration plan, invarianti. |
+| `src/backend/lifelog2/services/pipeline/stage_f_grouping.py` | **✅ RISCRITTO (2026-06-26)** — Nuovo Stage F: 4 pass deterministici + ARIA a chiusura. Pass1 vp_hash, Pass2 role, Pass3 thread stitching, Pass4 coherence validation. Deployato su LXC 203. |
 
 ---
 
@@ -93,6 +104,16 @@ _Ultimo aggiornamento: 2026-06-07_
 | [[concepts/dias-stage0-preproduction\|dias-stage0-preproduction]] | Stage 0 Intelligence, Dashboard, Casting, Character Bible |
 | [[concepts/dias-prompt-evolution\|dias-prompt-evolution]] | Versioni prompt con rationale — lezioni apprese Stage B/C/B2 (aggiornato B v1.3, C v2.5.0) |
 | [[concepts/dias-voice-pipeline-quality\|dias-voice-pipeline-quality]] | Analisi qualitativa pipeline voce v1 — gap, fixes, tassonomia pause, priorità sviluppo |
+
+---
+
+## Concepts — SHIFTER
+
+| Pagina | Descrizione |
+|--------|-------------|
+| [[concepts/shifter-equity-boundary\|shifter-equity-boundary]] | Boundary di fine anno, effetto settimana 53 ed equità saldi carry-over |
+| [[concepts/shifter-swap-analysis\|shifter-swap-analysis]] | Logica di validazione e strumento CLI per analizzare le streak di turni scambiabili |
+
 
 ---
 
@@ -135,13 +156,13 @@ _Ultimo aggiornamento: 2026-06-07_
 
 ## Statistiche Wiki
 
-- **Pagine totali:** 61
-- **Entities containers:** 10
-- **Entities systems:** 5 (ARIA, DIAS, NH-Mini, Stratex, Lifelog2)
-- **Concepts:** 16
+- **Pagine totali:** 69
+- **Entities containers:** 11
+- **Entities systems:** 6 (ARIA, DIAS, NH-Mini, Stratex, Lifelog2, SHIFTER)
+- **Concepts:** 21
 - **Sources ingerite:** 26
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-06-07 (Lifelog2 gate B→G, V1 import tooling, allineamento dev/rt/GitHub)
+- **Ultimo aggiornamento:** 2026-06-24 (Lifelog2 refactor roadmap: confidence tier, thread model, dual pool)
 
 ---
 

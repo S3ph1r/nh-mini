@@ -31,7 +31,7 @@ def extract_last_end_block(text: str) -> tuple[str | None, str | None]:
     Estrae la entry END più recente dal journal basandosi sul timestamp.
     Ritorna (timestamp, content) oppure (None, None) se non trovata.
     """
-    pattern = r"(## \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] END\n)(.*?)(?=\n## \[|\Z)"
+    pattern = r"(## \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] END[^\n]*\n)(.*?)(?=\n## \[|\Z)"
     matches = list(re.finditer(pattern, text, re.DOTALL))
     if not matches:
         return None, None
@@ -53,7 +53,7 @@ def extract_section(block: str, section: str) -> str:
 
 def find_last_start_objective(text: str) -> str:
     """Trova l'obiettivo della sessione più recente (dal blocco START)."""
-    pattern = r"## \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] START\n(.*?)(?=\n## \[|\Z)"
+    pattern = r"## \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] START[^\n]*\n(.*?)(?=\n## \[|\Z)"
     matches = list(re.finditer(pattern, text, re.DOTALL))
     if not matches:
         return ""

@@ -24,13 +24,14 @@ Sostituisce NHI-CORE (CT160) come "faccia" del sistema — CT160 è in dismissio
 web/
 ├── app.py                  # FastAPI backend
 └── static/
-    ├── index.html          # SPA — 4 pagine: Overview, Infrastructure, Projects, ARIA
+    ├── index.html          # SPA — 7 pagine: Overview, Infrastructure, Projects, Services, ARIA, Alerts, Topology
     ├── css/
     │   ├── warroom.css     # Design system NHI-CORE (copiato localmente)
     │   ├── tokens.css      # CSS tokens
-    │   └── dashboard.css   # Componenti custom NH-Mini
+    │   └── dashboard.css   # Componenti custom NH-Mini (layout sidebar, topology, alerts)
     └── js/
-        └── dashboard.js    # Logica frontend (fetch API, render, navigation)
+        ├── dashboard.js        # Logica frontend (fetch API, render, navigation, vis-network)
+        └── vis-network.min.js  # Vis-network 10.1.0 — grafo interattivo, self-hosted (643KB)
 ```
 
 ## Pagine
@@ -39,8 +40,11 @@ web/
 |--------|--------------|------------|
 | Overview | Stats infra reale, container cards, last discovery | `/api/overview`, `/api/infrastructure` |
 | Infrastructure | Container grid real/legacy/external con status badge | `/api/infrastructure` |
+| Services | Service catalog con stato live (TCP probe), purpose, backends e remediation | `/api/services` |
 | Projects | Cards `sviluppi/` con description/stack/status | `/api/projects` |
 | ARIA | Info statica PC139 + tabella porte + dev workflow | hardcoded (stabile) |
+| Alerts | Alert attivi (heartbeat), summary cards, healthy services | `/api/alerts` |
+| **Topology** | **Grafo interattivo force-directed (vis-network) — 13 nodi, 12 archi colorati per protocollo** | **`/api/topology`** |
 
 ## API Endpoints
 
@@ -51,16 +55,20 @@ GET  /api/infrastructure                  — containers split: real / legacy / 
 GET  /api/projects                        — lista sviluppi/ con workspace attivo
 GET  /api/projects/{name}/context         — .project-context YAML parsato
 GET  /api/services?probe=true             — service catalog con TCP probe
+GET  /api/alerts                          — alert attivi da state/alerts.json
+GET  /api/topology                        — grafo infra: {nodes, edges} per vis-network
 POST /api/containers/{vmid}/start         — start container via Proxmox SSH
 POST /api/containers/{vmid}/stop          — stop container via Proxmox SSH
 POST /api/discovery/refresh               — trigger manuale nh-discovery.sh
+POST /api/heartbeat/run                   — trigger manuale heartbeat.py (aggiorna alerts.json)
 ```
 
 ## Auto-refresh
 
 - Frontend: polling ogni 60s su `/api/overview`, health check ogni 30s
-- Pulsante ↻ in topbar: trigger `/api/discovery/refresh` + reload overview
+- Pulsante ↻ in sidebar (bottom): trigger `/api/discovery/refresh` + reload overview
 - Backend discovery: systemd timer ogni 15min (indipendente dalla dashboard)
+- Heartbeat daemon: systemd timer ogni 5min (aggiorna `state/alerts.json`)
 
 ## Accesso
 
@@ -83,3 +91,5 @@ Per aggiungere una nuova pagina:
   NHI-CORE v1.1 scansionava Proxmox ogni ora e generava context files per l'agent.
   NH-Mini Dashboard unifica: dashboard web + API + context generation in CT190.
   Design system warroom CSS copiato da NHI-CORE tramite API prima della dismissione.
+- **2026-06-11**: Refactor layout — rimossa topbar, introdotta **sidebar sinistra fissa** (260px, `position: fixed`) con brand, nav, status indicators. Fix sfondo bianco in scroll (`.nhi-scene-bg` → `position: fixed`). Responsive mobile via `@media (max-width: 768px)`.
+- **2026-06-11**: Aggiunta tab **Topology** — grafo interattivo force-directed via vis-network 10.1.0 (self-hosted). 13 nodi colorati per tipo (Control/Hypervisor/App/Gateway/Infra/GPU/External), 12 archi colorati per protocollo (SSH/HTTP/Redis/Postgres/S3/Monitoring). Click su nodo → pannello dettaglio. Dati statici da `GET /api/topology`.
