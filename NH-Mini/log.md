@@ -1,7 +1,25 @@
 # Wiki Log — NH-Mini Second Brain
 
 Log append-only di tutte le operazioni sul wiki.  
-Formato entry: `## [YYYY-MM-DD] tipo | titolo`
+Formato entry: `## [2026-07-28] dev | WhisperX: turni tagliati per parola, non per segmento
+
+Correzione al backend `lifelog_whisperx` di ARIA (commit `abe9b1b`) che sana la causa a monte
+di una lunga catena di problemi Lifelog2. WhisperX assegna lo speaker di un SEGMENTO per durata
+dominante: un segmento a cavallo di due parlanti collassa sul maggioritario e le parole
+dell'altro vengono assorbite; il backend concatenava poi i segmenti con la stessa etichetta.
+Il "turno" era un blocco di tempo a etichetta dominante — misurati turni da 37s con domanda e
+risposta di persone diverse, `n_segments_merged` fino a 79, uno da 299s, 53% dei turni senza
+voiceprint utilizzabile. Da lì le persone ricorrenti fantasma e la voce dell'utente non
+riconosciuta (cosine -0.007 col proprio centroide).
+
+`assign_word_speakers` assegnava già lo speaker a ogni parola: il dato veniva scartato. Ora i
+turni si tagliano sul cambio di speaker per parola. Aggiunto `speaker` ai word_timestamps.
+Verificato offline su 5 casi (incluso il caso del bug e i tre fallback); non ancora su audio
+reale — il backend non era in esecuzione, riparte col codice nuovo al prossimo task ASR.
+
+Nuova pagina: `concepts/whisperx-word-level-turns.md`.
+
+## [YYYY-MM-DD] tipo | titolo`
 
 ## [2026-07-14] dev | upgrade homelab connection to 5G CPE cascade (JC16)
 
@@ -2059,3 +2077,26 @@ Creato il sistema wiki secondo il pattern LLM Wiki.
 - **Doc repo Lifelog2 allineati** (blocchi datati, storia preservata): status-roadmap (blocco stato 2026-07-16 in testa), hardening doc (§8: backpressure lockstep, retry PEL, soft deadline, GPU lease, date recording), thread-refactor-roadmap (CHIUSA), intelligence-addendum e places-spec (banner superamento atom→thread).
 - **Wiki**: [[concepts/lifelog2-tier2-alignment-roadmap]] chiusa con blocco 2026-07-16; index aggiornato.
 - **Gap noti**: GPS quasi assente dall'app Android (Places a zero), Day Digest catchup storico da lanciare, retention enforcement, drop memory_atoms, ciclo Tier1 a chunk.
+
+---
+
+## [2026-07-17] dev | Lifelog2 — calibrazione identità + intervista Roadmap Segnali
+
+- **Calibrazione identità**: audit di grounding su un thread "live streaming" (1 turno utente su 11 narrato come partecipazione) ha portato a un'indagine sulla soglia voiceprint. Ipotesi iniziale (gate anti-chimera a 0.70) **smentita** da ascolto ground truth: 15/15 turni campione erano voce dell'utente, inclusi i chimera a 0.55. Soglia base 0.50 **confermata definitivamente**. Causa reale della distorsione: la diarizzazione non spezza il turno al cambio voce → parole di un podcast finiscono in un turno etichettato utente. Fix mantenuti: best-match resolution in C1, semantica di presenza in Stage E (prompt v5).
+- **Incidente**: un commit di ritiro del gate anti-chimera non si era salvato (perso tra cambio modello e compattazione conversazione) — pipeline ha girato una notte con soglia sbagliata, zero impatto reale, scoperto verificando esplicitamente lo stato su LXC 203.
+- **Intervista strutturata Roadmap Segnali**: 8 decisioni con Roberto su come sfruttare il 90% dei thread "solo statistici" — sintetizzate in [[concepts/lifelog2-signal-statistics-roadmap]].
+- Dettagli: `workspace/vp-calibration-2026-07-17.md`, `workspace/lifelog2-signal-roadmap-interview.md`.
+
+## [2026-07-18] dev | Lifelog2 — Roadmap Segnali Fase 0 + audit e fix frontend completo
+
+- **Fase 0 implementata**: `conversation_threads.signal_class` (deterministico, backfill 46 actionable/73 contextual/824 statistical), tabella `weekly_metrics` (4 famiglie), worker giornaliero. Corretto in corsa un disegno errato (cluster vp per stringa — impossibile per via di `SESSION_GAP_MIN`) prima del deploy.
+- **Audit frontend completo**: verifica dal vivo di tutte le 15 route → 4 endpoint a 500 in produzione (People era in nav primaria), causa comune modelli droppati/rinominati. Tutti sistemati: People, Sagas (dati reali dalle 11 saghe), Search/RAG, stats/monthly, Day detail, Tasks. Eliminate Timeline e Transcript (orfane). Prima UI per signal_class (badge+filtro) e weekly_metrics (card in Profile).
+- **Bug aperto**: click su thread dalla grid → 501 nel dettaglio turni, in indagine.
+- Dettagli tecnici: `sviluppi/Lifelog2/docs/lifelog2-status-roadmap.md` (blocco 2026-07-18), `lifelog2-thread-builder-hardening-2026-07.md` §9.
+
+## [2026-07-21] dev | Lifelog2 — pratica di test sistematica + pulizia ORM completa
+
+- **Nuova pratica scritta**: `sviluppi/Lifelog2/docs/lifelog2-dev-testing-practice.md` — la suite `tests/test_dashboard_smoke.py` (27 casi) è ora regola, non abitudine: un caso per endpoint dashboard, aggiornato nello stesso commit, verde prima di ogni deploy. Nata da 8 endpoint totali trovati rotti in silenzio in 3 giorni (4 il 18/07, altri 4 scoperti oggi scrivendo i test) + un test esistente rotto da un refactor di giugno mai notato.
+- **Pulizia ORM completa**: rimosse Episode/Thread/MemoryAtom/ActionItem/Decision dopo verifica esaustiva di tutte le occorrenze. Trovati e riscritti /map, /places/{id}, /places/{id}/atoms, /people/{id}/context (tutti silenziosamente rotti, fuori scope dell'audit del 18/07) e la vista materializzata place_signals (stesso bug, mascherato da places vuota per GPS assente). Migration 0034 applicata sul DB di produzione con ok esplicito.
+- **Verifica pipeline sotto carico reale**: con la registrazione riattivata, confermato via log WhisperX + telemetria che il degrado ASR è un fenomeno storico noto (max mai visto: 23 minuti per un segmento), e che il Thread Builder fermo da 5 giorni si è sbloccato da solo appena Tier1 ha avuto una finestra idle — nessuna soglia bloccante, solo scheduling che si autorisolve. Nessuna modifica al codice pipeline.
+- Dettagli: `sviluppi/Lifelog2/docs/lifelog2-status-roadmap.md` blocco 2026-07-21.
