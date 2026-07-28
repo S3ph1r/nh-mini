@@ -67,7 +67,7 @@ _Ultimo aggiornamento: 2026-07-06_
 | [[concepts/lifelog2_dev-pattern\|lifelog2_dev-pattern]] | Pattern dev Lifelog2 — orchestrator B→E+Detective, Stage F, API, MinIO, Redis, frontend workflow |
 | [[concepts/lifelog2-places-intelligence\|lifelog2-places-intelligence]] | Places Intelligence — apprendimento luoghi (Place Detective, cover AI, /places dashboard) |
 | [[concepts/lifelog2-quality-gate\|lifelog2-quality-gate]] | Quality Gate & Tiers — Regole Stage C1, Quality Tiers A/B/C, server-side floor ed asimmetria biometria/ASR |
-- [[concepts/whisperx-word-level-turns]] — turni tagliati per parola: la correzione ARIA alla causa a monte dei turni-chimera (2026-07-28)
+- [[concepts/whisperx-diarization-ceiling]] — il tetto della diarizzazione su audio ambientale: cosa è stato provato e perché scartato (2026-07-28)
 | [[concepts/lifelog2-telemetry\|lifelog2-telemetry]] | Telemetry — Sistema di telemetria SQLite locale (6 tabelle) ed API REST per le statistiche della pipeline |
 | [[concepts/lifelog2-thread-consolidation\|lifelog2-thread-consolidation]] | Thread Consolidation Z6 — Consolidamento episodi in saghe a lungo termine via Gemini Cloud + Qwen3 Locale |
 | [[concepts/lifelog2-turn-classification\|lifelog2-turn-classification]] | Turn-Level Classification — algoritmo deterministico per classificare singoli turni diarizzati (personal/media_passive/dialogue_likely/ambiguous), problema mixed segment, soglie e limiti |

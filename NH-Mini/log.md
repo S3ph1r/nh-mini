@@ -1,23 +1,26 @@
 # Wiki Log — NH-Mini Second Brain
 
 Log append-only di tutte le operazioni sul wiki.  
-Formato entry: `## [2026-07-28] dev | WhisperX: turni tagliati per parola, non per segmento
+Formato entry: `## [2026-07-28] dev | WhisperX: misurato il tetto della diarizzazione, turni invariati
 
-Correzione al backend `lifelog_whisperx` di ARIA (commit `abe9b1b`) che sana la causa a monte
-di una lunga catena di problemi Lifelog2. WhisperX assegna lo speaker di un SEGMENTO per durata
-dominante: un segmento a cavallo di due parlanti collassa sul maggioritario e le parole
-dell'altro vengono assorbite; il backend concatenava poi i segmenti con la stessa etichetta.
-Il "turno" era un blocco di tempo a etichetta dominante — misurati turni da 37s con domanda e
-risposta di persone diverse, `n_segments_merged` fino a 79, uno da 299s, 53% dei turni senza
-voiceprint utilizzabile. Da lì le persone ricorrenti fantasma e la voce dell'utente non
-riconosciuta (cosine -0.007 col proprio centroide).
+Indagine completa sul backend `lifelog_whisperx` di ARIA partendo dai raw text. Il difetto
+c'era: whisperx assegna lo speaker di un segmento per durata dominante, quindi un segmento a
+cavallo di due parlanti collassa sul maggioritario. Ma tutte le leve native provate per
+correggerlo sono risultate PEGGIORATIVE, misurate sullo stesso segmento (SNR 21dB, 4-5 parlanti):
+taglio per parola (30% dei turni a 1-2 parole), min_speakers 3/4/5 (da 42 a 99 frammenti sotto
+0.5s), exclusive_speaker_diarization (alternanze spurie da 24 a 78). Gli embedding per parlante
+di pyannote sono inutilizzabili come voiceprint: +0.038 di somiglianza con identità confermate
+contro una soglia di 0.50.
 
-`assign_word_speakers` assegnava già lo speaker a ogni parola: il dato veniva scartato. Ora i
-turni si tagliano sul cambio di speaker per parola. Aggiunto `speaker` ai word_timestamps.
-Verificato offline su 5 casi (incluso il caso del bug e i tre fallback); non ancora su audio
-reale — il backend non era in esecuzione, riparte col codice nuovo al prossimo task ASR.
+Turni riportati alla costruzione per segmento. Restano nel contratto i segnali nuovi
+(`diarization_stats`, speaker per parola, `speaker_embeddings`) per ETICHETTARE l'affidabilità
+in Stage C1 invece di tentare estrazioni su materiale non attendibile.
 
-Nuova pagina: `concepts/whisperx-word-level-turns.md`.
+Bug reale corretto per strada: il wrapper dell'orchestratore ricostruiva il body con soli tre
+campi e scartava in silenzio ogni parametro di diarizzazione — senza accorgersene avremmo
+concluso che i parametri non servono senza averli mai provati.
+
+Pagina: `concepts/whisperx-diarization-ceiling.md` (sostituisce whisperx-word-level-turns).
 
 ## [YYYY-MM-DD] tipo | titolo`
 
