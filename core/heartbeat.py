@@ -46,6 +46,7 @@ import json
 import sys
 import socket
 import logging
+import subprocess
 import time
 from pathlib import Path
 from datetime import datetime, timezone
@@ -66,6 +67,7 @@ SERVICE_SEVERITY = {
     "nh_mini_api": "LOW",     # la dashboard stessa
     "dias_api":    "HIGH",    # API runtime DIAS
     "lifelog2_rt": "HIGH",    # API runtime Lifelog2
+    "lifelog2_orchestrator": "HIGH",  # pipeline B->G + Tier2 (identity_detective, Z7, ...)
     "shifter_rt":  "HIGH",    # API runtime SHIFTER
     "sops_age":    "LOW",     # locale, non ha TCP probe
 }
@@ -104,6 +106,23 @@ def probe_tcp(host: str, port: int, timeout: float = 3.0) -> bool:
         with socket.create_connection((host, port), timeout=timeout):
             return True
     except (OSError, ConnectionRefusedError, socket.timeout):
+        return False
+
+
+def probe_ssh_systemd(host: str, unit: str, timeout: float = 8.0) -> bool:
+    """Liveness check per processi di background senza porta TCP (2026-08-30):
+    un daemon come lifelog2-orchestrator non è un server, il probe_tcp non
+    può vederlo — verifica lo stato reale del systemd unit via SSH (BatchMode,
+    nessun prompt: se la chiave non è autorizzata fallisce e basta, come un
+    TCP probe fallito)."""
+    try:
+        result = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", f"ConnectTimeout={int(timeout)}",
+             f"root@{host}", f"systemctl is-active {unit}"],
+            capture_output=True, text=True, timeout=timeout + 5,
+        )
+        return result.returncode == 0 and result.stdout.strip() == "active"
+    except (subprocess.TimeoutExpired, OSError):
         return False
 
 
@@ -149,10 +168,31 @@ def probe_services(catalog: dict) -> tuple[list[dict], list[str]]:
         port = svc.get("port")
         name = svc.get("name", key)
         severity = SERVICE_SEVERITY.get(key, "MEDIUM")
+        check_type = svc.get("check_type", "tcp" if port else "none")
+
+        if check_type == "ssh_systemd":
+            unit = svc.get("unit", "")
+            reachable = probe_ssh_systemd(host, unit)
+            if reachable:
+                log.info(f"  OK   {key} (systemd:{unit}@{host})")
+                healthy.append(key)
+            else:
+                log.warning(f"  DOWN {key} (systemd:{unit}@{host}) — non 'active'")
+                new_alerts.append({
+                    "id": make_alert_id(key, "service_down"),
+                    "service_key": key,
+                    "service_name": name,
+                    "severity": severity,
+                    "type": "SERVICE_DOWN",
+                    "message": f"{name} non attivo (systemctl is-active '{unit}' su {host} non ha risposto 'active')",
+                    "endpoint": f"{host} ({unit})",
+                })
+            continue
 
         if not port:
-            # Servizio locale senza porta TCP (es. sops_age) — skip probe
-            log.info(f"  SKIP {key} — no TCP port")
+            # Servizio locale senza porta TCP e senza check_type dedicato
+            # (es. sops_age) — nessun modo di verificarlo, skip probe.
+            log.info(f"  SKIP {key} — no TCP port, no check_type")
             healthy.append(key)
             continue
 

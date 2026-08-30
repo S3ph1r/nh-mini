@@ -166,6 +166,23 @@ STATIC_CATALOG: dict[str, dict] = {
         "diagnostic": "ssh root@192.168.1.203 'journalctl -u lifelog2-api -n 15 --no-pager'",
         "remediation": "ssh root@192.168.1.203 'systemctl restart lifelog2-api'",
     },
+    "lifelog2_orchestrator": {
+        "name": "Lifelog2 Orchestrator (pipeline B-G + Tier2)",
+        "container": "CT203 (Lifelog (v2))",
+        "host": "192.168.1.203",
+        "port": None,
+        # 2026-08-30: nessuna porta TCP — è un processo di background (systemd
+        # service), non un server. Il probe TCP di lifelog2_rt copre solo la
+        # REST API: se l'orchestratore si blocca/crasha ma l'API resta su,
+        # nessun probe esistente se ne accorgeva. check_type="ssh_systemd"
+        # (nuovo in heartbeat.py) verifica lo stato reale del servizio via SSH.
+        "check_type": "ssh_systemd",
+        "unit": "lifelog2-orchestrator",
+        "purpose": "Pipeline Stage B->G + worker Tier2 (identity_detective, profile_builder, thread_builder, ...).",
+        "notes": "Processa segmenti in tempo reale + backlog. Nessuna porta: liveness verificata con systemctl is-active via SSH.",
+        "diagnostic": "ssh root@192.168.1.203 'journalctl -u lifelog2-orchestrator -n 20 --no-pager'",
+        "remediation": "ssh root@192.168.1.203 'systemctl restart lifelog2-orchestrator'",
+    },
     "shifter_rt": {
         "name": "SHIFTER Runtime API",
         "container": "CT204 (shifter-rt)",
