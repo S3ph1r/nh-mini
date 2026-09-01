@@ -26,9 +26,13 @@ def sync_env(project_name: str):
     mapping = {
         "dias": ("dias", "dias"),
         "stratex": ("stratex", "stratex"),
-        "lifelog2": ("lifelog", "Lifelog2"), 
+        "lifelog2": ("lifelog", "Lifelog2"),
+        # frontend è un target separato: chiave PUBLIC_ (client-side, visibile nel
+        # browser per design — Leaflet la usa direttamente nell'URL dei tile) in un
+        # .env diverso (src/frontend/.env), non nel .env del backend.
+        "lifelog2-frontend": ("carto_basemaps", "Lifelog2/src/frontend"),
     }
-    
+
     if project_name not in mapping:
         print(f"❌ Progetto '{project_name}' non configurato nel mapping di sincronizzazione.")
         return
@@ -36,7 +40,7 @@ def sync_env(project_name: str):
     service_info = mapping[project_name]
     service, folder = service_info[0], service_info[1]
     creds = get_service_credential(service, "main" if project_name != "lifelog2" else "db")
-    
+
     if not creds:
         print(f"❌ Impossibile recuperare credenziali per {service} dal vault SOPS.")
         return
@@ -68,7 +72,15 @@ def sync_env(project_name: str):
         # Add Google API Key for LLM Enrichment
         gemini_creds = get_service_credential("google_gemini", "main")
         if gemini_creds:
-            lines.append(f"GOOGLE_API_KEY={gemini_creds.get('google_api_key')}\n")
+            lines.append(f"GOOGLE_API_KEY={gemini_creds.get('api_key')}\n")
+
+        # Google Places/Geocoding — arricchimento opzionale places (2026-09-01)
+        places_creds = get_service_credential("google_places", "main")
+        if places_creds:
+            lines.append(f"LIFELOG2_GOOGLE_PLACES_API_KEY={places_creds.get('api_key')}\n")
+
+    elif project_name == "lifelog2-frontend":
+        lines.append(f"PUBLIC_CARTO_API_KEY={creds.get('api_key')}\n")
 
     with open(env_path, "w") as f:
         f.writelines(lines)
