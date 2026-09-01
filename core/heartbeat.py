@@ -70,6 +70,7 @@ SERVICE_SEVERITY = {
     "lifelog2_orchestrator": "HIGH",  # pipeline B->G + Tier2 (identity_detective, Z7, ...)
     "shifter_rt":  "HIGH",    # API runtime SHIFTER
     "sops_age":    "LOW",     # locale, non ha TCP probe
+    "minio_disk_space": "HIGH",  # 2026-09-02: audio Lifelog2 non recuperabile se il disco si riempie
 }
 
 REAL_VMIDS = get_real_vmids()
@@ -126,6 +127,26 @@ def probe_ssh_systemd(host: str, unit: str, timeout: float = 8.0) -> bool:
         return False
 
 
+def probe_disk_free_gb(host: str, path: str, timeout: float = 8.0) -> float | None:
+    """Spazio libero reale in GB su `path` dell'host, via `df` su SSH —
+    2026-09-02, per l'alert di sfoltimento audio Lifelog2 (MinIO, CT104).
+    Deliberatamente `df -h` sull'host reale, non una stima dal DB o dal
+    bucket via API: è la stessa fonte già usata per diagnosticare la
+    crisi di spazio il 2026-09-02, la più affidabile disponibile.
+    None se la SSH fallisce (nessuna falsa lettura di 'tutto ok')."""
+    try:
+        result = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", f"ConnectTimeout={int(timeout)}",
+             f"root@{host}", f"df --output=avail -B1 {path} | tail -1"],
+            capture_output=True, text=True, timeout=timeout + 5,
+        )
+        if result.returncode != 0:
+            return None
+        return int(result.stdout.strip()) / (1024 ** 3)
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        return None
+
+
 def load_inventory() -> list[dict]:
     path = ROOT / "state" / "inventory.json"
     if not path.exists():
@@ -169,6 +190,33 @@ def probe_services(catalog: dict) -> tuple[list[dict], list[str]]:
         name = svc.get("name", key)
         severity = SERVICE_SEVERITY.get(key, "MEDIUM")
         check_type = svc.get("check_type", "tcp" if port else "none")
+
+        if check_type == "disk_space":
+            path = svc.get("path", "/")
+            min_free_gb = svc.get("min_free_gb", 3.0)
+            free_gb = probe_disk_free_gb(host, path)
+            if free_gb is None:
+                log.warning(f"  SKIP {key} — SSH df fallita, nessuna lettura affidabile")
+                healthy.append(key)  # non allarmare su un semplice fallimento SSH transitorio
+            elif free_gb >= min_free_gb:
+                log.info(f"  OK   {key} ({free_gb:.1f}GB liberi su {host}:{path})")
+                healthy.append(key)
+            else:
+                log.warning(f"  LOW  {key} ({free_gb:.1f}GB liberi < soglia {min_free_gb}GB)")
+                new_alerts.append({
+                    "id": make_alert_id(key, "disk_low"),
+                    "service_key": key,
+                    "service_name": name,
+                    "severity": severity,
+                    "type": "DISK_LOW",
+                    "message": (
+                        f"{name}: solo {free_gb:.1f}GB liberi su {host}:{path} "
+                        f"(soglia {min_free_gb}GB). Sfoltimento pronto ma non ancora "
+                        f"eseguito — richiede conferma esplicita (audio non recuperabile)."
+                    ),
+                    "endpoint": f"{host}:{path}",
+                })
+            continue
 
         if check_type == "ssh_systemd":
             unit = svc.get("unit", "")

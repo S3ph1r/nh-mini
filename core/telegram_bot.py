@@ -28,6 +28,16 @@ sys.path.insert(0, str(ROOT))
 from scripts.credential_manager import UnifiedCredentialManager
 
 log = logging.getLogger("telegram_bot")
+
+# 2026-08-30 (conversazione con Roberto, in partenza per un paio di giorni
+# senza accesso remoto): canale di controllo Claude<->Telegram. Il daemon di
+# polling (già esistente, gestiva solo i callback dei bottoni remediation)
+# ora scrive OGNI messaggio in arrivo (testo libero o click su bottone) in
+# questo file — un consumer esterno (Claude Code, non questo processo) lo
+# legge per sapere se Roberto ha risposto, senza competere sulla stessa
+# chiamata getUpdates (un solo consumer reale dell'API Telegram, questo
+# processo; chiunque altro legge il file, mai l'API direttamente).
+TELEGRAM_INBOX_PATH = ROOT / "state" / "telegram_inbox.jsonl"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [telegram] %(levelname)s %(message)s",
@@ -160,17 +170,48 @@ class TelegramBot:
         reply_markup = None
         if remediation_cmd:
             text += "\n\n<i>Cosa vuoi fare?</i>"
-            # Crea Inline Keyboard
+            # Etichetta bottone configurabile per servizio (2026-09-02) — "Riavvia"
+            # ha senso per un processo bloccato, non per es. lo sfoltimento audio.
+            rem_label = service.get("remediation_label", "🛠️ Riavvia")
             reply_markup = {
                 "inline_keyboard": [
                     [
-                        {"text": "🛠️ Riavvia", "callback_data": f"rem_yes:{service_key}"},
+                        {"text": rem_label, "callback_data": f"rem_yes:{service_key}"},
                         {"text": "👁️ Ignora", "callback_data": f"rem_no:{service_key}"}
                     ]
                 ]
             }
             
         self.send_message(text, reply_markup=reply_markup)
+
+    def send_confirmation(self, token: str, question: str) -> bool:
+        """Chiede conferma via bottoni Sì/No per un'azione proposta da Claude
+        (non una remediation di servizio — vedi claude_confirm: in
+        handle_callback). `token` identifica la richiesta: la risposta
+        arriva nel file inbox taggata con lo stesso token, così un consumer
+        che ha proposto più azioni in sequenza sa quale bottone risponde a
+        quale domanda."""
+        reply_markup = {
+            "inline_keyboard": [[
+                {"text": "✅ Sì, procedi", "callback_data": f"claude_confirm:{token}:yes"},
+                {"text": "❌ No, aspetta", "callback_data": f"claude_confirm:{token}:no"},
+            ]]
+        }
+        return self.send_message(f"🤖 <b>Claude chiede conferma</b>\n\n{question}", reply_markup=reply_markup)
+
+    def _log_inbox(self, entry: dict) -> None:
+        """Appende un evento in arrivo (messaggio libero o risposta a un
+        bottone) al file che Claude Code legge per sapere cosa Roberto ha
+        detto mentre non è al PC. Un solo scrittore (questo processo), mai
+        riscritto, solo appeso — sicuro anche se il consumer lo legge in
+        contemporanea."""
+        entry = {"ts_received": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + "Z", **entry}
+        try:
+            TELEGRAM_INBOX_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(TELEGRAM_INBOX_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except OSError as e:
+            log.error(f"Impossibile scrivere su inbox Telegram: {e}")
 
     def poll_updates(self):
         """Ciclo di polling infinito per ascoltare i callback dei bottoni."""
@@ -191,10 +232,24 @@ class TelegramBot:
                 updates = res.get("result", [])
                 for update in updates:
                     offset = update["update_id"] + 1
-                    
+
                     if "callback_query" in update:
                         self.handle_callback(update["callback_query"])
-                        
+                    elif "message" in update:
+                        msg = update["message"]
+                        text = msg.get("text")
+                        # Solo dal chat_id configurato — un messaggio da
+                        # chiunque altro (se il bot fosse mai aggiunto
+                        # altrove) non entra nell'inbox che Claude legge.
+                        if text and str(msg.get("chat", {}).get("id")) == str(self.chat_id):
+                            log.info(f"Messaggio ricevuto: {text[:80]}")
+                            self._log_inbox({
+                                "type": "message",
+                                "text": text,
+                                "message_id": msg.get("message_id"),
+                                "date": msg.get("date"),
+                            })
+
             except KeyboardInterrupt:
                 log.info("Polling interrotto dall'utente.")
                 break
@@ -221,20 +276,32 @@ class TelegramBot:
             service_key = data.split(":", 1)[1]
             service = self.catalog.get(service_key, {})
             cmd = service.get("remediation")
-            
+
             if not cmd:
                 self.answer_callback(query_id, "Comando non trovato.")
                 return
-                
+
             self.answer_callback(query_id, "Avvio riparazione...")
             self.edit_message(message_id, f"{original_html}\n\n⏳ <i>Esecuzione riavvio in corso...</i>")
-            
+
             success, output = self._execute_command(cmd)
-            
+
             if success:
                 self.edit_message(message_id, f"{original_html}\n\n✅ <b>Risolto:</b> Comando eseguito con successo.\n<pre>{output}</pre>")
             else:
                 self.edit_message(message_id, f"{original_html}\n\n❌ <b>Fallito:</b> Il riavvio ha restituito un errore.\n<pre>{output}</pre>")
+
+        elif data.startswith("claude_confirm:"):
+            # Non esegue nulla qui — a differenza di rem_yes/rem_no questa
+            # non è un comando fisso del catalogo, è un'azione proposta a
+            # runtime da Claude Code. Il ruolo di questo processo è solo
+            # registrare la risposta nell'inbox; chi ha proposto l'azione
+            # (Claude, non questo daemon) la legge e decide cosa fare.
+            _, token, answer = data.split(":", 2)
+            self._log_inbox({"type": "confirm", "token": token, "answer": answer})
+            icon = "✅ Confermato" if answer == "yes" else "❌ Annullato"
+            self.answer_callback(query_id, icon)
+            self.edit_message(message_id, f"{original_html}\n\n{icon} da Roberto.")
 
 if __name__ == "__main__":
     bot = TelegramBot()

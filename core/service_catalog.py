@@ -202,6 +202,36 @@ STATIC_CATALOG: dict[str, dict] = {
         "pattern": "namespace: service.key → scripts/credential_manager.py --get service.key",
         "notes": "Age key in ~/.config/sops/age/keys.txt. File cifrati in secrets/",
     },
+    "minio_disk_space": {
+        "name": "MinIO Disco Audio Lifelog2",
+        "container": "CT104 (minio)",
+        "host": "192.168.1.104",
+        "port": None,
+        "check_type": "disk_space",
+        "path": "/",
+        "min_free_gb": 3.0,
+        "purpose": "Storage m4a Lifelog2 (bucket 'lifelog') — spazio finito, nessuna cancellazione automatica di default.",
+        "notes": (
+            "2026-09-02: trovato 68% pieno con zero retention attiva. Disegnato con "
+            "Roberto un sistema a due script (scripts/cleanup_quality_rejected.py 2gg "
+            "senza eccezioni, scripts/cleanup_ambient_audio.py 7gg con esclusione vp_R "
+            "assoluta) entrambi già gated su --min-free-gb — non eliminano nulla se lo "
+            "spazio è comodo. Questo probe scatta solo quando serve DAVVERO (sotto "
+            "min_free_gb) e chiede sempre conferma esplicita prima di eseguire — mai "
+            "in automatico, l'audio cancellato non è recuperabile."
+        ),
+        "diagnostic": (
+            "ssh root@192.168.1.203 'cd /opt/Lifelog2 && "
+            ".venv/bin/python3 scripts/cleanup_quality_rejected.py --days 2 --dry-run && "
+            ".venv/bin/python3 scripts/cleanup_ambient_audio.py --days 7 --dry-run'"
+        ),
+        "remediation": (
+            "ssh root@192.168.1.203 'cd /opt/Lifelog2 && "
+            ".venv/bin/python3 scripts/cleanup_quality_rejected.py --days 2 --yes && "
+            ".venv/bin/python3 scripts/cleanup_ambient_audio.py --days 7 --yes'"
+        ),
+        "remediation_label": "🧹 Libera spazio",
+    },
 }
 
 
