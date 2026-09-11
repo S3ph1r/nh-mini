@@ -49,3 +49,6 @@ Base dashboard: http://192.168.1.203:5173
 3. **Semantica di presenza (Stage E v5) mantenuta**: è il vero fix della distorsione osservata — il caso "live streaming" era escalation narrativa su presenza marginale, non misattribuzione.
 4. **Soglia base 0.50 confermata** — chiude anche il vecchio quesito "alzare a 0.65": no, taglierebbe turni genuini.
 5. Niente re-resolve retroattivo: lo storico delle attribuzioni vp_R è affidabile.
+
+### Precisazione — ascolto del turno "spawnano" (thread 39040a18, turno 2)
+Roberto conferma: **voce sua all'inizio, poi subentra un podcast — tutto in un turno unico**. Diagnosi definitiva: il matching identità è corretto (voce sua presente), il fallo è la **segmentazione**: la diarizzazione non taglia il turno al cambio di sorgente. `intra_sim_flag` rileva proprio questo ("turno con sorgenti miste"), ma la conseguenza è TESTUALE: parole del podcast trascritte dentro un turno etichettato vp_R → a valle risultano "dette dall'utente". Non è un problema di soglie vp — è un problema di split dei turni lunghi al cambio voce.

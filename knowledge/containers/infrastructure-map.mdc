@@ -109,6 +109,7 @@ Tutto il resto è legacy/reference — vedi sezione sotto.
 - **os**: Debian 12
 - **progetto**: Lifelog2 (sviluppi/Lifelog2/) — pipeline stage G embedding
 - **nota**: Promosso da legacy a infra reale 2026-05-06. Ollama già installato e running. Voiceprint (192d SpeechBrain) rimane su ARIA PC139.
+- **nota (2026-08-16)**: disco all'86% (2GB liberi) per ~10GB di librerie ROCm/CUDA mai usate (installer Ollama le scarica sempre di default, a prescindere dall'hardware). Verificato che l'host (AMD Ryzen 5 7430U, iGPU "Barcelo" integrata, mai passata al container) gira solo CPU — confermato via log Ollama. Indagata la possibilità di passare la iGPU a questo LXC (tecnicamente fattibile, nessun blocco Proxmox), scartata per supporto ROCm incerto su questa generazione (gfx90c, non nella lista ufficiale) e guadagno atteso marginale su un embedder da 700MB — CPU-only confermato come scelta giusta, anche perché non compete mai con la GPU reale su ARIA. Librerie morte rimosse, disco tornato al 16%. RAM (1GB totale sulla VM) resta il vincolo reale — causa i reload periodici del modello visibili nei log — non ancora affrontata.
 
 ### CT204 — shifter-rt 🟢 RUNTIME SHIFTER
 - **type**: applicazione (runtime)

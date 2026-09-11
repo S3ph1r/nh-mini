@@ -1525,3 +1525,153 @@ tail -n 20 knowledge/development/development-history.mdc
   "git_commit": "ef284ef"
 }
 ```
+
+### 2026-08-16 - Taglio-in-parti per thread troppo lunghi spostato ...
+```json
+{
+  "timestamp": "2026-08-16T21:21:16.544606+00:00",
+  "category": "ARCHITECTURE",
+  "component": "Lifelog2/Stage D+E",
+  "change": "Taglio-in-parti per thread troppo lunghi spostato da Stage D (force-cut fisico, creava righe conversation_threads separate) a Stage E (metadato thread_turns.part_number + tabella thread_part_summaries, mai una nuova entità thread) — un thread resta sempre una riga sola",
+  "reason": "il force-cut per volume in Stage D spezzava thread narrativamente continui (69/353 casi misurati, frase tagliata a metà confermata su un caso reale) — il vincolo di contesto è di Stage E, non di Stage D, il taglio va deciso dove serve davvero",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "904fcc0,ea1ebc4,c340b7f"
+}
+```
+
+### 2026-08-16 - gate is_ambiguous (soglia di narrabilita) corretto...
+```json
+{
+  "timestamp": "2026-08-16T21:21:24.575921+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/stage_d_thread_builder.py",
+  "change": "gate is_ambiguous (soglia di narrabilita) corretto per confrontare solo il volume di caratteri HIGH invece che tutti i turni (HIGH+LOW+JUNK), in tre punti del file",
+  "reason": "pre-esistente e indipendente dal refactor multipart, innocuo finche Stage E leggeva tutti i turni ma diventato reale (9/17 thread con zero turni HIGH superavano comunque il gate) da quando Stage E filtra HIGH-only; trovato durante la verifica manuale del riprocessamento storico",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "d580363"
+}
+```
+
+### 2026-08-16 - nuovo campo audio_quality_score (media di avg_word...
+```json
+{
+  "timestamp": "2026-08-16T21:21:38.152469+00:00",
+  "category": "FEATURE",
+  "component": "Lifelog2/conversation_threads",
+  "change": "nuovo campo audio_quality_score (media di avg_word_score pesata per word_count su tutti i turni del thread) + badge in dashboard, complementare al gate secco is_ambiguous",
+  "reason": "proposta di Roberto: distinguere fra i thread che superano il gate di narrabilita quelli costruiti su audio pulito da quelli su audio degradato ma ancora sopra soglia",
+  "author": "agent",
+  "impact": "medium",
+  "git_commit": "c340b7f"
+}
+```
+
+### 2026-08-16 - variabile t0 nel loop copertine-luogo rinominata i...
+```json
+{
+  "timestamp": "2026-08-16T21:21:38.181047+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/stage_g_covers.py",
+  "change": "variabile t0 nel loop copertine-luogo rinominata in t_place: sovrascriveva silenziosamente il timer dell'intero run, falsando duration_s in telemetria",
+  "reason": "trovato durante l'audit codebase modulo-per-modulo; solo telemetria, nessun comportamento della pipeline dipendeva dal valore, ma le metriche di durata di Stage G erano sbagliate probabilmente da settimane",
+  "author": "agent",
+  "impact": "low",
+  "git_commit": "f1063cf"
+}
+```
+
+### 2026-08-16 - avviato audit codebase modulo-per-modulo (13 file ...
+```json
+{
+  "timestamp": "2026-08-16T21:21:38.209083+00:00",
+  "category": "REFACTOR",
+  "component": "Lifelog2/services",
+  "change": "avviato audit codebase modulo-per-modulo (13 file services/pipeline/ + orchestrator.py completati): 1 modulo morto rimosso (stage_d_mode_signal.py), ~15 simboli morti rimossi, docstring stale corrette, dead code verificato sempre contro grep + doc di progetto prima di rimuovere",
+  "reason": "richiesta esplicita di Roberto dopo il refactor Stage D/E: leggibilita, rami morti, commenti sul perche mancante — non ancora concluso, restano API routers/frontend/script",
+  "author": "agent",
+  "impact": "medium",
+  "git_commit": "ad86030..30b1f24"
+}
+```
+
+### 2026-09-08 - Redesign wrapper LLM locale: passthrough parametri...
+```json
+{
+  "timestamp": "2026-09-08T23:18:07.433179+00:00",
+  "category": "FEATURE",
+  "component": "ARIA / backend qwen3-14b-q4km",
+  "change": "Redesign wrapper LLM locale: passthrough parametri completo (no whitelist), profili thinking/non_thinking nel manifest (llm_contract), contratto self-describing (contract()/probe()), finish_reason propagato, greedy guard. Binario llama-server b9119->b10819/cuda-13.3, ctx 16384->32768 + KV q8_0 + flash-attn + parallel 1. Deployato su PC139.",
+  "reason": "thinking=False non ha mai avuto effetto dal 2026-05 (guardia /no_think sempre falsa); whitelist a 8 campi scartava in silenzio ogni altro parametro; sampling fissi ai valori thinking anche in non-thinking. Lifelog2 (unico consumatore) userà entrambe le modalità.",
+  "author": "agent",
+  "impact": "high",
+  "git_commit": "b0fb208"
+}
+```
+
+### 2026-09-08 - _build_cmd ricarica il manifest ad ogni avvio back...
+```json
+{
+  "timestamp": "2026-09-08T23:18:07.462339+00:00",
+  "category": "ARCHITECTURE",
+  "component": "ARIA / orchestrator.py",
+  "change": "_build_cmd ricarica il manifest ad ogni avvio backend; _process_lifelog_llm_task fa importlib.reload del modulo backend ad ogni task (fallback all'istanza di avvio se il reload fallisce).",
+  "reason": "Un deploy del backend qwen3-14b-q4km via git pull era inefficace senza riavvio dell'orchestratore (Python cacha i moduli). restart_aria.py fa un taskkill nucleare di tutti i python, gated. Ora il deploy di quel backend è effettivo al task successivo, senza riavvio.",
+  "author": "agent",
+  "impact": "medium",
+  "git_commit": "4bc78df"
+}
+```
+
+### 2026-09-11 - thinking=True cablato su tutti i worker Qwen3 (Sta...
+```json
+{
+  "timestamp": "2026-09-11T03:58:17.441442+00:00",
+  "category": "ARCHITECTURE",
+  "component": "Lifelog2/core/llm.py, orchestrator.py",
+  "change": "thinking=True cablato su tutti i worker Qwen3 (Stage D/E, identity_detective, thread_consolidation, day_digest, profile_validator) con budget condiviso (estimate_char_budget/estimate_response_max_tokens: prompt+tabella+riserva reasoning+risposta)",
+  "reason": "redesign wrapper ARIA (contesto 32768, reasoning_budget_tokens reale) sblocca il thinking che prima non arrivava mai al modello (bug /no_think mai efficace dal 2026-05-12)",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-09-11 - _non_self_volume_ratio leggeva word_count, chiave ...
+```json
+{
+  "timestamp": "2026-09-11T03:58:26.046912+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/stage_e_thread_enrichment.py",
+  "change": "_non_self_volume_ratio leggeva word_count, chiave mai presente nei dict di turno; media_type restava sempre NULL su ogni thread dal 2026-08-21",
+  "reason": "trovato durante l'audit post-reprocess: 458 dump Stage E con rilevamento media valido, 0 scritti a DB",
+  "author": "agent",
+  "impact": "medium"
+}
+```
+
+### 2026-09-11 - loop infinito del detective su thread abnorme (0a9...
+```json
+{
+  "timestamp": "2026-09-11T03:58:26.075761+00:00",
+  "category": "BUGFIX",
+  "component": "Lifelog2/worker_identity_detective.py, orchestrator.py",
+  "change": "loop infinito del detective su thread abnorme (0a9250ee, 1966 turni) che bloccava l'intero reprocess; timeout thread_builder da latenza raddoppiata dal thinking",
+  "reason": "regressioni introdotte dallo stesso giorno (contesto 32768 + reasoning reserve) emerse durante il reprocess generale",
+  "author": "agent",
+  "impact": "high"
+}
+```
+
+### 2026-09-11 - riordino documentazione: 32 doc indicizzati in doc...
+```json
+{
+  "timestamp": "2026-09-11T03:58:26.104224+00:00",
+  "category": "REFACTOR",
+  "component": "Lifelog2/docs, knowledge",
+  "change": "riordino documentazione: 32 doc indicizzati in docs/README.md, 1 archiviato in docs/archive/, 4 knowledge/*.md rinfrescate, nuovi lifelog2-session-log.md e blocco STATO in status-roadmap.md",
+  "reason": "docs/README.md fermo 10gg, knowledge/ ferma 5-7 settimane rispetto al ritmo di sviluppo reale",
+  "author": "agent",
+  "impact": "medium"
+}
+```

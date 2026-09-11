@@ -120,7 +120,7 @@ Script di troubleshooting one-shot per ARIA (PC139) e Redis (CT120). Non fanno p
 | `check_redis.py` | Dump chiavi Redis CT120 filtrate per namespace `aria/qwen/lifelog/queue/q:` — snapshot stato code |
 | `inspect_redis_queues.py` | Dump completo Redis CT120 — tutte le chiavi con tipo e contenuto |
 | `clean_redis_queues.py` | Elimina code ARIA specifiche da Redis: `aria:q:llm:local:qwen3-14b-q4km:lifelog` + `aria:result:llm:*` — usare con cautela |
-| `restart_aria.py` | Riavvio completo ARIA su PC139 via SSH: `taskkill /F /IM python.exe /T` + `taskkill /F /IM llama-server.exe /T`, poi restart. **⚠️ Non eseguire autonomamente — attendere ok esplicito di Roberto** |
+| `restart_aria.py` | Riavvio completo ARIA su PC139 via SSH: `taskkill /F /IM python.exe /T` + `taskkill /F /IM llama-server.exe /T`, poi restart. **⚠️ Non eseguire autonomamente — attendere ok esplicito di Roberto**. Nota (2026-09-09): un deploy del backend `qwen3-14b-q4km` (manifest `server_args`/`llm_contract` + `backends/lifelog_llm.py`) **non** richiede più questo riavvio — l'orchestratore ricarica manifest e modulo backend ad ogni task (`_build_cmd` + `_process_lifelog_llm_task`). Vale solo per quel backend. |
 | `list_aria_dirs.py` | SSH su PC139 → `whoami` + `Get-ChildItem C:\Users` — verifica directory utenti Windows |
 | `find_pm2.py` | SSH su PC139 → cerca `pm2.cmd` in `C:\Users\roberto` e `C:\Users\gemini` (diagnostico legacy PM2) |
 

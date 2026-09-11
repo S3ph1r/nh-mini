@@ -2,7 +2,8 @@
 
 Catalogo master di tutte le pagine wiki. Aggiornato ad ogni ingest.  
 Per navigare: apri in Obsidian e usa la Graph View per vedere le connessioni.
-_Ultimo aggiornamento: 2026-07-06_
+_Ultimo aggiornamento: 2026-09-11 (Lifelog2: thinking Qwen3 su tutti i worker, reprocess generale (671 thread), audit dei 17 casi storici noti — coda tabella e attribuzione scambiata confermate risolte —, riordino documentazione di progetto; nuova sorgente [[sources/lifelog2-thinking-reprocess-audit-2026-09-11]]; vedi `log.md`)_
+_Aggiornamento precedente: 2026-09-08 (ARIA: redesign wrapper LLM Qwen3-14B + deploy — vedi `log.md`; correzione drift `aria-redis-protocol.md`/`stack-aria.md`; CT160 → stopped)_
 
 ---
 
@@ -24,7 +25,7 @@ _Ultimo aggiornamento: 2026-07-06_
 | [[ct104-minio]] | 104 | Object storage S3 — condiviso | running |
 | [[ct105-postgres]] | 105 | Database relazionale — condiviso | running |
 | [[ct120-redis]] | 120 | Redis Universal State Bus | running |
-| [[ct160-nhi-core]] | 160 | NHI-CORE v1.1 — AI core | running |
+| [[ct160-nhi-core]] | 160 | NHI-CORE v1.1 — AI core | stopped |
 | [[ct190-nh-mini]] | 190 | NH-Mini agent framework ⭐ | running |
 | [[ct201-dias-rt]] | 201 | DIAS runtime — dashboard + API | running |
 | [[ct202-gateway]] | 202 | Internet gateway (nginx + ngrok) | running |
@@ -153,6 +154,7 @@ _Ultimo aggiornamento: 2026-07-06_
 | [[sources/lifelog2-identity-resolution\|lifelog2-identity-resolution]] | `sviluppi/Lifelog2/docs/lifelog2-identity-resolution-design.md` | 2026-05-12 |
 | [[sources/lifelog-stage-d-blueprint\|lifelog-stage-d-blueprint]] | `sviluppi/Lifelog2/docs/lifelog-stage-d-blueprint-v1.md` | 2026-05-13 |
 | [[sources/lifelog2-status-roadmap\|lifelog2-status-roadmap]] | `sviluppi/Lifelog2/docs/lifelog2-status-roadmap.md` | 2026-05-22 |
+| [[sources/lifelog2-thinking-reprocess-audit-2026-09-11\|lifelog2-thinking-reprocess-audit-2026-09-11]] | sessione 2026-09-08→11, vedi `sviluppi/Lifelog2/docs/lifelog2-session-log.md` | 2026-09-11 |
 
 ---
 
@@ -164,7 +166,7 @@ _Ultimo aggiornamento: 2026-07-06_
 - **Concepts:** 21
 - **Sources ingerite:** 26
 - **Sorgenti non ingerite:** 0 (coda svuotata ✅)
-- **Ultimo aggiornamento:** 2026-06-24 (Lifelog2 refactor roadmap: confidence tier, thread model, dual pool)
+- **Ultimo aggiornamento:** 2026-09-02 (Lifelog2: guardia volume/overflow LLM condivisa, primo audit+run reale di Z6 con correzione di una riga wiki stale, nuovo canale telemetria device heartbeat+rubrica+chiamate, rischio quota ngrok trovato e corretto — vedi [[entities/systems/stack-lifelog2]], [[entities/containers/ct202-gateway]]; riordino cronologico di `log.md` e `state/session-journal.md` con convenzione d'ordine ora esplicita in entrambi i file — vedi entry lint in fondo a `log.md`)
 
 ---
 

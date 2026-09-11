@@ -1,9 +1,9 @@
 ---
 title: "Stack — Lifelog2"
 type: entity
-tags: [stack, lifelog, memory, pipeline, embedding, identity]
-sources: [lifelog2-project-context.md, lifelog2-identity-resolution.md]
-updated: 2026-07-06
+tags: [stack, lifelog, memory, pipeline, embedding, identity, device, telemetry]
+sources: [lifelog2-project-context.md, lifelog2-identity-resolution.md, lifelog2-session-digest-2026-09-02-device-channel.md, lifelog2-thinking-reprocess-audit-2026-09-11.md]
+updated: 2026-09-11
 ---
 
 # Stack — Lifelog2
@@ -107,10 +107,20 @@ vecchio bucket condiviso `vp_unk_nr` che causava frammentazione di thread). `tur
 (HIGH/LOW/JUNK) è puro `avg_logprob`, disaccoppiato dalla durata del turno.
 
 **Chiusura thread** (tutta deterministica): gap >10min (state machine dinamica, non blocklist) ·
-media_passive ≥30s (hard boundary) · **force-cut per volume di testo** (non più conteggio turni
-— un thread con pochi turni ma ciascuno enorme, es. audio ambientale continuo, può sforare il
-context LLM di Stage E anche restando sotto qualunque soglia di conteggio; taglia in Part N+1
-quando il budget di caratteri disponibile nel contesto si esaurirebbe, mai a metà di un turno).
+media_passive ≥30s (hard boundary). **Aggiornamento 2026-08-16**: il force-cut per volume di
+testo in Stage D è stato **rimosso** — un thread resta sempre esattamente una riga
+`conversation_threads`, mai spezzato a livello di entità. Il problema del volume che sforerebbe
+il context LLM è stato spostato interamente in Stage E: il budget di caratteri viene calcolato
+solo sui turni HIGH-reliability e, se eccede, Stage E divide il thread in "parti" puramente
+metadata (`thread_turns.part_number`, nuovo campo — semantica diversa dal vecchio
+`conversation_threads.part_number` ora morto) con un riassunto per parte in
+`thread_part_summaries`; una chiamata LLM finale di fusione combina i riassunti di parte
+nell'unico enrichment del thread. Contestualmente fixato anche un bug del gate `is_ambiguous`
+(confrontava `THREAD_MIN_NARRATIVE_CHARS` contro il volume di TUTTI i turni invece dei soli HIGH)
+e introdotto `audio_quality_score` su `conversation_threads` (media pesata di `avg_word_score`
+per `word_count`, segnale continuo di affidabilità che affianca il gate binario `is_ambiguous`).
+Dettagli completi: `sviluppi/Lifelog2/docs/lifelog2-data-architecture-v1.md` (blocco STATO
+2026-08-16) e `sviluppi/Lifelog2/knowledge/architecture.md`.
 
 [Worker indipendenti]
 → Identity Detective (ogni 15min, Qwen3 su ARIA → speaker → Person resolution)
@@ -272,7 +282,7 @@ L'orchestratore (`lifelog2.services.orchestrator`) è il processo padre avviato 
 | M4 — Stage D (LLM Enrichment) | ✅ Done 2026-05-13 | **Prompt v10** (corrente, 2026-05-22): capture_class-aware + sentiment + transcript_quality + scoring tier. v8 (2026-05-20): prime versioni capture_class-aware. v5 (2026-05-15): action_items + decisions. Noise filter `_NOISE_PHRASES`. |
 | M4.5 — Stage E (Embedding + WAV cleanup) | ✅ Done 2026-05-13 | mxbai-embed-large 1024d via CT107, `memory_atoms.embedding` aggiornato, WAV MinIO eliminato, pipeline_status="consolidated". Fast Pipeline A→E operativa. |
 | M5 — Conversation Thread Grouping | ✅ Done | Stage F v1 live 2026-05-15 (episodes, 4-pass sliding window). **FASE 3 (2026-06-26):** Stage F v2 RISCRITTO — `conversation_threads` (5 tipi), VP roster per thread, `CLOSE_AFTER_ATOMS=2` + `MAX_THREAD_GAP_S=10min`, `ended_at=last_atom_at` (fix 2026-06-27). Migrations 0022-0024. Stage G trigger: da `_grouping_loop` post-drain (fix 2026-06-27 — rimossa race condition ARIA FLUX2/qwen3). DB reset + backfill v2: 1301 atoms, 2026-06-27. **Thread Builder v2 (2026-06-29 → 07-06, migration 0026/0028):** riscritto turn-first — D=Thread Builder LLM, E=Thread Enrichment LLM, F=Thread Embedding. Redesign identità VP (`vp_unk_nr`→`vp_unk_noemb`), gap-enforcement dinamico, correzione meccanica mono/dialogue, naming MinIO anti-disastro, force-cut per volume testo (non conteggio turni) — validato su 675 segmenti reali da telefono. Dettagli: `docs/lifelog2-thread-builder-hardening-2026-07.md`. |
-| M5.5 — Thread Consolidation (Stage Z6) | ✅ Done 2026-05-26 | Worker periodico con approccio ibrido (Gemini cloud via ARIA per mapping in batch di max BATCH_SIZE=15 + Qwen3 locale per la sintesi dei singoli thread). Embedding 1024d salvati su Postgres. Testato e validato in produzione. |
+| M5.5 — Thread Consolidation (Stage Z6) | ✅ Done 2026-05-26 | Worker periodico con approccio ibrido (Gemini cloud via ARIA per mapping in batch di max BATCH_SIZE=15 + Qwen3 locale per la sintesi dei singoli thread). Embedding 1024d salvati su Postgres. Testato e validato in produzione. **[Correzione 2026-09-02]**: verificato che `sagas` aveva 0 righe prima di oggi — il worker non era mai stato eseguito contro dati reali fino al primo dry-run di questa sessione (17 episodi, 5 saghe create, dump verificati). La riga sopra descriveva probabilmente uno stato pianificato/di test isolato, non un run reale continuativo — non cancellata, solo corretta qui. Vedi `docs/lifelog2-session-digest-2026-09-02-device-channel.md` §3. |
 | M6 — Scoring/Retention v1 | Pending | Quality/attention scoring, retention class, oblio automatico. **Gap noti da risolvere in M6**: (1) `discarded` segments (audio senza atom prodotto) non vengono cancellati da MinIO — `_reject()` in Stage B tenta la cancellazione ma swallows l'eccezione; backfill non cancella mai il sorgente. File a valore zero si accumulano indefinitamente. (2) `cleanup_ambient_audio.py` copre solo `capture_class='ambient'`; nessuna policy per mixed/personal o staged abbandonati. (3) Policy corretta da implementare: `discarded` → cancellazione entro 24h; `consolidated` → retention basata su `retention_class` atom (ephemeral/counted/summarized/remembered/preserved); `staging` orfani > 30gg → discard + cancellazione. |
 | M7 — Frontend SvelteKit | ✅ Done | **Cinematic UI** live su CT203:5173. Views: Dashboard, Day, Map, People, Sagas, Timeline, Transcript, Pipeline, Tasks, Profile. Audio playback MP3 su transcript. Sfondo bg.jpg + oklch. |
 | M8 — Intelligence Layer Z7 | 🔧 In progress | **Profile Builder Strato 1+2 live** (2026-05-22). Strato V + Cerchia Tier B + HNSW index: P2 roadmap. `lifelog2-status-roadmap.md` come checklist periodica. |
@@ -444,15 +454,101 @@ P3c (pianificato): reclassification_worker batch → ripesca flagged_reclassifia
 
 ---
 
+## Guardia di volume/overflow LLM (2026-09-02)
+
+`core/llm.py` — condiviso da TUTTI i worker LLM (Stage D, Stage E, Identity
+Detective, Profile Validator, Day Digest, Z6) — stima il volume reale del prompt
+prima di ogni chiamata (riduce `max_tokens` o rifiuta la chiamata se il contesto
+non basta) e ritenta con budget raddoppiato se la risposta arriva vicina al tetto
+richiesto (usage reali quando disponibili, non solo stima char/token). `thinking`
+esposto come parametro vero per Qwen3 locale (prima sempre disattivato). Stage D
+aveva un budget di input turni congelato da v28 a v33 mai ricalcolato — stesso
+bug già visto in Stage E il 2026-08-30, qui corretto con
+`_dynamic_turn_budgets_v28`. Z6 (sintesi per-saga) non aveva alcun tetto sul
+volume di episodi accumulati in un run — ora bounded, gli episodi in eccesso
+vengono rivalutati al run successivo invece di essere persi. Dettagli:
+`docs/lifelog2-session-digest-2026-09-02-device-channel.md` §1-4.
+
+## Canale telemetria device (heartbeat + rubrica + chiamate)
+
+> **Contratto di input completo (permessi, schemi JSON, cadenze, stato
+> registrazione chiamate)**: `sviluppi/Lifelog2/docs/lifelog2-android-app-blueprint-v2.3.md`
+> — base di partenza per l'app Android, aggiornata 2026-09-02.
+
+Nuovo canale disaccoppiato dall'upload dei segmenti (che riflette lo stato solo a
+fine ciclo di 5 minuti): `POST /api/v1/devices/me/heartbeat` — batteria, rete,
+GPS, mic attivo+RMS live, servizio attivo/in pausa — persistito nel Global
+Registry SQLite (stessa fonte di identità/auth degli upload, nessun bisogno di
+Redis per uno stato che è per natura "ultimo valore noto"). `GET
+/api/dashboard/device-status` per la dashboard, "online" derivato da
+`last_seen_at` vs soglia lato server.
+
+**Cadenza**: 30s iniziali portati a 5 minuti per batteria/carico server.
+~~Incidente reale: bruciava la quota free-tier di ngrok in circa una
+settimana~~ — **ridimensionato lo stesso giorno**: il contatore reale
+dell'agent ngrok (non i log nginx, ambigui tra ngrok e il `cloudflared` che
+gira sullo stesso host) mostra ~740 richieste/mese osservate contro un limite
+di 20.000 — nessun rischio reale di esaurimento verificato. Dettagli e causa
+dell'errore di lettura: [[ct202-gateway]].
+
+Nuove tabelle Postgres `synced_contacts`/`synced_calls` (migrazione 0056) —
+sync giornaliera di rubrica e ultime 500 chiamate dal device, upsert su chiavi
+naturali (numero di telefono; numero+timestamp per le chiamate) in assenza di
+un ID stabile dal device. Terzo asse di segnale per l'identità/relazioni,
+accanto a voiceprint (Z7) e co-presenza nei luoghi (place_relations). Non ancora
+correlato ai `persons`/voiceprint esistenti — passo successivo non ancora
+pianificato.
+
+**Frontend**: stato device visibile come chip cliccabile negli header di `/` e
+`/pipeline` (non nella sidebar, che è collassata/nascosta su `/pipeline`) — espande
+un menu con rubrica scrollabile + ultime 10 chiamate. Dettagli:
+`docs/lifelog2-session-digest-2026-09-02-device-channel.md` §8-10.
+
+## Thinking Qwen3 + reprocess generale + audit (2026-09-08 → 09-11)
+
+Redesign del wrapper ARIA↔llama-server per `qwen3-14b-q4km` (fatto su [[stack-aria]],
+handoff `qwen3-14b-backend-spec-2026-09-09.md`): contesto 16384→32768, KV cache q8_0,
+profili thinking/non_thinking coerenti, `reasoning_budget_tokens` come cap vero. Lato
+Lifelog2: `thinking=True` cablato su tutti i worker Qwen3 (Stage D, Stage E,
+identity_detective, thread_consolidation, day_digest, profile_validator) con budget
+condiviso (`core/llm.py::estimate_char_budget`/`estimate_response_max_tokens` — prompt +
+tabella + riserva reasoning + risposta, non più un `max_tokens` fisso).
+
+**Stage D** tornato al prompt v34b (pre-minimizzazione) + reasoning generoso: 6/7 puliti
+sui 7 casi storici noti (contro 3/7 prima). **Reprocess generale da Stage C1** (11659
+speaker_turns, 671 conversation_threads, 371 arricchiti) — 4 bug trovati e risolti in
+corsa durante il reprocess stesso (nessuna scrittura dati sbagliata: tutti fallivano "in
+sicurezza"). **Audit sistematico** dei 17 casi storici noti: i due problemi più vecchi
+(coda tabella persa in Stage D, attribuzione scambiata in Stage E) confermati **risolti**
+sui dati reali. Trovato e corretto un bug indipendente (`media_type` sempre NULL su ogni
+thread dal 2026-08-21, cancello di volume rotto).
+
+**Scoperto**: la formazione del ricordo (A→G — ingest→identità→arricchimento→embedding→
+cover) è la parte matura del progetto, con solo 4 problemi aperti. I worker secondari
+(identity/place detective, day/week/month/year digest, profile builder/Z7, Saghe) sono
+ineguali — alcuni dormienti da settimane, `month_digest`/`year_digest` non esistono
+affatto. Dettaglio completo, incluso il conteggio onesto di quanto manca alla visione
+del blueprint: `docs/lifelog2-status-roadmap.md` (STATO 2026-09-11) e
+`docs/lifelog2-post-audit-todo-2026-09-11.md`.
+
+**Riordino documentazione** nella stessa sessione: `docs/README.md` (indice curato, fermo
+10 giorni) aggiornato con 32 documenti mai indicizzati; un documento marcato superato ma
+mai spostato archiviato per davvero (`docs/archive/`); le 4 knowledge/*.md di progetto
+(ferme 5-7 settimane) rinfrescate con banner + correzioni mirate; nuovo
+`docs/lifelog2-session-log.md` (una voce per sessione di sviluppo, sostituisce
+`knowledge/development-log.md` per le voci future).
+
 ## Link Correlati
 
 - [[stack-nh-mini]]
 - [[stack-aria]]
 - [[ct105-postgres]]
 - [[ct120-redis]]
+- [[ct202-gateway|CT202 Gateway — vincolo quota ngrok]]
 - [[concepts/lifelog2-quality-gate|Quality Gate & Tiers]]
 - [[concepts/lifelog2-thread-consolidation|Thread Consolidation Z6]]
 - [[concepts/lifelog2-refactor-roadmap|Thread Builder v2 — roadmap e hardening]]
 - [[sources/lifelog2-project-context|lifelog2-project-context]]
 - [[sources/lifelog2-identity-resolution|lifelog2-identity-resolution]]
+- [[sources/lifelog2-thinking-reprocess-audit-2026-09-11|lifelog2-thinking-reprocess-audit-2026-09-11]]
 

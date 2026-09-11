@@ -64,3 +64,4 @@ CT190 → git pull/push → tutti i progetti in sviluppi/
 - `2026-05-06` — Promozione CT107 (Ollama) a infrastruttura reale.
 - `2026-05-11` — CT203 Live con Global Registry per Lifelog2.
 - `2026-05-13` — Attivato backend LLM Qwen3-14b su PC139 per arricchimento memorie.
+- `2026-09-02` — Lifelog2: guardia di volume/overflow condivisa per tutte le chiamate LLM, primo audit+run reale di Z6 (mai eseguito prima), nuovo canale telemetria device (heartbeat + rubrica + chiamate) con relativa UI. Trovato e corretto un rischio reale di quota ngrok — vedi [[ct202-gateway]].

@@ -1,0 +1,5 @@
+{"ts_received": "2026-08-30T15:26:00Z", "type": "message", "text": "Ok procediamo in questo modo per restare sincronizzati da remoto", "message_id": 130, "date": 1788103560}
+{"ts_received": "2026-08-30T21:46:29Z", "type": "message", "text": "No aspetta, hai ricevuto nuovi segmenti da quando sono partito? Quanti? Hanno GPS? Sai dirmi dove sono?", "message_id": 134, "date": 1788126389}
+{"ts_received": "2026-08-30T21:51:10Z", "type": "message", "text": "Si sono qui ma sono arrivato alle 19.30, l'app non so perché ma ogni tanto smette di registrare.. se vedi nuovi segmenti dimmi se hanno GPS. La pipeline è attiva? Hai visto il prodotto dei segmenti?", "message_id": 136, "date": 1788126670}
+{"ts_received": "2026-08-30T21:59:37Z", "type": "message", "text": "Ho appena uploadato un segmento..verifica se hai ricevuto o se c'è un problema di limiti mensili o quota raggiunta con ngrok", "message_id": 138, "date": 1788127177}
+{"ts_received": "2026-08-30T22:01:34Z", "type": "message", "text": "Ok dimmi il contenuto degli ultimi tre thread creati", "message_id": 140, "date": 1788127294}

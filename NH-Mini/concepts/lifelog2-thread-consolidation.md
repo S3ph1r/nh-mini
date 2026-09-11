@@ -2,13 +2,26 @@
 title: "Thread Consolidation — Lifelog2"
 type: concept
 tags: [lifelog2, thread-consolidation, saghe, pipeline, llm, gemini, qwen]
-sources: [lifelog2-project-context.md, stack-lifelog2.md]
-updated: 2026-06-07
+sources: [lifelog2-project-context.md, stack-lifelog2.md, lifelog2-session-digest-2026-09-02-device-channel.md]
+updated: 2026-09-02
 ---
 
 # Thread Consolidation — Stage Z6
 
 Lo **Stage Z6 (Thread Consolidation)** di [[entities/systems/stack-lifelog2|Lifelog2]] è il processo periodico che consolida gli episodi di vita quotidiana (Z3) in saghe, filoni di memoria o "Thread" a lungo termine (Z6). È implementato dal worker `worker_thread_consolidation.py`.
+
+> **Correzione 2026-09-02** (verificato leggendo il codice reale, non riscritto qui
+> sotto per storia ricostruibile — vedi `docs/lifelog2-session-digest-2026-09-02-
+> device-channel.md` §3): questa pagina descrive l'architettura PRE-migrazione 0022.
+> La tabella reale è `sagas` (non `threads`, rinominata dalla stessa migration), e
+> l'unità narrativa reale sono i `conversation_threads` (non "memory atoms", tabella
+> droppata dalla stessa migration — i prompt Z6 parlano ancora di "episodi" per
+> compatibilità semantica, ma l'unità è il thread). L'"esecuzione periodica
+> settimanale (la domenica notte)" descritta sotto **non risultava attiva**: la
+> tabella `sagas` aveva 0 righe prima di oggi — il worker era dormiente, non
+> schedulato attivamente, fino al primo dry-run reale di questa sessione (17
+> episodi, 5 saghe create). L'architettura ibrida Cloud/Locale descritta sotto (§1)
+> resta invece corretta e confermata dal codice reale.
 
 ---
 

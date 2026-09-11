@@ -3,7 +3,7 @@ title: "ARIA — Adaptive Resource for Inference and AI"
 type: entity
 tags: [sistema, aria, gpu, tts, stt, llm, redis, windows]
 sources: [aria-project-context.md, aria-blueprint.md, aria-api-contract.md]
-updated: 2026-05-13
+updated: 2026-09-08
 ---
 
 # ARIA — Adaptive Resource for Inference and AI
@@ -58,10 +58,10 @@ Tutti i backend AI sono erogati in modalità on-demand (JIT) dall'orchestratore 
 | **Fish S1-mini** | `fish-s1-mini` | 8080 | ~4 GB | ✅ Operativo | TTS espressivo con emotion tagging |
 | **Fish Voice Cloning** | (companion Fish) | 8081 | CPU | ✅ Operativo | Encoder VQGAN per cloni vocali |
 | **ACE-Step Music** | `acestep-1.5-xl-sft` | 8084 | ~8 GB | ✅ Operativo | Sound engine e orchestrazione musicale |
-| **Qwen3.5 35B MoE** | `qwen3.5-35b-moe-q3ks` | 8085 | ~13 GB | ✅ Operativo | Ragionamento complesso (llama.cpp) |
+| **Qwen3.5 35B MoE** | `qwen3.5-35b-moe-q3ks` | 8085 | ~13 GB | ⚠️ Solo scaffolding | **Mai deployato** — pesi assenti su PC139, `FileNotFoundError` all'avvio. Vedi `docs/qwen3-llm-wrapper-investigation-2026-09-08.md` §5 |
 | **Audiocraft** | `audiocraft-medium` | 8086 | ~5 GB | ✅ Operativo | Generazione sfx/ambience/sting |
 | **ASR / STT Qwen3** | `qwen3-asr-1.7b` | 8087 | ~9 GB | ⏸️ Standby | ASR alternativo + forced aligner |
-| **Dense LLM 14B** | `qwen3-14b-q4km` | 8090 | ~9 GB | ✅ Operativo | llama-server.exe (CUDA 13.1, sm_120) |
+| **Dense LLM 14B** | `qwen3-14b-q4km` | 8090 | ~10.8 GB | ✅ Operativo | llama-server.exe **b10819** (CUDA 13.3). Wrapper redesign 2026-09-09: ctx 32768 + KV q8, profili thinking/non-thinking, contratto `llm_contract` nel manifest. Vedi `docs/qwen3-14b-backend-spec-2026-09-09.md` |
 | **ASR / STT WhisperX** | `whisperx-large-v3` | 8091 | ~10 GB | ✅ Operativo | Trascrizione, diarizzazione e voiceprint |
 | **FLUX.2-klein-4B** | `flux2-klein-4b` | 8092 | ~12.8 GB | ✅ Operativo | Generatore immagini (optimum-quanto INT8) |
 | **Cloud Gemini** | `gemini-flash-lite-latest` | — | cloud | ✅ Attivo | Routing automatico/fallback cloud |
@@ -103,7 +103,7 @@ Backend JIT: avviati on-demand al primo task, fermati automaticamente dopo `IDLE
 ## Consumatori Attuali ed Esempi di Flusso
 
 - **[[stack-dias|DIAS]]** — Utilizza `qwen3-tts-1.7b` (voci), `acestep-1.5-xl-sft` (colonne sonore) e `audiocraft-medium` (effetti sonori).
-- **[[stack-lifelog2|Lifelog2]]** — Utilizza `whisperx-large-v3` (coda `stt` per trascrizione, diarizzazione e voiceprint), `qwen3-14b-q4km` (coda `llm` per estrazione MemoryAtom) e `flux2-klein-4b` (coda `imagegen` per copertine episodi).
+- **[[stack-lifelog2|Lifelog2]]** — Utilizza `whisperx-large-v3` (coda `stt` per trascrizione, diarizzazione e voiceprint), `qwen3-14b-q4km` (coda `llm` — **unico consumatore** — per Thread Builder/Enrichment Stage D/E, Identity Detective, Day Digest) e `flux2-klein-4b` (coda `imagegen` per copertine thread). Il wrapper `qwen3-14b-q4km` è stato ridisegnato e deployato (2026-09-09): passthrough parametri, profili thinking/non-thinking, contratto self-describing. Lato ARIA fatto; resta `core/llm.py` di Lifelog2 — vedi `sviluppi/ARIA/docs/qwen3-14b-backend-spec-2026-09-09.md`.
 - **Nuove Integrazioni (es. [[stack-stratex|Stratex]])** — Possono ereditare istantaneamente l'accesso alle code `llm:local:qwen3-14b-q4km:stratex` per estrazione dati finanziari senza alcuna riconfigurazione hardware.
 
 ## Vedi anche

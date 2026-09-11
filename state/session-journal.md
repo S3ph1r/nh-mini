@@ -1,3 +1,509 @@
+# Session Journal — NH-Mini
+
+Journal di sessione, append-only durante ogni sessione (vedi `.cursorrules`
+§SESSION JOURNAL per quando scrivere).
+
+> **Convenzione d'ordine — PREPEND, decrescente.** Le nuove entry si aggiungono
+> SEMPRE in cima al file, subito sotto questa riga. Ordine cronologico decrescente:
+> la più recente in cima, la più vecchia in fondo. Mai appendere in fondo — è la
+> convenzione opposta di [[../NH-Mini/log.md|NH-Mini/log.md]] (APPEND), non
+> confonderle. Storia mai cancellata: un'analisi rivelatasi sbagliata non si
+> riscrive, si aggiunge una nuova entry `DEVIATION`/`RESOLVED` sopra.
+>
+> **2026-09-02**: riordinato meccanicamente l'intero file (alcune entry erano fuori
+> posizione rispetto alla convenzione dichiarata — es. un'entry del 2026-07-16 era
+> finita quasi in fondo alle ~1900 righe invece che vicino alla cima). Nessuna
+> entry riscritta o persa: solo riposizionate: a parità di data/ora, l'ordine
+> relativo preesistente nel file è stato preservato.
+
+## [2026-09-11 04:00] END — Lifelog2: thinking Qwen3, reprocess generale, audit, riordino documentazione
+
+**Nota di processo**: nessuna entry `START`/`TASK`/`DECISION` scritta durante questa
+sessione (violazione della regola "scrivi DURANTE, non alla fine") — stesso pattern
+già osservato e corretto il 2026-08-16 (vedi `NH-Mini/user-profile.md` "Note di
+Sessione"). L'END sotto è ricostruito a posteriori dal contenuto reale della
+sessione, non da entry intermedie. Roberto ha invocato esplicitamente
+`/doc lifelog` → `/lint lifelog` → `/finalize` in sequenza per chiudere.
+
+**Obiettivo**: chiudere l'"Incompleto" lasciato dall'END precedente (2026-09-08
+23:30, redesign wrapper ARIA — vedi sotto) su `sviluppi/Lifelog2/src/backend/lifelog2/core/llm.py`,
+poi tarare Stage D sul nuovo contesto/thinking, riprocessare il corpus, e fare
+l'audit di cosa è cambiato. Concluso con un riordino della documentazione di
+progetto su richiesta esplicita di Roberto.
+
+**Completato**:
+- `core/llm.py`: `thinking=True` cablato su Stage D, Stage E, identity_detective,
+  thread_consolidation, day_digest, profile_validator, con budget condiviso
+  (`estimate_char_budget`/`estimate_response_max_tokens`) — chiude esplicitamente
+  l'item lasciato aperto dall'END del 09-08.
+- Stage D tornato al prompt v34b + reasoning generoso (6/7 puliti sui 7 casi
+  storici, contro 3/7 prima).
+- **Reprocess generale da Stage C1** (11659 turni, 671 thread, 371 arricchiti):
+  4 bug trovati e risolti durante il reprocess stesso (`_is_v28`/`_synthesize_from_v28`
+  non riconoscevano v34b, loop infinito del detective su un thread abnorme di 1966
+  turni, timeout `thread_builder` da latenza raddoppiata dal thinking). Nessuna
+  scrittura dati sbagliata — tutti i bug fallivano "in sicurezza".
+- **Audit dei 17 casi storici noti**: i due problemi più vecchi (coda tabella
+  persa in Stage D, attribuzione scambiata in Stage E) confermati **risolti** sui
+  dati reali, non solo in teoria. Trovato e corretto un bug indipendente
+  (`_non_self_volume_ratio` leggeva `word_count`, mai presente — `media_type`
+  sempre NULL dal 2026-08-21).
+- Scritta una scheda worker-per-worker A→G verificata sul codice
+  (`lifelog2-pipeline-worker-reference-2026-09-11.md`) e una lista di problemi
+  aperti (`lifelog2-post-audit-todo-2026-09-11.md`).
+- **Riordino documentazione**: `docs/README.md` (fermo 10gg) aggiornato con 32
+  doc mai indicizzati; 1 documento marcato superato ma mai spostato archiviato
+  per davvero (`docs/archive/`), riferimenti incrociati aggiornati; le 4
+  `knowledge/*.md` di Lifelog2 (ferme 5-7 settimane) rinfrescate con banner +
+  correzioni mirate sui punti più pericolosi (mappatura stage-lettera→funzione
+  era quella pre-pivot); nuovo `docs/lifelog2-session-log.md` (log per sessione,
+  ricorrente) e nuovo blocco `STATO 2026-09-11` in `lifelog2-status-roadmap.md`
+  con una valutazione esplicita di avanzamento (formazione del ricordo A→G
+  matura, worker secondari ineguali, month/year digest inesistenti — conteggio
+  onesto: 9-10 voci).
+- NH-Mini: `history_manager.py` (3 entry: ARCHITECTURE/BUGFIX×2/REFACTOR),
+  `NH-Mini/log.md`, `NH-Mini/index.md`, `NH-Mini/entities/systems/stack-lifelog2.md`,
+  nuova `NH-Mini/sources/lifelog2-thinking-reprocess-audit-2026-09-11.md`,
+  `NH-Mini/user-profile.md` (Note di Sessione).
+
+**Incompleto (prossima sessione)** — vedi `lifelog2-post-audit-todo-2026-09-11.md`
+per il dettaglio:
+1. Verificare se il modello rispetta il marcatore `~` di non-citabilità (fino al
+   45% dei turni HIGH lo portano — se ignorato come il vecchio filtro LOW/JUNK,
+   rischio di fatti inventati su una fetta larga del corpus).
+2. Riprogettare la catena identità: Z7 solo clustering (oggi fa anche un
+   giudizio media/reale che non gli spetta), identity_detective proprietario
+   del giudizio semantico via reciprocità, scrivendo su `is_media_persona`
+   (campo esistente, mai scritto da nessun worker).
+3. Bucket per volume per il detective sui thread molto lunghi (oggi li salta,
+   `MAX_PARTS_PER_THREAD`) — vincolo di Roberto: niente sliding window, solo
+   dimensionamento su prompt+tabella+reasoning+risposta.
+4. Over-segmentation minore di flussi media contigui in Stage D (bassa priorità).
+5. Audit dei worker secondari (identity/place detective, day/week/month/year
+   digest, profile_builder) — non ancora iniziato, prossimo passo concordato.
+
+**Mine per il prossimo agent**:
+- ⚠️ **`workspace/active_config.json` indica ancora `"active": "ARIA"`** —
+  stale da prima di questa sessione, che ha lavorato interamente su Lifelog2
+  senza mai fare lo switch esplicito (switch progetto è MUST-ASK, non fatto
+  autonomamente). Se la prossima sessione riparte "a freddo" leggendo solo
+  quel file, penserà che il progetto attivo sia ARIA — non lo è stato per
+  gran parte di questa sessione.
+- ⚠️ **Working tree NH-Mini con modifiche preesistenti non committate**
+  (precedenti a questa sessione, stesso set visto all'avvio: `NH-Mini/concepts/
+  aria-redis-protocol.md`, `stack-aria.md`, `ct202-gateway.md`,
+  `overview.md`, `knowledge/architecture/core-modules.mdc`,
+  `knowledge/containers/infrastructure-map.mdc`,
+  `knowledge/development/development-history.mdc`,
+  `workspace/vp-calibration-2026-07-17.md`, + i file toccati in questa
+  sessione) — **non committate per scelta** (nessuna autorizzazione esplicita
+  a `git commit` sul repo NH-Mini root ricevuta in questa sessione;
+  `sviluppi/Lifelog2` è un repo git separato, lì i commit sono stati fatti
+  con autorizzazione già stabilita in sessione). Verificare con Roberto se e
+  cosa committare.
+- I due warning di lint pre-esistenti (`lifelog2_orchestrator` e
+  `minio_disk_space` non nel wiki NH-Mini) restano — non risolti in questa
+  sessione, nessuna direttiva ricevuta da Roberto per farlo (protocollo
+  `/lint`: nessun fix autonomo).
+
+## [2026-09-08 23:30] END — ARIA: redesign wrapper LLM Qwen3-14B — indagine → design → verifica → implementazione → deploy
+
+**Nota sui timestamp**: le entry intermedie di questa sessione (da `[2026-09-08 22:50]` in poi)
+hanno orari che corrono avanti rispetto al clock reale (stimavo male il tempo trascorso). Gli
+eventi sono reali e nell'ordine giusto; l'ora effettiva di questo END è **2026-09-08 ~23:30 UTC**
+(sessione iniziata ~19:40 UTC, ~4h). Storia non riscritta — solo segnalata.
+
+**Obiettivo (raggiunto):** redesign completo del wrapper ARIA↔llama-server per il backend
+`qwen3-14b-q4km` (unico consumatore: Lifelog2), partendo da
+`sviluppi/ARIA/docs/qwen3-llm-wrapper-investigation-2026-09-08.md`.
+
+**Completato:**
+- **Quadro sistema** ripreso (infra + progetti), contesto **ARIA registrato** nel workspace
+  manager (`sviluppi/ARIA/project_info.json`), drift wiki corretto (`aria-redis-protocol.md`,
+  `stack-aria.md`, `index.md` — log `[2026-09-08] lint`).
+- **Design chiuso** (`qwen3-llm-wrapper-redesign-2026-09-08.md`): 3 livelli (BASE<PROFILE<OVERRIDE),
+  contratto `llm_contract` self-describing nel manifest, tabella parametri dalla doc ufficiale Qwen3/llama.cpp.
+- **Verifica empirica dal vivo** su PC139 (§8): build b10819, leve thinking verificate
+  (`chat_template_kwargs.enable_thinking:false`, `reasoning_budget_tokens:0`, `/no_think`, cap
+  `reasoning_budget_tokens:N`); `reasoning_effort` NON supportato dal template Qwen3-14B; perf
+  sana (42 tok/s gen, 1646 prompt su 8K), CUDA 13.3 ok.
+- **Implementazione** (`sviluppi/ARIA`, commit `baa917e`+`4bc78df`+`b0fb208`, pushati):
+  `lifelog_llm.py::run()` riscritto (profili, passthrough, validazione, `contract()`/`probe()`,
+  `finish_reason`, greedy guard); manifest `args`→`server_args`+`llm_contract`; `_build_cmd`
+  supporta `server_args` + **ricarica il manifest ad ogni avvio**; `_process_lifelog_llm_task`
+  **ricarica il modulo backend ad ogni task**. 16 test offline (`tests/test_lifelog_llm_wrapper.py`), 16/16.
+- **DEPLOY su PC139**: binario `b9119`→`b10819`/`cuda-13.3` in `tools\llama\` (b9119 in
+  `tools\llama.b9119\`); config live ctx 32768 + KV q8 + flash-attn + parallel 1 (~10.8 GB VRAM,
+  ~2.4 GB liberi). **Nessun riavvio orchestratore** (hot-reload). Validato end-to-end via launcher.
+- **Handoff doc** `sviluppi/ARIA/docs/qwen3-14b-backend-spec-2026-09-09.md`: spec deployata,
+  tabella parametri, test da eseguire, modifiche puntuali a `core/llm.py` di Lifelog2.
+- Doc/knowledge: `ARIA-blueprint.md`, `qwen35-llm-moe.md` ("piano mai realizzato"),
+  `core-modules.mdc` (nota restart_aria), `stack-aria.md`, `log.md`, 2 entry `history_manager`.
+
+**Incompleto (prossima sessione):**
+- **`sviluppi/Lifelog2/src/backend/lifelog2/core/llm.py`** — dettaglio in
+  `qwen3-14b-backend-spec-2026-09-09.md` §8: togliere `temperature` dal payload,
+  `CONTEXT_WINDOW_TOKENS` 16384→32768, `_THINKING_RESERVE_TOKENS` 1024→2048, consumare
+  `output.finish_reason` nella logica `near_ceiling`, decidere quali stage passano a `thinking:true`
+  (consiglio: partire da Stage D con `max_tokens` alzato).
+- **Spot-check qualità KV q8** vs f16 su un `llm_call_dumps/stage_d_*.json` reale (§7c del doc).
+- NH-Mini repo **non committato** (c'erano modifiche pre-sessione non mie — wiki/knowledge in working tree).
+
+**Mine per il prossimo agent:**
+- ~~Nessuna nuova nata e non risolta in sessione.~~ Il half-state "binario nuovo + orchestratore
+  vecchio" è stato eliminato con l'hot-reload prima del deploy. Il deploy è stato validato.
+- ⚠️ Al primo job LLM reale di Lifelog2 dopo il deploy: conviene guardare `logs/aria_orchestrator.log`
+  su PC139 per confermare che il reload del modulo backend + il nuovo `server_args` girino puliti
+  (il path è stato validato via launcher, non ancora via un job Redis reale end-to-end).
+- ⚠️ VRAM ~2.4 GB liberi col desktop di Roberto attivo — se un job va in OOM, ARIA ritenta;
+  valutare `ctx 24576` se ricorre (ladder in redesign §5).
+
+**Warnings lint** (non-bloccanti, non-ARIA): `lifelog2_orchestrator` e `minio_disk_space` non
+nel wiki NH-Mini (pre-esistenti, tema Lifelog2).
+
+---
+
+## [2026-09-09 03:30] RESOLVED — DEPLOY su PC139 completato (binario + codice), senza riavvio orchestratore
+
+**Push CT190 → git pull PC139** (2 commit): `baa917e` (wrapper redesign) + `4bc78df` (hot-reload
+orchestratore). PC139 `C:\Users\roberto\aria` @ `4bc78df`.
+
+**Binario swappato**: `tools\llama\` → `tools\llama.b9119\` (backup), `tools\llama-b10819\` → `tools\llama\`.
+Ora `tools\llama\llama-server.exe` = b10819/cuda-13.3. Rollback = `ren` inverso. Regola firewall
+inbound ereditata (stesso path). Zip vecchio `llama-cuda131.zip` lasciato (inerte).
+
+**Niente riavvio orchestratore** grazie a 2 hot-reload aggiunti:
+- `_build_cmd` rilegge il manifest ad ogni avvio backend → nuovi `server_args`
+- `_process_lifelog_llm_task` fa `importlib.reload(backends.lifelog_llm)` per-task → nuovo `run()`
+  (fallback all'istanza di avvio se il reload fallisce)
+
+**Validato end-to-end** (launcher `envs\lifelog-llm\python.exe` → b10819, path reale orchestratore):
+- ctx 32768, model loaded ~6.5s
+- non-thinking (`enable_thinking:false` + `reasoning_budget_tokens:0`) → reasoning vuoto, risposta pulita
+- thinking + `reasoning_budget_tokens:120` → pensiero ~110 tok poi risposta finale
+- `response_format:json_object` → JSON valido (in fence)
+- orchestratore-python (`miniconda3\python.exe`): import + `contract()` + `importlib.reload` OK
+
+**Stato finale**: GPU idle (3063 MiB), nessun llama-server, ARIA online, coda vuota. Il prossimo
+job Lifelog2 innesca il path completo nuovo (binario + server_args + wrapper).
+
+**Nota**: `psutil` assente in `envs\lifelog-llm` → self-reporting PID del launcher saltato (come da
+indagine); la scoperta PID via titolo finestra dell'orchestratore (fix 2026-09-05) è il fallback.
+
+**Resta**: (a) `sviluppi/Lifelog2/src/backend/lifelog2/core/llm.py` — prossima sessione;
+(b) spot-check qualità KV q8 su dump Stage D reale. Handoff doc in preparazione.
+
+---
+
+## [2026-09-09 02:15] TASK — Implementazione wrapper lato CT190 (§9 passi 3-5, 7) — FATTA
+
+Modifiche in `sviluppi/ARIA/` (git `S3ph1r/ARIA` master, **non pushato**):
+
+- **`aria_node_controller/config/backends_manifest.json`** — entry `qwen3-14b-q4km`:
+  `args` (array) → `server_args` (dict: ctx 32768, cache-type-k/v q8_0, parallel 1, flash-attn on,
+  jinja, reasoning-format deepseek, no-context-shift) + `llm_contract` (model, defaults,
+  `unknown_param_policy: forward_warn`, 2 profili, 19 `request_params` con schema tipo/range).
+  `reasoning-budget` NON messo tra i flag di avvio (rischio di lock del per-request — §8 verificato
+  che il default va bene). Altri backend intatti. JSON valido.
+- **`aria_node_controller/core/orchestrator.py`** — `_build_cmd` gestisce `server_args` dict
+  (bool True → flag nudo, False/None → omesso, path risolti su aria_root); `args` list ancora
+  supportata per fish/acestep/audiocraft/... `_process_lifelog_llm_task` propaga `finish_reason`.
+- **`aria_node_controller/backends/lifelog_llm.py`** — `run()` riscritto: risoluzione profilo
+  (`profile` › `thinking` bool › default), merge BASE<PROFILE<OVERRIDE (solo chiavi presenti nel
+  payload), deep-merge `chat_template_kwargs`, validazione+clamp dal contratto, alias
+  `thinking_budget_tokens`→`reasoning_budget_tokens`, greedy guard (temp 0 / top_k 1 in thinking
+  → ValueError), `unknown_param_policy`, `finish_reason` nel ritorno. Nuovi: `contract()`,
+  `probe()` (merge con GET /props). Whitelist rigida + bug `/no_think` RIMOSSI.
+- **`tests/test_lifelog_llm_wrapper.py`** (nuovo) — 16 test offline (mock `requests.post`, no GPU):
+  profili, merge, deep-merge, passthrough, alias, clamp, type-reject, greedy guard, prompt
+  shorthand, reserved keys, finish_reason, `<think>` fallback. **16/16 pass** (pytest + standalone).
+- **`docs/ARIA-blueprint.md`** — tabella modelli: 14b aggiornata, 35b → "solo scaffolding".
+
+**ARIA su PC139: intatta.** b9119 gira ancora, niente pushato/riavviato.
+
+**Restano:** (a) `core/llm.py` di Lifelog2 — Roberto; (b) swap binario b9119→b10819 in
+`tools\llama\` + push CT190 + git pull PC139 + restart — su ok esplicito di Roberto.
+Doc: `qwen3-llm-wrapper-redesign-2026-09-08.md` §9 aggiornato (passi 3-5,7,8 = ✅).
+
+---
+
+## [2026-09-09 01:30] RESOLVED — §8 verifica empirica COMPLETATA, server fermato, stato ripristinato
+
+Secondo giro di test (nomi campo alternativi) ha chiuso il quadro:
+
+**Leve thinking — verificate su b10819 + Qwen3-14B:**
+- ✅ `chat_template_kwargs:{enable_thinking:false}` — spegne
+- ✅ `reasoning_budget_tokens: 0` — spegne (NOME CAMPO: `reasoning_budget_tokens`, non `reasoning_budget`)
+- ✅ `reasoning_budget_tokens: 150` — **cap REALE**: pensiero ~150 tok poi risposta finale prodotta
+- ✅ ` /no_think` in coda
+- ❌ `reasoning_effort` (template non lo supporta), `enable_thinking` top-level, `reasoning_budget` senza `_tokens`
+
+**Altro verificato:**
+- `--reasoning-format deepseek` ✅ (pensiero in `reasoning_content`)
+- `finish_reason` ✅ `stop`/`length`
+- `response_format:{type:json_object}` → JSON valido ma con fence markdown (Lifelog2 le strippa già)
+- Perf: **42 tok/s gen, 1646 tok/s prompt su 8K token** — CUDA 13.3 sana, GPU 94%, nessun fallback
+- Context 32768 reale ok (prompt 8K processato)
+- VRAM: llama-server **~10.8 GB** (pesi + KV q8, `--parallel 1`). Con desktop Roberto ~3 GB →
+  ~2.4 GB liberi. Stretto ma funziona. `--parallel 1` aggiunto (default 4 = +3 GB inutili).
+
+**Server fermato** (PID killato), GPU a baseline (2452 MiB), ARIA `active_backends:[]`, coda vuota.
+`tools\llama-b10819\` resta su PC139 (staging, base per il deploy).
+
+**Doc aggiornato**: `qwen3-llm-wrapper-redesign-2026-09-08.md` rev 2026-09-09 — §2.1/§3.1/§4/§5/§7/§8/§9/§10.
+
+**2 decisioni residue — CHIUSE (Roberto):**
+1. VRAM: si tiene **ctx 32768** (~2.4 GB liberi accettati; semaforo scarica il modello al gaming).
+2. Deploy binario: **sostituire in `tools\llama\`** (backup → `llama-server.b9119.exe`, poi
+   estrarre b10819/cuda-13.3 completo lì; rollback = rinomina).
+
+**Design CHIUSO e verificato.** Tutte le decisioni in §10 del doc. Prossimo: implementazione §9
+(manifest `server_args`+`llm_contract`, `_build_cmd`, riscrittura `lifelog_llm.py::run()`, poi
+binario+deploy su PC139 con ok di Roberto). Nessuna riga di codice ancora scritta; ARIA intatta.
+
+---
+
+## [2026-09-09 00:40] TASK — §8 verifica empirica su PC139: b10819 avviato, primi risultati
+
+Permesso `Bash(ssh pc139:*)` aggiunto da Roberto → sbloccato l'avvio.
+
+**Fatto**: scaricato `llama-b10819-bin-win-cuda-13.3-x64.zip` in `tools\llama-b10819\` (dir separata,
+`tools\llama\` b9119 intatta). Avviato `llama-server.exe` su :8090 con
+`--ctx-size 32768 --cache-type-k/v q8_0 --flash-attn on --parallel 1 --jinja --reasoning-format deepseek --no-context-shift`.
+Modello caricato in ~7s. `--version` = build 10819.
+
+**Risultati §8 (giro 1)** — chiamate dirette localhost (CT190→:8090 bloccato da firewall, vedi sotto):
+- `chat_template_kwargs:{enable_thinking:false}` → ✅ **funziona** (reasoning vuoto, content pieno, finish=stop)
+- `/no_think` in coda all'ultimo user → ✅ **funziona**
+- `reasoning_budget: 0` → ❌ NON spegne il thinking
+- `reasoning_budget: 200` (cap) → ❌ NON limita il pensiero
+- `reasoning_effort` → ❌ `chat_template_caps.supports_reasoning_effort=false` — il template Qwen3-14B non lo supporta
+- `--reasoning-format deepseek` → ✅ pensiero isolato in `reasoning_content`
+- `finish_reason` → ✅ `length`/`stop` corretti
+- Perf: generazione **~42 tok/s** stabile (23.5 ms/tok), prompt proc 225-493 tok/s a caldo → CUDA 13.3 ok, nessun fallback lento, GPU util 94%
+- **VRAM: llama-server ~10.8 GB** (pesi + KV q8, --parallel 1). Con desktop di Roberto attivo
+  (browser/VSCode ~3 GB) → totale ~13.7 GB / 16.3, **~2.4 GB liberi** — margine stretto.
+
+**Giro 2 in corso**: nomi campo alternativi (`reasoning_budget_tokens`, `thinking_budget_tokens`),
+`response_format` + `enable_thinking:false` (test valido), prompt grande per prompt-proc a regime.
+
+**Firewall PC139**: regole inbound Allow per `tools\llama\llama-server.exe` (b9119) e vecchio
+`bin\llama-cpp\`. Il mio b10819 in `tools\llama-b10819\` NON è raggiungibile dalla LAN → i test
+girano da localhost via ssh. Per il deploy: o si sostituisce il binario in `tools\llama\`
+(regola firewall ereditata) o serve una regola nuova per la dir separata.
+
+---
+
+## [2026-09-09 00:05] TASK — Probe stato PC139 (read-only) + scoperta variante CUDA per b10819
+
+**Probe read-only** (ssh pc139 nvidia-smi/tasklist/curl + redis-cli GET su CT120, nessuna scrittura):
+- GPU: 2.7 GB usati / **13.3 GB liberi**, nessun `llama-server.exe`, `:8090/health` connection-refused
+  → **backend qwen3-14b NON caricato**.
+- ARIA orchestrator **online**: heartbeat `aria:global:node:192.168.1.139:status` fresco (TTL 57s),
+  `gpu_status:online` (semaforo GREEN), `active_backends:[]`, `current_tasks:{}`.
+- Coda `aria:q:llm:local:qwen3-14b-q4km:lifelog` = **vuota**. 2 dead-letter vecchi, inerti.
+- Finestra pulita per il test §8 — ma l'orchestratore è vivo: un job Lifelog2 farebbe partire
+  b9119 su :8090 → due 14B non stanno in 16 GB.
+
+**Scoperta: `b10819` NON ha un build `cuda-13.1`** (varianti x64: `12.4` e `13.3`). La decisione
+"restare su 13.1" è moot. Verificato su PC139: driver 610.88 / CUDA UMD 13.3, toolkit di sistema
+**v13.2** (`cudart64_13.dll`+`cublas64_13.dll` su PATH), `tools/llama/` senza cudart bundle →
+usa il runtime di sistema. **Scelta: `llama-b10819-bin-win-cuda-13.3-x64.zip`** (combacia driver
++ toolkit 13.x). `cuda-12.4` richiederebbe anche il cudart 12.4 (assente).
+
+**Percorso test deciso**: DIRETTO a llama-server :8090 (non via Redis — il wrapper attuale
+scarta i param sotto test), come swap b10819 su :8090 (= §9 passi 1-3), un solo modello su
+quella porta. `llama-server.b9119.exe` tenuto per rollback. Script pronto:
+`scratchpad/qwen3_s8_verify.sh`.
+
+Doc aggiornato (§7 CUDA, §8 stato+percorso). **Nessuna modifica a codice/infra** — solo probe read-only + doc.
+
+**Serve ok esplicito di Roberto** per: (a) scaricare b10819 su PC139 + swap binario, (b) avviare
+llama-server su :8090 con i nuovi flag. Oppure lo fa lui e io guido le curl del §8.
+
+---
+
+## [2026-09-08 23:55] DECISION — Design wrapper Qwen3-14B CHIUSO (ultime 5 decisioni sciolte)
+
+Roberto ha confermato le 5 raccomandazioni residue (§10 del doc):
+1. `temperature: 0` / `top_k: 1` con profilo `thinking` → wrapper **rifiuta con errore** (Qwen: greedy in thinking = ripetizioni infinite).
+2. Parametro non nel contratto → **`forward_warn`** (inoltra + WARN), non `reject`.
+3. Profili → **nel manifest** (`llm_contract`), non file separato.
+4. `CONTEXT_WINDOW_TOKENS` lato Lifelog2 → **costante 32768 con commento**, non fetch da endpoint.
+5. Endpoint dashboard `/contract` → **rimandato**; `contract()` + `probe()` bastano.
+
+`docs/qwen3-llm-wrapper-redesign-2026-09-08.md` aggiornato: stato → "design chiuso", §10 →
+"tutte prese", §2.1/§3.2/§6 allineate alle decisioni.
+
+**Prossimo passo (richiede ok esplicito di Roberto — azione su PC139):** verifica empirica §8 —
+avvio `llama-server` b10819 con i nuovi flag (`--ctx-size 32768 --cache-type-k/v q8_0
+--flash-attn on --jinja --reasoning-format deepseek --no-context-shift`), poi le 10 prove
+(3 leve thinking, `reasoning_budget` cap, `finish_reason`, VRAM reale, qualità KV q8, log CUDA).
+Output = tabella che congela le assunzioni prima di scrivere il wrapper.
+
+**Nessuna modifica di codice/infra in questa sessione** — solo indagine + design + doc + lint wiki.
+
+---
+
+## [2026-09-08 23:45] DECISION — Locked: build b10819/cuda-13.1, ctx 32768 + KV q8_0, contratto con tabella parametri
+
+Roberto ha sciolto 3 decisioni del design (§10 di `docs/qwen3-llm-wrapper-redesign-2026-09-08.md`):
+
+1. **`--ctx-size` → 32768** (nativo Qwen3-14B, era 16384 = metà) **+ KV cache `q8_0`** su K e V.
+   KV math (indagine §7 + ricalcolo): 32768 fp16 ≈ 13.9 GB (non entra nei 13.1 liberi), q8_0 ≈
+   11.4 GB (entra con ~1.7 GB margine). Richiede `--flash-attn on` (llama.cpp non fa q8_0 KV
+   senza FA). Raddoppia il budget di input → leva diretta contro i troncamenti Lifelog2.
+   Ladder di fallback qualità: K=q8_0/V=f16 → torna a 16384 fp16.
+2. **Build → `b10819` (2026-09-05) fissa**, variante **`cuda-13.1`** invariata (gira da mesi
+   senza problemi su Q4_K_M; si legge comunque il log al primo avvio per MMQ vs cuBLAS).
+3. Tabella completa `request_params` incorporata nel contratto (§3.1 del doc) dalla doc ufficiale.
+
+Doc aggiornato: header + §3 (server_args con ctx/KV) + §5 (flag) + §7 (decisioni) + §8 (verifica
+KV q8 quality + VRAM reale) + §9 (piano) + §10 (5 decisioni ancora aperte: temp=0 in thinking,
+unknown_param_policy, profili nel manifest o file separato, context_window client, endpoint /contract).
+
+**Nessuna modifica di codice/infra** — solo doc. Prossimo: sciogliere le 5 decisioni residue,
+poi (con ok di Roberto) verifica §8 su PC139, poi implementazione.
+
+---
+
+## [2026-09-08 23:20] DECISION — Aggiornare la build llama-server (b9119 → recente) per abilitare il toggle thinking per-richiesta
+
+**Requisito Roberto**: Lifelog2 userà entrambe le modalità — thinking on/off deve essere scelto
+da un parametro passato dal client. Deve funzionare davvero.
+
+**Ricerca doc ufficiale** (model-card Qwen3-14B, doc Qwen, README `llama.cpp/tools/server`,
+Unsloth, GitHub PR/release):
+- Build attuale `b9119` = **2026-05-12** (4 mesi; corrente `b10819` = 2026-09-05, ~1700 commit dopo).
+- I controlli per-richiesta del thinking sono stati aggiunti DOPO b9119:
+  - `reasoning_effort: "none"` (OAI canonico, spegne reasoning) — PR #26045, 2026-07-24
+  - per-request `reasoning_budget_tokens` onorato — PR #23116, 2026-07-12
+  - fix reasoning leak template `<think>` — PR #24674, 2026-07-13
+- Su b9119 l'unica leva per-richiesta è `chat_template_kwargs.enable_thinking` — proprio quella
+  con i dubbi di affidabilità (issue #20409/#20182/#20196, quasi tutte su Qwen3.5 non Qwen3 orig.).
+
+**DECISIONE**: aggiornare la build. Design aggiornato (`docs/qwen3-llm-wrapper-redesign-2026-09-08.md`
+rev 2026-09-08) — profilo `non_thinking` con 3 leve indipendenti (`reasoning_effort:none` +
+`chat_template_kwargs.enable_thinking:false` + `reasoning_budget:0`), profilo `thinking` con
+`reasoning_budget` cap (default 2048, overridabile). Tabella completa `request_params` incorporata
+nel contratto dalla doc ufficiale (sampling, reasoning, output strutturato).
+
+**Da verificare al primo avvio nuova build**: variante CUDA (install scarica `cuda-13.1`; per
+Blackwell/sm_120 la community consiglia `cuda-12.8` — MMQ può cadere su 13.1). Leggere il log.
+
+**Decisioni ancora aperte** (§10 del doc): `--ctx-size` 16384 vs 32768+KV-q8; build target
+esatta; variante CUDA; `temperature:0` in thinking (rifiuta o corregge); `unknown_param_policy`;
+profili nel manifest o file separato; `context_window` client costante o fetch.
+
+**Nessuna modifica di codice o infra ARIA** — solo ricerca + doc.
+
+---
+
+## [2026-09-08 22:50] TASK — Quadro generale sistema + setup contesto ARIA + lint drift doc
+
+Su richiesta di Roberto, giro completo del framework prima di entrare nel merito del
+wrapper: `.cursorrules`, `CLAUDE.md`, wiki NH-Mini (index/overview/stack-aria/stack-lifelog2/
+dependency-map/container pages/concept ARIA), `state/inventory.json` + `system-context.md`,
+`service_catalog.py` live, codice reale della catena Lifelog2→Redis→ARIA→llama-server,
+doc ARIA (`aria-state-of-gaps`, manifest, orchestrator).
+
+**Catena verificata:** Lifelog2 CT203 (`core/llm.py::AriaLLMClient`) → RPUSH
+`aria:q:llm:local:qwen3-14b-q4km:lifelog` su Redis CT120 → ARIA orchestrator PC139
+(`_run_loop` → `model_logic_ids` hardcoded → `BatchOptimizer.decide_next_queue` →
+`_process_lifelog_llm_task` → `ensure_running` → `_build_cmd`(manifest) →
+`backends/lifelog_llm/launcher.py` → `llama-server.exe` b9119 :8090) →
+`LifelogLLMBackend.run()` → POST `/v1/chat/completions` → `post_result` RPUSH
+`aria:result:llm:{job_id}` → BRPOP Lifelog2. **Consumatore unico del 14b locale: solo Lifelog2.**
+
+**DECISION (Roberto):** (1) registrare ARIA nel workspace manager — FATTO
+(`sviluppi/ARIA/project_info.json` + switch, `current_project → ARIA`, previous SHIFTER);
+(2) correggere il drift doc↔codice subito — FATTO (vedi `NH-Mini/log.md` entry
+`[2026-09-08] lint`): schema code Redis, tabella Model IDs, `qwen3.5-35b` scaffolding
+non "operativo", CT160 stopped.
+
+**Non risolti (fuori scope, annotati):** link orfani `index.md` → `concepts/aria-telemetry`
++ `concepts/aria-gemini-503-pattern` (pagine mai create); CT200 running senza pagina wiki;
+journal senza `END` tra 2026-08-16 e i commit fino al 09-06 (pattern noto).
+
+**Prossimo passo:** review insieme di `docs/qwen3-llm-wrapper-investigation-2026-09-08.md`,
+poi decisione sul redesign. Bozza design già in `docs/qwen3-llm-wrapper-redesign-2026-09-08.md`
+(da rivedere, non validata).
+
+---
+
+## [2026-09-08 19:40] START — ARIA: redesign wrapper LLM locale (Qwen3-14B ↔ llama-server)
+
+**Contesto operativo:** switch da progetto Lifelog2/SHIFTER → **ARIA** (`sviluppi/ARIA`, runtime PC139 Win11).
+`workspace/active_config.json` indicava ancora SHIFTER; switch richiesto esplicitamente da Roberto.
+
+**Obiettivo:** partire dal DESIGN del nuovo wrapper ARIA↔llama-server per il backend `qwen3-14b-q4km`,
+sulla base di `sviluppi/ARIA/docs/qwen3-llm-wrapper-investigation-2026-09-08.md`. Requisiti (sez. 6 del doc):
+(1) passthrough parametri completo — no whitelist fissa; (2) default ARIA espliciti e documentati;
+(3) profili coerenti thinking/non-thinking con default per profilo + override per-campo del chiamante;
+(4) manifest self-describing lato backend (modello, versione, parametri configurabili + default).
+**Non-goal:** cambio modello — resta Qwen3-14B-Q4_K_M.
+
+**Grounding (probe in lettura, questa sessione):**
+- `aria_node_controller/backends/lifelog_llm.py` — confermata whitelist rigida (`model, messages, max_tokens,
+  temperature, top_p, top_k, min_p, stream`) + bug guardia `/no_think` (righe 48-51).
+- `aria_node_controller/config/backends_manifest.json` — entry `qwen3-14b-q4km`, `args` piatti, nessun
+  `--jinja`/`--reasoning-format`, `ctx-size 16384`.
+- `aria_node_controller/core/orchestrator.py` — `_process_lifelog_llm_task` (1399) passa `task.payload`
+  intatto a `backend.run()`; `_build_cmd` (193) costruisce argv dal manifest (`args` piatti).
+- `backends/lifelog_llm/launcher.py` — thin wrapper llama-server.exe, self-reporting PID (2026-09-05).
+- `sviluppi/Lifelog2/src/backend/lifelog2/core/llm.py` — `AriaLLMClient` è l'**unico** chiamante del
+  backend locale (grep su tutti i progetti: DIAS non lo usa). Superficie di redesign contenuta.
+
+**Regola rispettata:** nessun avvio/stop/riavvio processi ARIA su PC139 — solo lettura.
+
+---
+
+## [2026-08-16 23:37] END — Stage D/E multipart refactor deployato+riprocessato, audit codebase avviato, LXC 107 pulito, /doc+/lint+/finalize lifelog2 eseguiti
+
+**Contesto:** Entry retroattiva — sessione lunga svolta nella stessa chat, mai spezzata da `/finalize`, compattata più volte. Il journal non ha ricevuto le entry TASK/DECISION durante la sessione (violazione della regola "scrivi durante, non alla fine" — segnalata dall'utente, corretta ricostruendo da `git log` di `sviluppi/Lifelog2` + narrativa completa nei doc di progetto citati sotto, stesso pattern già usato per l'entry del 06-29→07-05).
+
+**TASK — Deploy refactor Stage D/E "taglio in parti" (Fase 0→4, concordate in sessione precedente)**
+- Trovato un import rotto in `dashboard.py` (`/segments/{id}`) durante il deploy: riferiva simboli spostati in `stage_d1_identity.py` l'8/8, mai aggiornato — avrebbe bloccato l'avvio dell'intera API al primo riavvio, mai emerso perché il servizio non era stato riavviato da allora. Fix + verificato con la suite pytest + chiamate reali, poi deploy completato su LXC 203 (commit `ff5a4a4`, `c340b7f` e precedenti).
+
+**DECISION — Fase 5: wipe DB da Stage C1 + riprocessamento storico (681 segmenti)**
+- Eseguito `reset_pipeline.py --from-c1 --run`: gap trovato nello script (mai documentato prima) — per un corpus GIÀ completamente processato serve prima flippare manualmente `segments.pipeline_status` da `'classified'` a `'c1'`, altrimenti `_replay_c1` non trova nulla da ripubblicare. Riprocessamento completato senza perdita di trascrizione (Stage C mai rifatto).
+
+**BLOCKED → RESOLVED — bug reale trovato durante la verifica manuale (il cuore della sessione)**
+- Verificando a campione i thread prodotti (richiesta esplicita dell'utente: confini, contenuto, thread multiparte), trovato che il gate `is_ambiguous` di Stage D confrontava il volume di caratteri di TUTTI i turni (HIGH+LOW+JUNK) contro la soglia di narrabilità, nonostante i suoi stessi messaggi di log dicessero "char HIGH" — pre-esistente, indipendente dal refactor, innocuo finché Stage E leggeva tutto ma diventato reale (9/17 thread con zero turni HIGH superavano comunque il gate) dal momento in cui Stage E ha iniziato a filtrare HIGH-only. Fermato il riprocessamento appena scoperto (zero thread arricchiti nel frattempo), fix in tre punti di `stage_d_thread_builder.py`, re-run pulito da capo. Verifica manuale turno-per-turno di un caso reale (thread `387e2ca0`, "Perge"/"ERG" ticker, "tre scalette") confermata un'allucinazione di collegamento del modello — non un bug di codice, limite del 14B su entità multiple in prompt tersi.
+
+**DECISION — nuovo indicatore `audio_quality_score` (proposta dell'utente)**
+- Media di `avg_word_score` pesata per `word_count` su tutti i turni del thread — ricombinazione statisticamente corretta di medie di gruppi disomogenei, non un'approssimazione. Complementa `is_ambiguous` (cancello secco) con un segnale continuo per i thread che lo superano ma variano in affidabilità. Migration 0048, badge 🎧 in dashboard.
+
+**TASK — Audit codebase modulo per modulo (avviato su richiesta esplicita, metodo: un file alla volta in ordine di pipeline, mai a macro-argomenti)**
+- Completati tutti i moduli `services/pipeline/` (13 file: stage_b/c/c1_gate/c1_turn_glue/c1_5_pooling/d/d1/e/f/g + 7 worker) e `services/orchestrator.py`. Trovati e corretti: 1 modulo morto rimosso (`stage_d_mode_signal.py`, mai agganciato), 2 bug reali (timer `t0` sovrascritto in `stage_g_covers.py` — falsava la telemetria di durata da settimane; il gate `is_ambiguous` sopra), ~15 simboli morti (costanti/funzioni mai referenziate), diverse docstring stale corrette (`stage_d1_identity.py` e `stage_e_thread_enrichment.py` dichiaravano comportamenti non più veri da settimane). Su `orchestrator.py` (l'unico modulo live in quel momento): 3 correzioni proposte e discusse PRIMA di agire — una di queste (`_is_sunday_early_morning`) è stata *salvata* dal controllo incrociato con la doc di progetto (`lifelog2-places-intelligence-spec-v1.md`), che ha rivelato essere design deliberato e già segnato "fatto", non codice morto come sembrava a prima vista. **Non concluso** — restano API routers, frontend, script di manutenzione. Stato dettagliato: `docs/lifelog2-codebase-audit-2026-08-16.md`.
+- Prodotto anche `docs/lifelog2-signal-catalog.md` (nuovo): catalogo di tutti i segnali di qualità/affidabilità da WhisperX agli aggregati per thread, con le formule esatte.
+
+**TASK — LXC 107 (Ollama embeddings) — pulizia disco**
+- Durante l'audit, la suite pytest si è bloccata ripetutamente su `test_rag_search_grounded`. Diagnosi iniziale sbagliata due volte (contesa GPU con ARIA — Ollama gira su una macchina diversa; poi "Ollama lento" — i log mostrano risposte in 50-1400ms, il blocco era nel processo locale, causa non identificata, non ricorrente). L'indagine collaterale ha trovato LXC 107 all'86% di disco: 10GB di librerie ROCm/CUDA mai usate (host CPU-only). Prima di cancellare, indagine su richiesta dell'utente se la iGPU del minipc Proxmox (AMD Ryzen 5 7430U, architettura Barcelo/gfx90c) fosse passabile a un LXC e convenisse — tecnicamente sì (nessun blocco Proxmox), ma supporto ROCm incerto per questa generazione e guadagno atteso marginale per un embedder piccolo; l'utente ha scelto di non testarlo (l'embedder gira bene su CPU, e restarci ha il vantaggio di non competere mai con la GPU reale su ARIA). Rimosse le librerie morte, disco 86%→16%, funzionalità riverificata con una chiamata embedding reale.
+
+**TASK — `/doc lifelog2` + `/lint lifelog2` + `/finalize` (chiusura formale sessione, richiesta esplicita utente)**
+- `/doc lifelog2` (forma estesa): risincronizzati `knowledge/{architecture,memory-model,development-log}.md` e `docs/lifelog2-data-architecture-v1.md` (blocco STATO 2026-08-16 + tabelle `conversation_threads`/`thread_turns` + nuova sezione `thread_part_summaries`) lato progetto; lato NH-Mini aggiornati `NH-Mini/entities/systems/stack-lifelog2.md` (sezione Chiusura thread corretta, force-cut descritto come rimosso), `NH-Mini/index.md`, `NH-Mini/user-profile.md`, `knowledge/containers/infrastructure-map.mdc`, 5 entry `history_manager.py`.
+- `/lint lifelog2`: 68 passed. Trovati e risolti (con conferma esplicita utente) 2 gap reali su `lifelog2-data-architecture-v1.md` — tabella `weekly_metrics` viva in Postgres ma priva di sezione dedicata (aggiunta ora, con nota che il worker è spento in `orchestrator.py` insieme agli altri Tier2); il presunto gap su `memory_atoms`/`action_items`/`decisions` si è rivelato un falso positivo mio — il documento le documenta già correttamente come droppate fisicamente (migration 0034, 21/07) nel blocco STATO 2026-08-05, sezioni §3 mantenute come storia per convenzione del doc. Confermato debito noto e volutamente non toccato: `knowledge/api-contracts.md` ha endpoint stale (`/api/dashboard/threads/{id}` vs il vero `/dashboard/thread/{thread_id}`), rimandato ad audit dedicato futuro.
+- Errore lint pre-esistente e non-Lifelog2 risolto su richiesta utente: creato `sviluppi/shifter-standalone/.project-context` (mancante, progetto esistente mai NH-Mini-onboarded — fork standalone locale di SHIFTER, deliberatamente isolato da infra condivisa).
+
+**Incompleto per la prossima sessione:**
+- Audit codebase: API routers (`dashboard.py` è enorme), frontend, 74 script di manutenzione — non ancora iniziati.
+- RAM di LXC 107 (1GB totale, causa la variabilità di latenza osservata) — deliberatamente non affrontata ("vediamo", nessuna decisione presa).
+- Detective identity worker: 191+ thread in coda, worker non agganciato al ciclo automatico per scelta esplicita (test isolato in corso) — nessuna azione richiesta finché non si riattiva.
+
+**Mine per il prossimo agent:** nessuna nuova — i problemi emersi in sessione (import rotto, gap nel toolkit di reset, bug is_ambiguous, timer t0) sono stati tutti risolti nella stessa sessione.
+
+**Riferimento**: `sviluppi/Lifelog2/docs/lifelog2-stage-e-multipart-refactor-roadmap-2026-08-16.md` (refactor + riprocessamento), `sviluppi/Lifelog2/docs/lifelog2-codebase-audit-2026-08-16.md` (audit, stato aggiornato per la ripresa), `sviluppi/Lifelog2/docs/lifelog2-signal-catalog.md` (catalogo segnali).
+
+## [2026-07-16 NOTA-ARIA] — Miglioramento futuro: health-check e recycle backend WhisperX lato ARIA
+
+Decisione architetturale del 2026-07-15 (con Roberto): la salute dei backend di inferenza è responsabilità di ARIA, non dei client — Lifelog2 (e qualsiasi altra app) invia task alle code Redis CT120 e basta. Da implementare nel progetto ARIA (`sviluppi/ARIA`, PC Win11 192.168.1.139):
+
+- **Degrado osservato su WhisperX** (15/07, sotto backlog continuo): latenza a gradini dopo ore di residenza VRAM → corruzione tokenizer (`'NoneType' object has no attribute 'sot_sequence'`). Un riavvio del backend risolve.
+- **Trigger reattivo proposto**: streak di N errori/timeout consecutivi sul backend → recycle automatico del processo (le code su Redis CT120 sono persistenti, zero perdite by design).
+- **Segnali da aggiungere alla telemetria** (:8089): RTF per task (serve passthrough `audio_duration_s` nel payload — oggi rtf/vram_peak_gb sono NULL per whisperx), polling VRAM via nvidia-smi.
+- **In riserva**: canary task di benchmark iniettato periodicamente per misurare il degrado in assenza di traffico.
+- Attenzione al vincolo esistente: mai avviare/stoppare ARIA su PC 139 autonomamente — implementazione da fare su LXC 190 (clone git) + pull su PC 139, con ok esplicito di Roberto per i test.
 ## [2026-07-06 15:40] END — Thread Builder v2 hardening + doc/lint pass completati
 
 **Completato in questa sessione (2026-07-06, seguito diretto del blocco TASK sotto):**
@@ -41,34 +547,6 @@
 
 **Doc:** `/doc lifelog2` — development-log.md, architecture.md, stack-lifelog2.md, log.md, index.md, history_manager.py.
 
-## [2026-06-23 14:00] START — CT202 gateway: debug /gateway/, Cloudflare doc, Telegram URL watcher
-
-**Obiettivo:** Diagnosticare /gateway/ non raggiungibile, documentare sistema di routing CT202 (nginx + ngrok + Cloudflare + Authelia), implementare notifica Telegram per cambio URL Cloudflare Quick Tunnel.
-**Grounding:** CT202 running con nginx + ngrok + cloudflared-quick + authelia.
-
-## [2026-06-23 14:05] TASK — Fix /gateway/ LAN + cleanup typo /lifelo/
-- Identificato bug: server_name 192.168.1.202 (shifter-lan.conf) mancava delle location /gateway/. Nginx sceglie block esplicito su catch-all.
-- Aggiunta duplicazione delle 3 location /gateway/ in shifter-lan.conf (via scp — shell SSH espande $var nei heredoc).
-- Rimosso typo /lifelo/ da lifelog.conf.
-- Verifica: /gateway/ → 200 ✅
-
-## [2026-06-23 14:15] TASK — CF URL sync su CT202 + dashboard gateway v2
-- Script /usr/local/bin/cf-url-sync.sh + cf-url-sync.timer (ogni 30s) su CT202.
-- Scrive URL Cloudflare in /var/www/html/gateway/cf-url.txt.
-- Dashboard gateway aggiornata: sezione Cloudflare, route map, titolo.
-
-## [2026-06-23 14:30] TASK — cf-url-watcher su LXC 190 (Telegram notification)
-- scripts/cf-url-watcher.py: polling http://192.168.1.202/gateway/cf-url.txt ogni 60s.
-- Se URL cambia → notifica Telegram via TelegramBot.send_message().
-- State: state/cf-url-last.txt. Timer: cf-url-watcher.timer su LXC 190.
-- CT202 NON ottiene SSH verso LXC 190 (sicurezza — LXC 190 è control plane).
-
-## [2026-06-23 14:45] TASK — Doc e wiki
-- knowledge/network/internet-gateway-pattern.mdc riscritto completo.
-- NH-Mini/entities/containers/ct202-gateway.md aggiornato (era del 2026-04-24).
-- core/service_catalog.py gateway entry aggiornata.
-- NH-Mini/concepts/dependency-map.md aggiornato con Cloudflare e route attuali.
-
 ## [2026-06-23 20:30] END — CT202 gateway + chiusura debiti SHIFTER
 
 **Completato:**
@@ -84,6 +562,34 @@
 
 **Mine per il prossimo agent:**
 - Lifelog2: riprendere da `day_digest --days 220` + M1 batch test 50 segmenti (roadmap in `sviluppi/Lifelog2/docs/lifelog2-pipeline-validation-roadmap.md`).
+
+## [2026-06-23 14:45] TASK — Doc e wiki
+- knowledge/network/internet-gateway-pattern.mdc riscritto completo.
+- NH-Mini/entities/containers/ct202-gateway.md aggiornato (era del 2026-04-24).
+- core/service_catalog.py gateway entry aggiornata.
+- NH-Mini/concepts/dependency-map.md aggiornato con Cloudflare e route attuali.
+
+## [2026-06-23 14:30] TASK — cf-url-watcher su LXC 190 (Telegram notification)
+- scripts/cf-url-watcher.py: polling http://192.168.1.202/gateway/cf-url.txt ogni 60s.
+- Se URL cambia → notifica Telegram via TelegramBot.send_message().
+- State: state/cf-url-last.txt. Timer: cf-url-watcher.timer su LXC 190.
+- CT202 NON ottiene SSH verso LXC 190 (sicurezza — LXC 190 è control plane).
+
+## [2026-06-23 14:15] TASK — CF URL sync su CT202 + dashboard gateway v2
+- Script /usr/local/bin/cf-url-sync.sh + cf-url-sync.timer (ogni 30s) su CT202.
+- Scrive URL Cloudflare in /var/www/html/gateway/cf-url.txt.
+- Dashboard gateway aggiornata: sezione Cloudflare, route map, titolo.
+
+## [2026-06-23 14:05] TASK — Fix /gateway/ LAN + cleanup typo /lifelo/
+- Identificato bug: server_name 192.168.1.202 (shifter-lan.conf) mancava delle location /gateway/. Nginx sceglie block esplicito su catch-all.
+- Aggiunta duplicazione delle 3 location /gateway/ in shifter-lan.conf (via scp — shell SSH espande $var nei heredoc).
+- Rimosso typo /lifelo/ da lifelog.conf.
+- Verifica: /gateway/ → 200 ✅
+
+## [2026-06-23 14:00] START — CT202 gateway: debug /gateway/, Cloudflare doc, Telegram URL watcher
+
+**Obiettivo:** Diagnosticare /gateway/ non raggiungibile, documentare sistema di routing CT202 (nginx + ngrok + Cloudflare + Authelia), implementare notifica Telegram per cambio URL Cloudflare Quick Tunnel.
+**Grounding:** CT202 running con nginx + ngrok + cloudflared-quick + authelia.
 
 ## [2026-06-22 17:14] END
 
@@ -124,10 +630,27 @@
 - Verificare scroll anno in user mode con i bottoni (non solo rotella).
 - Verificare CT204 risponde correttamente su http://192.168.1.204:8000 dopo la migrazione `src/`.
 
-## [2026-06-22 12:00] START — SHIFTER: calendar refactor, slide-in panel, git workflow, CT204 align
+## [2026-06-22 12:20] TASK — Git workflow SHIFTER: LXC190 dev → GitHub → CT204 pull
 
-**Obiettivo:** Completare il refactor del calendario SHIFTER (rimozione summary columns, pannello slide-in, riduzione colonne per 31gg visibili), stabilire workflow git LXC190→GitHub→CT204, allineare produzione.
-**Grounding:** SHIFTER.service operativo su CT204 (192.168.1.204:8000). Ultimo commit `8dfca06` NH-Mini in data 2026-06-01.
+- Creato `.gitignore` (esclude DB, backups, seed, scratch con dati operatori, screenshots).
+- Primo commit `ce3d40b` su `sviluppi/SHIFTER/` (LXC 190): struttura `src/` + tutte le modifiche sessione.
+- Force-push su `S3ph1r/SHIFTER` GitHub (rimpiazza vecchia struttura flat di CT204).
+- CT204: `git reset --hard origin/main` → allineata a nuova struttura `src/`.
+- Service `SHIFTER.service`: `WorkingDirectory` aggiornato a `/opt/SHIFTER/src` — confermato `active (running)`.
+- Token rimosso dal remote URL di CT204 dopo il pull.
+
+## [2026-06-22 12:15] TASK — User mode filter + default pivot + validazione client-side
+
+- User mode: celle oltre `pivot+3m` renderizzate come punto grigio (non mostrano turni futuri).
+- Default pivot: `today+1` al load della pagina via `init()`.
+- Validazione client-side: blocca run solutore se `pivotDate ≤ today` senza checkbox "Consenti Pivot nel passato" attiva.
+
+## [2026-06-22 12:10] TASK — Riduzione larghezze colonne (31 giorni visibili)
+
+- `cal-left-group`: 54px → 36px (risparmio 18px), `cal-day-col`: 36px → 32px (risparmio 31×4=124px).
+- `COL_WIDTH = 32` in `app.js` (era 36) per allineare scrollToMonth/scrollToDate.
+- Tutti e 4 i colgroup generator in app.js aggiornati a 32px.
+- CSS `style.css` aggiornato per entrambe le classi.
 
 ## [2026-06-22 12:05] TASK — Refactor calendario LIVE/PLANNED: rimozione summary columns e slide-in panel
 
@@ -137,27 +660,10 @@
 - Tecnica riga mese: testo "X" con `color:transparent` per forzare stessa line-height del calendario senza essere visibile.
 - Header "Gruppo" → "Gr." in tutti e 3 i calendari.
 
-## [2026-06-22 12:10] TASK — Riduzione larghezze colonne (31 giorni visibili)
+## [2026-06-22 12:00] START — SHIFTER: calendar refactor, slide-in panel, git workflow, CT204 align
 
-- `cal-left-group`: 54px → 36px (risparmio 18px), `cal-day-col`: 36px → 32px (risparmio 31×4=124px).
-- `COL_WIDTH = 32` in `app.js` (era 36) per allineare scrollToMonth/scrollToDate.
-- Tutti e 4 i colgroup generator in app.js aggiornati a 32px.
-- CSS `style.css` aggiornato per entrambe le classi.
-
-## [2026-06-22 12:15] TASK — User mode filter + default pivot + validazione client-side
-
-- User mode: celle oltre `pivot+3m` renderizzate come punto grigio (non mostrano turni futuri).
-- Default pivot: `today+1` al load della pagina via `init()`.
-- Validazione client-side: blocca run solutore se `pivotDate ≤ today` senza checkbox "Consenti Pivot nel passato" attiva.
-
-## [2026-06-22 12:20] TASK — Git workflow SHIFTER: LXC190 dev → GitHub → CT204 pull
-
-- Creato `.gitignore` (esclude DB, backups, seed, scratch con dati operatori, screenshots).
-- Primo commit `ce3d40b` su `sviluppi/SHIFTER/` (LXC 190): struttura `src/` + tutte le modifiche sessione.
-- Force-push su `S3ph1r/SHIFTER` GitHub (rimpiazza vecchia struttura flat di CT204).
-- CT204: `git reset --hard origin/main` → allineata a nuova struttura `src/`.
-- Service `SHIFTER.service`: `WorkingDirectory` aggiornato a `/opt/SHIFTER/src` — confermato `active (running)`.
-- Token rimosso dal remote URL di CT204 dopo il pull.
+**Obiettivo:** Completare il refactor del calendario SHIFTER (rimozione summary columns, pannello slide-in, riduzione colonne per 31gg visibili), stabilire workflow git LXC190→GitHub→CT204, allineare produzione.
+**Grounding:** SHIFTER.service operativo su CT204 (192.168.1.204:8000). Ultimo commit `8dfca06` NH-Mini in data 2026-06-01.
 
 ## [2026-06-17 22:31] END — SHIFTER carry_out fix, UX audit, layout 2-col, /doc SHIFTER
 
@@ -178,26 +684,26 @@
 
 ---
 
-## [2026-06-17 14:00] START — SHIFTER: analisi equity H1, fix carry_out, UX audit
+## [2026-06-17 18:00] TASK — Analisi Streak future-only + wiki blueprint
+- Filtro Streak da `date.today()` a fine anno. Blueprint SHIFTER aggiornato.
 
-**Obiettivo:** Verificare equity percentuali dopo caricamento dati storici H1, investigare e fixare bug carry_out formula, UX audit completo e raffinamenti.
-**Grounding:** SHIFTER.service operativo su CT204 (192.168.1.204:8000). DB shifts.db con dati H1 reali.
+---
 
-## [2026-06-17 14:30] TASK — Analisi equity post-H1 e carry_out bug
-- Analizzate equity percentuali: operatori con 12 mesi di storico mostravano saldi divergenti inaspettati.
-- Identificato bug: formula `carry_in + (planned_rec - actual_rec) + (actual_we - planned_we)` = 0 quando solver scrive su entrambe le tabelle (publish_end_date = fine anno). Carry_out sempre uguale a carry_in — debiti mai decurtati.
+## [2026-06-17 16:30] TASK — UX audit e raffinamenti
+- Rimossa tabella MESE. Scroll per mese con toggle. Operatori inattivi opacity 0.18. Ferie storiche H1 in calendario ferie. Rinominata "FERIE PIAN.". Layout 2-col con Analisi Streak.
 
 ## [2026-06-17 15:30] DECISION — Fix carry_out con formula diretta su DB
 - Sostituita formula degenere con `max(0, carry_in + H2_WE+FES - H2_REC)` calcolata da `turni_effettivi` + `recuperi_effettuati` post `pivot_date` (da `storico_solutore`).
 - Verificato in produzione: Guareschi 44 RECs per 32 WE+FES → saldo negativo azzerato correttamente.
 
-## [2026-06-17 16:30] TASK — UX audit e raffinamenti
-- Rimossa tabella MESE. Scroll per mese con toggle. Operatori inattivi opacity 0.18. Ferie storiche H1 in calendario ferie. Rinominata "FERIE PIAN.". Layout 2-col con Analisi Streak.
+## [2026-06-17 14:30] TASK — Analisi equity post-H1 e carry_out bug
+- Analizzate equity percentuali: operatori con 12 mesi di storico mostravano saldi divergenti inaspettati.
+- Identificato bug: formula `carry_in + (planned_rec - actual_rec) + (actual_we - planned_we)` = 0 quando solver scrive su entrambe le tabelle (publish_end_date = fine anno). Carry_out sempre uguale a carry_in — debiti mai decurtati.
 
-## [2026-06-17 18:00] TASK — Analisi Streak future-only + wiki blueprint
-- Filtro Streak da `date.today()` a fine anno. Blueprint SHIFTER aggiornato.
+## [2026-06-17 14:00] START — SHIFTER: analisi equity H1, fix carry_out, UX audit
 
----
+**Obiettivo:** Verificare equity percentuali dopo caricamento dati storici H1, investigare e fixare bug carry_out formula, UX audit completo e raffinamenti.
+**Grounding:** SHIFTER.service operativo su CT204 (192.168.1.204:8000). DB shifts.db con dati H1 reali.
 
 ## [2026-06-13 18:10] END — SHIFTER holiday integration, solver relaxation, and E2E validation complete
 
@@ -217,10 +723,18 @@
 **Mine per il prossimo agent:**
 - Nessuna.
 
-## [2026-06-13 15:57] START — SHIFTER holiday synchronization, solver relaxation, and CT204 deployment
+## [2026-06-13 17:10] TASK — Sincronizzazione della tabella ferie in produzione
+- Esportato il dump di 327 righe dal database delle ferie locale.
+- Copiato ed eseguito via script Python nativo nel database SQLite di produzione `/opt/SHIFTER/shifts.db`.
+- Eseguito il solutore sul server CT204, completato con successo (stato OPTIMAL per l'intero anno 2026).
 
-**Obiettivo:** Risolvere l'infeasibility del solutore annuale integrando le ferie, allineare e riavviare SHIFTER su LXC 204 RT, sincronizzare i dati delle ferie.
-**Grounding:** Solutore testato localmente (OPTIMAL) e promosso su CT204 con successo. Tabella ferie popolata e allineata a 327 righe.
+## [2026-06-13 16:30] TASK — Deploy del codice e riavvio del servizio su CT204
+- Promosso il codice aggiornato sul container di produzione `CT204` tramite lo script `nh-promote.py`.
+- Riavviato con successo il servizio `SHIFTER.service` (confermata l'esecuzione di uvicorn sulla porta 8000).
+
+## [2026-06-13 16:15] TASK — Ripristino visualizzazione ferie in calendario live/planned
+- Ripristinata la sovrapposizione delle ferie (`leaveMap`) nelle celle giornaliere del calendario Live e Planned in `app.js` per mostrare i badge `FER`/`MAL` al posto dei puntini grigi.
+- Allineato il layout e lo stile delle griglie del calendario ferie a due pannelli con sincronizzazione orizzontale dello scroll.
 
 ## [2026-06-13 16:05] TASK — Analisi infeasibility e rilassamento vincoli solutore
 - Analizzata la causa di infeasibility nella settimana 25 dovuta alla presenza di sole 10 persone attive per via delle ferie concomitanti.
@@ -228,18 +742,10 @@
 - Introdotte penalità consecutive per il cambio di turno giorno-giorno (peso 600) per evitare il flipping continuo dei turni.
 - Il solutore completa ora l'orizzonte 2026 con successo (stato OPTIMAL).
 
-## [2026-06-13 16:15] TASK — Ripristino visualizzazione ferie in calendario live/planned
-- Ripristinata la sovrapposizione delle ferie (`leaveMap`) nelle celle giornaliere del calendario Live e Planned in `app.js` per mostrare i badge `FER`/`MAL` al posto dei puntini grigi.
-- Allineato il layout e lo stile delle griglie del calendario ferie a due pannelli con sincronizzazione orizzontale dello scroll.
+## [2026-06-13 15:57] START — SHIFTER holiday synchronization, solver relaxation, and CT204 deployment
 
-## [2026-06-13 16:30] TASK — Deploy del codice e riavvio del servizio su CT204
-- Promosso il codice aggiornato sul container di produzione `CT204` tramite lo script `nh-promote.py`.
-- Riavviato con successo il servizio `SHIFTER.service` (confermata l'esecuzione di uvicorn sulla porta 8000).
-
-## [2026-06-13 17:10] TASK — Sincronizzazione della tabella ferie in produzione
-- Esportato il dump di 327 righe dal database delle ferie locale.
-- Copiato ed eseguito via script Python nativo nel database SQLite di produzione `/opt/SHIFTER/shifts.db`.
-- Eseguito il solutore sul server CT204, completato con successo (stato OPTIMAL per l'intero anno 2026).
+**Obiettivo:** Risolvere l'infeasibility del solutore annuale integrando le ferie, allineare e riavviare SHIFTER su LXC 204 RT, sincronizzare i dati delle ferie.
+**Grounding:** Solutore testato localmente (OPTIMAL) e promosso su CT204 con successo. Tabella ferie popolata e allineata a 327 righe.
 
 ## [2026-06-11 22:39] END — NH-Mini Dashboard: sidebar refactor + Topology tab vis-network
 
@@ -297,20 +803,20 @@
 - Test di connessione SSH bidirezionale superato (`CT204 → Proxmox` OK).
 - Inventario `state/inventory.json` aggiornato.
 
-## [2026-06-11 05:44] START — Shift pill color adjustments and grey background customization
+## [2026-06-11 05:51] DECISION — Sfondo aggiornato a grigio medio-scuro
 
-**Obiettivo:** Personalizzare il colore delle pillole dei turni (Mattino=Giallo, Pomeriggio=Verde, REC=Arancione, Notte=Azzurro) e cambiare lo sfondo da bianco a un grigio medio-scuro con onde d'acqua concentriche per ottimizzare il contrasto.
-**Grounding:** Modificato `/static/style.css` e rigenerato l'asset `/static/obsidian_bg.png` tramite AI, copiato nella cartella statica del frontend.
+- Rigenerato l'asset `obsidian_bg.png` per passare da uno sfondo bianco a un grigio medio-scuro (obsidian/brushed silver) con onde d'acqua sparse.
+- Copiato il file in `src/frontend/obsidian_bg.png`.
 
 ## [2026-06-11 05:47] TASK — Colorazione pillole turni completata
 
 - Aggiornate le definizioni delle classi `.cell-shift-XXX` e `.shift-label-XXX` per M, P, N, REC, FER, MAL in `style.css`.
 - Incrementata l'opacità e la saturazione dei colori delle pillole per renderli più leggibili sul tema chiaro/vetro.
 
-## [2026-06-11 05:51] DECISION — Sfondo aggiornato a grigio medio-scuro
+## [2026-06-11 05:44] START — Shift pill color adjustments and grey background customization
 
-- Rigenerato l'asset `obsidian_bg.png` per passare da uno sfondo bianco a un grigio medio-scuro (obsidian/brushed silver) con onde d'acqua sparse.
-- Copiato il file in `src/frontend/obsidian_bg.png`.
+**Obiettivo:** Personalizzare il colore delle pillole dei turni (Mattino=Giallo, Pomeriggio=Verde, REC=Arancione, Notte=Azzurro) e cambiare lo sfondo da bianco a un grigio medio-scuro con onde d'acqua concentriche per ottimizzare il contrasto.
+**Grounding:** Modificato `/static/style.css` e rigenerato l'asset `/static/obsidian_bg.png` tramite AI, copiato nella cartella statica del frontend.
 
 ## [2026-06-09 00:30] END — Backlog V1 completato + fix ghost episodes + race condition Stage D + encryption key
 
@@ -359,14 +865,14 @@
 
 Aggiornati: `knowledge/architecture.md` (loop autonomi: _stage_b_gate gate B→G, MAX_MESSAGES_PER_RUN=25; nuovi script ingestion/maintenance), `knowledge/development-log.md` (entry 2026-06-07), `NH-Mini/log.md` (entry dev 2026-06-07). History entry: ARCHITECTURE/Lifelog2/Orchestrator (impact: high).
 
+## [2026-06-04 17:00] TASK — /doc lifelog2 e /doc backend whisperx completati
+
+Sincronizzati tutti i file documentali del framework NH-Mini, del progetto Lifelog2 e di ARIA. Aggiunta la specifica delle nuove metriche contrattuali di WhisperX (avg_logprob, no_speech_prob e transcription_quality). Registrata la feature nello storico con `history_manager.py`. Eseguito `nh-lint.py` con successo.
+
 ## [2026-06-04 16:30] START — Sincronizzazione Documentale (/doc lifelog2 e /doc backend whisperx)
 
 **Obiettivo:** Allineare la documentazione del framework NH-Mini, del progetto Lifelog2 e del backend WhisperX in ARIA, registrando nello storico i cambiamenti contrattuali e strutturali.
 **Grounding:** Letti .cursorrules, AGENTS.md, active_config.json (contesto Lifelog2 attivo). Le modifiche al backend WhisperX (avg_logprob, no_speech_prob e transcription_quality) sono state verificate e applicate sui server di produzione e di sviluppo.
-
-## [2026-06-04 17:00] TASK — /doc lifelog2 e /doc backend whisperx completati
-
-Sincronizzati tutti i file documentali del framework NH-Mini, del progetto Lifelog2 e di ARIA. Aggiunta la specifica delle nuove metriche contrattuali di WhisperX (avg_logprob, no_speech_prob e transcription_quality). Registrata la feature nello storico con `history_manager.py`. Eseguito `nh-lint.py` con successo.
 
 ## [2026-06-03] TASK — /doc lifelog2 eseguito
 
@@ -542,6 +1048,42 @@ Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, per
 
 ---
 
+## [2026-05-28] START — Lifelog2 Checklist: Worker Flow + Stage G + Profile Validator + AriaLLMClient
+
+Continua sessione precedente. Checklist 8 punti pipeline Lifelog2.
+
+## [2026-05-28 TASK] — Orchestrator parallel B+E architecture
+
+Ridisegno orchestratore: `_stage_b_loop` e `_stage_e_loop` autonomi e indipendenti da ARIA. `ARIA_PIPELINE=[C,D]` seriale. `_reconciliation_loop` aggiunto. Commit `6a2b77d`. Deploy su CT203.
+
+## [2026-05-28 TASK] — Stage G COVERS_MIN_TOTAL=10
+
+`COVERS_MIN_TOTAL=10`: guard in `_covers_loop` che accumula almeno 10 cover pending prima di avviare Stage G FLUX. Commit `7295bc9`. Deploy su CT203.
+
+## [2026-05-28 TASK] — AriaLLMClient infinite-wait polling
+
+`generate_json()` ora aspetta indefinitamente con polling 30s invece di BRPOP hard timeout 600s. Re-push automatico se job consumato senza risposta (ARIA crash durante elaborazione). Commit `7e58e75`. Deploy su CT203.
+
+## [2026-05-28 TASK] — Profile Validator systemd timer
+
+`lifelog2-profile-validator.timer` abilitato su CT203, giornaliero 03:00. Prima run manuale: 339 fatti in 43 batch Qwen3, 0 errori.
+
+## [2026-05-28] END | Lifelog2 Checklist: Orchestrator Parallel Architecture + ARIA Infinite-Wait + Stage G Threshold + Profile Validator
+
+- **Completato**:
+  - Point 2: Orchestratore redesign parallel B+E loops (commit `6a2b77d`)
+  - Point 3: Stage G COVERS_MIN_TOTAL=10 threshold guard (commit `7295bc9`)
+  - Point 6: Profile Validator timer giornaliero 03:00 su CT203
+  - AriaLLMClient: infinite-wait polling con re-push automatico (commit `7e58e75`)
+  - /doc lifelog2: architecture.md + development-log.md + history_manager + wiki
+  - /lint lifelog2: 0 errori, 7 warnings scripts_ref (pre-esistenti)
+- **Incompleto / Deferred**:
+  - Stage D cold start: investigato (0.07% timeout rate, non urgente), no code fix
+  - ARIA FLUX health check 320s: approvato da utente, in attesa OK esplicito per toccare PC 139
+- **Mine (priorità prossima sessione)**:
+  - **P0 — Speaker enrollment rotto**: `best_score < 0.2` su tutti i segmenti, tutti classificati `ambient`. Nessun speaker Roberto riconosciuto. Diagnosi completa prima di qualsiasi fix.
+  - 7 `scripts_ref` warnings in lint: check_aria_log.py, check_redis.py, clean_redis_queues.py, find_pm2.py, inspect_redis_queues.py, list_aria_dirs.py, restart_aria.py — non documentati in core-modules.mdc
+
 ## [2026-05-27 23:56] END
 
 **Completato:**
@@ -631,14 +1173,6 @@ Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, per
 - `max_tokens=1536` è ancora il default per tutti i worker tranne Detective. Se in futuro altri worker mostrano troncamento, applicare lo stesso pattern.
 - Stage Z4 (Day Digest) e Z6 (Thread Consolidation) mai avviati — gap architetturale noto.
 
-## [2026-05-25 21:00] START — Detective Debug: JSON Truncation, NULL-safe Dedup, max_tokens Fix
-
-**Obiettivo:** Diagnosticare il blocco del worker Detective su LXC 203, applicare fix, fare audit completo della pipeline, allineare dev (LXC 190) e rt (LXC 203).
-**Grounding:**
-- Detective bloccato in loop infinito da 3+ ore su batch 2025-10-07/08 (8 atomi → >18 turn → output JSON > 1536 token → troncamento → parse fail → checkpoint non avanzato).
-- Bug secondario scoperto durante debug: NULL-safe dedup e counter cieco in `worker_detective.py`.
-- Tutti i fix committati su LXC 203 e pushati su `origin/main`.
-
 ## [2026-05-25 21:30] TASK — Detective fix, audit pipeline, DB cleanup, dev/rt align
 
 - **BATCH_SIZE 8→4** (`worker_detective.py`): ridotto il batch per prevenire troncamento JSON su batch densi (commit `7d501fe`).
@@ -648,13 +1182,22 @@ Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, per
 - **Audit pipeline**: B=0, C=0, D=0, E=0, F=3 storici (pre-fix), G=0, Detective=261 storici (JSON parse failures pre-fix). Nessun errore attivo.
 - **Dev/rt allineati**: git pull su LXC 190 — 7 commit recuperati (`ca2f8d2`→`b4daf35`).
 
-## [2026-05-25 12:20] START — Detective Greedy Batch Processing & E2E Validation
+## [2026-05-25 21:00] START — Detective Debug: JSON Truncation, NULL-safe Dedup, max_tokens Fix
 
-**Obiettivo:** Confermare e documentare l'implementazione del Greedy Batch Processing (5 passate x 8 atomi = 40 atomi max per innesco) per il worker Detective (Stage L2) e monitorare il corretto drenaggio del backlog storico dei segmenti audio.
+**Obiettivo:** Diagnosticare il blocco del worker Detective su LXC 203, applicare fix, fare audit completo della pipeline, allineare dev (LXC 190) e rt (LXC 203).
 **Grounding:**
-- Codice di `worker_detective.py` verificato e validato su `y:\home\Projects\NH-Mini\sviluppi\Lifelog2\src\backend\lifelog2\services\pipeline\worker_detective.py`.
-- Il loop greedy `for batch_num in range(5)` con early-exit `if atoms_processed == 0` risulta già integrato e deployato su `CT203`.
-- Esecuzione manuale triggerata tramite Redis e monitorata tramite SSH per ispezionare `/tmp/lifelog2-workers/detective.log`.
+- Detective bloccato in loop infinito da 3+ ore su batch 2025-10-07/08 (8 atomi → >18 turn → output JSON > 1536 token → troncamento → parse fail → checkpoint non avanzato).
+- Bug secondario scoperto durante debug: NULL-safe dedup e counter cieco in `worker_detective.py`.
+- Tutti i fix committati su LXC 203 e pushati su `origin/main`.
+
+## [2026-05-25 12:30] END
+
+**Completato:**
+- Verificato il corretto funzionamento del "Greedy Batch Processing" per il worker Identity Detective (`worker_detective.py`) su `CT203`.
+- Ispezionati e analizzati i log reali tramite Proxmox, confermando l'esecuzione sequenziale di 5 batch da 8 atomi l'uno senza tempi morti (3m 14s di elaborazione continua, 0 candidati rigettati da crash).
+- Documentata l'ottimizzazione e l'esito positivo del test nel Second Brain (`log.md`) e in `development-log.md`.
+
+---
 
 ## [2026-05-25 12:25] TASK — Greedy Detective Logs Inspection
 
@@ -668,14 +1211,13 @@ Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, per
 - Tempo totale di elaborazione: **3 minuti e 14 secondi** per 40 atomi, con 0 crash o leak di risorse.
 - Il backlog storico si sta drenando a velocità record (5x rispetto alla configurazione legacy).
 
-## [2026-05-25 12:30] END
+## [2026-05-25 12:20] START — Detective Greedy Batch Processing & E2E Validation
 
-**Completato:**
-- Verificato il corretto funzionamento del "Greedy Batch Processing" per il worker Identity Detective (`worker_detective.py`) su `CT203`.
-- Ispezionati e analizzati i log reali tramite Proxmox, confermando l'esecuzione sequenziale di 5 batch da 8 atomi l'uno senza tempi morti (3m 14s di elaborazione continua, 0 candidati rigettati da crash).
-- Documentata l'ottimizzazione e l'esito positivo del test nel Second Brain (`log.md`) e in `development-log.md`.
-
----
+**Obiettivo:** Confermare e documentare l'implementazione del Greedy Batch Processing (5 passate x 8 atomi = 40 atomi max per innesco) per il worker Detective (Stage L2) e monitorare il corretto drenaggio del backlog storico dei segmenti audio.
+**Grounding:**
+- Codice di `worker_detective.py` verificato e validato su `y:\home\Projects\NH-Mini\sviluppi\Lifelog2\src\backend\lifelog2\services\pipeline\worker_detective.py`.
+- Il loop greedy `for batch_num in range(5)` con early-exit `if atoms_processed == 0` risulta già integrato e deployato su `CT203`.
+- Esecuzione manuale triggerata tramite Redis e monitorata tramite SSH per ispezionare `/tmp/lifelog2-workers/detective.log`.
 
 ## [2026-05-24 23:50] START — Svelte Page Hydration Fix
 
@@ -973,6 +1515,13 @@ Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, per
 
 ---
 
+## [2026-05-14 19:30] END
+**Completato:** /doc nh-mini, /doc aria, /doc lifelog2 — tutti i file di knowledge allineati con sessione 2026-05-14. Log.md, development-log.md, architecture.md, api-contracts.md, ARIA blueprint, aria-state-of-gaps aggiornati.
+**Incompleto:** nulla di critico.
+**Mine:** Level 2 workers (Detective, Stage F/G) da implementare — headroom disponibile e architettura chiara.
+
+---
+
 ## [2026-05-14 19:00] TASK — WhisperX E2E + timing pipeline + headroom Level 2
 
 **Completato nella sessione:**
@@ -997,13 +1546,6 @@ Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, per
 - LLM già warm dopo Stage D → ogni chiamata Level 2 ~12s → **~17 chiamate LLM/segmento** nel budget
 - Greedy batch (BatchOptimizer regola binaria: stay if ≥1 task in coda) protegge la warmness: se Level 2 task arrivano subito dopo D, LLM non switcha mai
 - Level 2/3 workers (Detective, Stage F, Stage G, Retroactive Indexer): **zero righe di codice** — solo blueprint. Prossimo step di sviluppo naturale.
-
-## [2026-05-14 19:30] END
-**Completato:** /doc nh-mini, /doc aria, /doc lifelog2 — tutti i file di knowledge allineati con sessione 2026-05-14. Log.md, development-log.md, architecture.md, api-contracts.md, ARIA blueprint, aria-state-of-gaps aggiornati.
-**Incompleto:** nulla di critico.
-**Mine:** Level 2 workers (Detective, Stage F/G) da implementare — headroom disponibile e architettura chiara.
-
----
 
 ## [2026-05-11 17:30] END
 **Obiettivo sessione**: Global Registry implementation + CT203 deploy + Android handoff analysis.
@@ -1042,6 +1584,20 @@ Deploy commit `d351760` su CT203 verificato: taxonomy attiva (real_dialogue, per
   - Attenzione alla discrepanza tra il codice del repo App (TODO GPS) e la realtà dei file .m4a (GPS presente). Usare i file reali come ground truth.
 
 ---
+
+## [2026-05-11 14:15] END | Lifelog2 Architecture Evolution & App Audit
+**Obiettivo sessione**: Definizione architettura Liquid Brain e audit app Android.
+- **Completato**: 
+  - Architettura Liquid Brain (Swap-In/Out) definita e documentata.
+  - Global Registry (LXC 203) progettato.
+  - Audit completo App Android v1 e individuazione gap (GPS/Metadata).
+  - Creato Handoff Document per upgrade App v2.0 (copiato su LXC 190 e PC 139).
+  - Wiki e MDC aggiornati secondo protocollo NH-Mini.
+- **Incompleto**: 
+  - Implementazione fisica del registry.db e dei relativi endpoint.
+  - Script di Session Management per mount/unmount.
+- **Mine**:
+  - Attenzione alla discrepanza tra il codice del repo App (TODO GPS) e la realtà dei file .m4a (GPS presente). Usare i file reali come ground truth.
 
 ## [2026-05-11 03:40] END
 
@@ -1122,6 +1678,25 @@ Ogni entry è un timestamp + tipo + contenuto.
 
 Tipi: START | TASK | DECISION | BLOCKED | RESOLVED | DEVIATION | END
 
+## [2026-05-07 23:45] END
+
+**Completato:**
+- Lifelog2: esplorazione dati V1 su PC139 (192.168.1.139) — 2482 memories, 1700 .m4a, trascrizioni Whisper complete, SQLite + ChromaDB
+- Lifelog2: creato bucket `lifelog` su MinIO CT104 (`minioadmin:minioadmin`)
+- Lifelog2: script `scripts/v1_import.py` — SCP da PC139 → MinIO → DB CT105 → Redis events
+- Lifelog2: 20 segmenti V1 importati (10 ambient + 10 personale) in `raw-decrypted-temp/roberto/` su MinIO
+- Lifelog2: 20 RawCapture + 20 Segment in `lifelog_roberto` CT105 con `pipeline_status="queued"`
+- Lifelog2: 20 eventi emessi su Redis stream `lifelog:stream:ingest`
+
+**Incompleto:** nulla di critico
+
+**Mine per il prossimo agent:**
+- Lifelog2 M2: pipeline worker Stage A — consumer Redis `lifelog:stream:ingest`, download M4A da MinIO `raw-decrypted-temp/`, conversione WAV 16kHz mono (ffmpeg), aggiornamento `pipeline_status = "preprocessing" → "asr"`
+- Lifelog2: I 20 segmenti sono in `queued` — pronti per il pipeline quando sarà implementato
+- Lifelog2: confronto output ASR V2 vs trascrizioni V1 (ground truth in `D:\LifeLogData\archive\transcripts_enriched\`)
+
+---
+
 ## [2026-05-07 13:09] END
 
 **Completato:**
@@ -1146,29 +1721,12 @@ Tipi: START | TASK | DECISION | BLOCKED | RESOLVED | DEVIATION | END
 
 ---
 
-## [2026-05-07 23:45] END
+## [2026-05-07 12:00] TASK — Import 20 segmenti V1 → MinIO + DB + Redis
 
-**Completato:**
-- Lifelog2: esplorazione dati V1 su PC139 (192.168.1.139) — 2482 memories, 1700 .m4a, trascrizioni Whisper complete, SQLite + ChromaDB
-- Lifelog2: creato bucket `lifelog` su MinIO CT104 (`minioadmin:minioadmin`)
-- Lifelog2: script `scripts/v1_import.py` — SCP da PC139 → MinIO → DB CT105 → Redis events
-- Lifelog2: 20 segmenti V1 importati (10 ambient + 10 personale) in `raw-decrypted-temp/roberto/` su MinIO
-- Lifelog2: 20 RawCapture + 20 Segment in `lifelog_roberto` CT105 con `pipeline_status="queued"`
-- Lifelog2: 20 eventi emessi su Redis stream `lifelog:stream:ingest`
-
-**Incompleto:** nulla di critico
-
-**Mine per il prossimo agent:**
-- Lifelog2 M2: pipeline worker Stage A — consumer Redis `lifelog:stream:ingest`, download M4A da MinIO `raw-decrypted-temp/`, conversione WAV 16kHz mono (ffmpeg), aggiornamento `pipeline_status = "preprocessing" → "asr"`
-- Lifelog2: I 20 segmenti sono in `queued` — pronti per il pipeline quando sarà implementato
-- Lifelog2: confronto output ASR V2 vs trascrizioni V1 (ground truth in `D:\LifeLogData\archive\transcripts_enriched\`)
-
----
-
-## [2026-05-07 10:00] START — Lifelog2: V1 data exploration + MinIO setup + import pipeline
-
-**Obiettivo:** Esplorare i dati V1 su PC139, creare il bucket MinIO `lifelog`, importare 20 segmenti come test del pipeline V2.
-**Grounding:** CT104 MinIO live (minioadmin), CT105 DB `lifelog_roberto` live con schema V2, PC139 accessibile via SSH.
+- Bucket `lifelog` creato su CT104
+- `scripts/v1_import.py`: SCP da PC139 → /tmp/v1_test/ → MinIO `raw-decrypted-temp/roberto/{YYYY}/{MM}/{DD}/` → RawCapture + Segment in CT105 → xadd su `lifelog:stream:ingest`
+- idempotency_key = uuid5(NAMESPACE_URL, "v1:{filename}") — deterministico, reimportare è idempotente
+- 10 ambient (2025-08-01 / 2025-08-06) + 10 personale (2025-10-09 / 2025-12-18) — tutti con lat/lon e trascrizione V1
 
 ---
 
@@ -1179,12 +1737,10 @@ MinIO prefix scelto: `raw-decrypted-temp/roberto/` — coerente con l'architettu
 
 ---
 
-## [2026-05-07 12:00] TASK — Import 20 segmenti V1 → MinIO + DB + Redis
+## [2026-05-07 10:00] START — Lifelog2: V1 data exploration + MinIO setup + import pipeline
 
-- Bucket `lifelog` creato su CT104
-- `scripts/v1_import.py`: SCP da PC139 → /tmp/v1_test/ → MinIO `raw-decrypted-temp/roberto/{YYYY}/{MM}/{DD}/` → RawCapture + Segment in CT105 → xadd su `lifelog:stream:ingest`
-- idempotency_key = uuid5(NAMESPACE_URL, "v1:{filename}") — deterministico, reimportare è idempotente
-- 10 ambient (2025-08-01 / 2025-08-06) + 10 personale (2025-10-09 / 2025-12-18) — tutti con lat/lon e trascrizione V1
+**Obiettivo:** Esplorare i dati V1 su PC139, creare il bucket MinIO `lifelog`, importare 20 segmenti come test del pipeline V2.
+**Grounding:** CT104 MinIO live (minioadmin), CT105 DB `lifelog_roberto` live con schema V2, PC139 accessibile via SSH.
 
 ---
 
@@ -1220,6 +1776,29 @@ MinIO prefix scelto: `raw-decrypted-temp/roberto/` — coerente con l'architettu
 Gemini Flash usato direttamente dall'LXC (non via Redis→ARIA) per enrichment batch intelligence — deviazione deliberata documentata in blueprint.md e development-history.
 
 ---
+
+## [2026-05-06 14:05] FINAL FIX — ARIA GPU Orchestration
+- Applicata logica di esclusività totale GPU.
+- Risolto race condition su JIT startup.
+- Sistema pronto per il riavvio su PC 139.
+
+## [2026-05-06 13:28] FIX — ARIA PC 139 Shutdown
+- Eseguito kill forzato di python.exe su PC 139.
+- Modificato `orchestrator.py` e `main_tray.py` per garantire la chiusura di dashboard e backend all'exit.
+- Sincronizzati file su PC 139.
+
+## [2026-05-06 13:10] DECISION — Progetto rinominato lifelog2
+- Corretto naming del package da `lifelog` a `lifelog2`.
+- Allineata documentazione e logger.
+- API operativa su porta 8002.
+
+## [2026-05-06 13:05] START — Lifelog2 Project Initialization
+
+**Obiettivo**: Setup dell'ambiente di sviluppo e dello skeleton backend.
+- Creato pacchetto backend .
+- Definiti  e documentazione locale ().
+- Inizializzato  con endpoint .
+- Installazione dipendenze in corso.
 
 ## [2026-05-06 12:26] END
 
@@ -1288,6 +1867,18 @@ Gemini Flash usato direttamente dall'LXC (non via Redis→ARIA) per enrichment b
 
 ---
 
+## [2026-05-04 16:00] END — [RECOVERY: sessione chiusa da agent successivo]
+
+**Completato:**
+- Parser BGSAXO multi-sheet (`bg_saxo.py`) e parser Binance dinamico (`binance.py`)
+- Schema TimescaleDB + pgvector applicato su LXC 105
+- Caricati 354 record BGSAXO e 3562 record Binance
+- Fix bug date Binance (`YY-MM-DD`) e tipo colonna ticker (`currency` → TEXT)
+
+**Incompleto:** nessuna informazione disponibile (sessione non finalizzata)
+
+---
+
 ## [2026-05-04 15:30] TASK — Ingestion e Caricamento DB Stratex
 
 - Inizializzato database `stratex` su LXC 105 (centralizzato).
@@ -1310,18 +1901,6 @@ Nonostante iniziali indicazioni per un DB locale all'app (LXC 190), abbiamo conf
 
 **Obiettivo**: Estrarre i dati dai report Excel BGSAXO e Binance, normalizzarli e caricarli nel database PostgreSQL di produzione.
 **Grounding**: Report Excel originali presenti in `docs/inbox/`. DB centralizzato su LXC 105.
-
-## [2026-05-04 16:00] END — [RECOVERY: sessione chiusa da agent successivo]
-
-**Completato:**
-- Parser BGSAXO multi-sheet (`bg_saxo.py`) e parser Binance dinamico (`binance.py`)
-- Schema TimescaleDB + pgvector applicato su LXC 105
-- Caricati 354 record BGSAXO e 3562 record Binance
-- Fix bug date Binance (`YY-MM-DD`) e tipo colonna ticker (`currency` → TEXT)
-
-**Incompleto:** nessuna informazione disponibile (sessione non finalizzata)
-
----
 
 ## [2026-05-03 18:00] END
 
@@ -1371,6 +1950,47 @@ Audit completo del flusso parametri DIAS LXC 190 → ARIA PC 139 → Qwen3-TTS s
 **Grounding**: P3+P4+P5 deployati in sessione precedente (2026-05-02). Pipeline Hyperion attiva su CT201, Stage C v2.6.0 in produzione.
 
 ---
+
+## [2026-05-03] TASK — ARIA Rate Limiter intelligente (RPM/TPM/RPD + PDT-aware lockout)
+
+**Modifiche su PC 139** (`C:\Users\roberto\aria\`):
+
+- `aria_node_controller/core/rate_limiter.py` — riscritta interamente:
+  - Aggiunto tracking RPM (sliding window 60s su Redis sorted set)
+  - Aggiunto tracking TPM (sliding window 60s su Redis sorted set con token count)
+  - Aggiunto `report_daily_quota_exhausted()` — lockout fino al prossimo reset PDT (mezzanotte America/Los_Angeles ≈ 09:00 IT)
+  - `wait_for_slot()` ora logga "Ripresa fra Xh Ym (HH:MM IT)" invece di attendere ciecamente
+  - Sleep max 60s per iterazione nel lockout (permette stop esterno e log periodici)
+
+- `aria_node_controller/core/cloud_manager.py` — patchato:
+  - Distinzione 429 RPD vs RPM via `_is_daily_quota_error()` (cerca `PerDay`, `GenerateRequestsPerDayPerProjectPerModel`)
+  - Chiama `report_daily_quota_exhausted()` per RPD, `report_429()` per RPM
+  - `record_usage(tokens)` dopo ogni task riuscito per aggiornare sliding window RPM/TPM
+
+**Entrano in effetto al prossimo riavvio di ARIA.**
+
+---
+
+## [2026-05-03] TASK — ARIA Dashboard web su porta 8089
+
+**Creato** `aria_node_controller/dashboard/server.py` — FastAPI + HTML inline, auto-refresh 5s:
+- Gauge RPD/RPM/TPM con barre colorate (verde/giallo/rosso)
+- Badge semaforo GPU (letto da Redis `aria:gpu:semaphore`) prominente in header
+- Stato backend cloud Gemini derivato da lockout + RPD corrente
+- Backend locali con health check HTTP (Qwen3/Fish/ACE-Step/asset-server)
+- Code Redis live (tutte le `aria:q:*`)
+- Ultimi 30 task da SQLite telemetry (ts, model, status, tokens, durata)
+- Statistiche giornaliere (totali, ok, errori, tempo medio)
+- ETA reset quota Google PDT
+
+**Avvio:** `C:\Users\roberto\miniconda3\python.exe aria_node_controller\dashboard\server.py`
+**URL:** `http://192.168.1.139:8089`
+**Task Scheduler:** task `ARIADashboard` registrato per avvio su richiesta.
+
+**Modifiche contestuali:**
+- `aria.bat` — aggiunta riga avvio dashboard hidden (PowerShell `WindowStyle Hidden`) dopo orchestratore
+- `aria_node_controller/main_tray.py` — aggiunta voce menu `🖥️ Apri Dashboard (8089)` con `webbrowser.open`
+
 
 ## [2026-05-02] TASK — DIAS Stage C Refactor: P3+P4+P5 deployati su CT201
 
@@ -1429,53 +2049,34 @@ Motivazione: pipeline DIAS Hyperion richiede >200 task/giorno per completare Sta
 
 ---
 
-## [2026-05-01] END — Sessione ARIA Telemetria (Claude)
+## [2026-05-02] START — Diagnosi Qwen3 + DIAS Stage C refactor
 
-**Obiettivo**: Implementare telemetria globale task in ARIA (SQLite) + documentare pattern 503 Gemini.
-
-**Completato**:
-- `core/telemetry.py` creato: TelemetryDB SQLite WAL, thread-safe, schema 17 colonne
-- `core/models.py`, `queue_manager.py`, `orchestrator.py`, `gemini_worker.py` aggiornati
-- `docs/aria-telemetry.md` e `docs/gemini-free-tier-503-behavior.md` creati
-- `docs/ARIA-blueprint.md` aggiornato (principio #6 + sezione 16)
-- Push GitHub (commit 6feb7e2 + 4c07fa8), LXC 190 allineato via git pull
-- `/lint` 39/39 ✅ — `/doc` completato ✅ — journal allineato retroattivamente
-
-**Incompleto**:
-- ARIA RT su PC 139 non riavviato — in attesa svuotamento coda DIAS Stage B
-
-**Mine per il prossimo agent**:
-- ⚠️ Riavviare ARIA su PC 139 (dal bat/tray) quando la coda cloud è vuota → `logs/aria-telemetry.db` si crea automaticamente al primo `post_result()`
+**Contesto:** Continuazione sessione precedente. Pipeline DIAS Hyperion bloccata — Qwen3-TTS backend crashava silenziosamente all'avvio. DIAS Stage C refactor P3/P4/P5 già implementato nella sessione precedente.
 
 ---
 
-## [2026-05-01] TASK — Riavvio ARIA RT differito: coda DIAS Stage B attiva
+## [2026-05-02] TASK — Diagnosi e risoluzione crash Qwen3-TTS su PC 139
 
-ARIA su PC 139 NON riavviato dopo deploy telemetria. Log mostrano task Gemini ogni ~90s
-(2 errori 503 auto-recuperati). Decisione: aspettare svuotamento coda cloud.
-Mine: riavviare ARIA per attivare aria-telemetry.db (si crea al primo post_result).
+**Problema:** Terminale Qwen3 si apriva e chiudeva immediatamente. Server non ascoltava su porta 8083. Log server.log fermo al 24 aprile.
 
----
+**Diagnosi:**
+- Avviato server manualmente via SSH: `envs/qwen3tts/python.exe backends/qwen3tts/server.py`
+- Avvio riuscito — modello caricato in 29.5s, VRAM 4.20GB, porta 8083 attiva
+- Causa root: ARIA orchestrator non era in esecuzione (sessione desktop Windows non raggiungibile via SSH)
+- Il manifest `backends_manifest.json` è corretto — ARIA avvia Qwen3 automaticamente quando necessario
+- Stage C ancora in corso (non serve Qwen3 per Stage C)
 
-## [2026-05-01] TASK — ARIA Telemetria + allineamento LXC 190
-
-Implementato TelemetryDB in ARIA (PC 139 + GitHub + LXC 190 allineato via git pull):
-- Creato `core/telemetry.py`: SQLite WAL, thread-safe, schema task_log (17 colonne)
-- `core/models.py`: campo `usage` in AriaTaskResult (token cloud)
-- `core/queue_manager.py`: hook `if self.telemetry: self.telemetry.log()` in post_result()
-- `core/orchestrator.py`: init TelemetryDB + inject in qm, fix output Qwen3 metrics
-- `backends/cloud/gemini_worker.py`: cattura usage_metadata (prompt/candidates token count)
-- Creato `docs/aria-telemetry.md`, aggiornato `docs/ARIA-blueprint.md` (§6 + §16)
-- Push GitHub: commit 6feb7e2 + 4c07fa8
-- LXC 190: git pull fast-forward, 9 file, nessun conflitto
+**Risoluzione:** Nessuna modifica al codice necessaria. Problema di sessione Windows, non di crash.
 
 ---
 
-## [2026-05-01] START — Continuazione sessione ARIA (da compattazione contesto)
+## [2026-05-02] TASK — Reset quota Gemini RPD su Redis
 
-Obiettivo: implementare telemetria globale task in ARIA (SQLite) + documentare pattern 503 Gemini.
-Grounding: ARIA RT attivo PC 139, LXC 190 dev 3 commit indietro, nessun progetto NH-Mini attivo.
-Nota: sessione iniziata prima dell'introduzione delle nuove regole — ritual eseguito a posteriori.
+**Problema:** `PREVENTIVE QUOTA PROTECTION: Daily limit reached (500)` — pipeline bloccata.
+
+**Azione:** `redis-cli DEL aria:rate_limit:google:daily_count:2026-05-02` + `DEL aria:rate_limit:google:lockout_until` su LXC 120.
+
+**Risultato:** Pipeline ripresa. Poi quota reale Google esaurita (500/500 free tier) alle 19:50 IT. Reset a mezzanotte PDT (09:00 IT del giorno dopo).
 
 ---
 
@@ -1544,60 +2145,6 @@ Se trovo incongruenze mi fermo e chiedo.
 
 ---
 
-## [2026-05-01 11:27] TASK — nh-lint.py
-
-Creato e testato. Risultato: 35 check passati, 2 warning (se stessi non documentati).
-Il lint si è auto-diagnosticato correttamente. Warning chiusi aggiornando core-modules.mdc.
-
-## [2026-05-01 11:30] TASK — nh-session-end.py
-
-Creato e testato. Output corretto: estrae END, obiettivo, completato, incompleto, mine.
-
-## [2026-05-01 11:33] TASK — core/heartbeat.py
-
-Creato con schema alerts.json. Dry-run verificato: rileva ARIA down (MEDIUM, PC spento — OK).
-Comportamento corretto: ARIA è on-demand, non HIGH.
-
-## [2026-05-01 11:34] TASK — systemd/nh-heartbeat.service + .timer
-
-Creati file systemd. Timer installato e attivato su CT190.
-
-## [2026-05-01 11:35] TASK — Dashboard Alerts
-
-Aggiornati: web/app.py (API /alerts, /heartbeat/run, /handover), index.html (nav + pagina),
-dashboard.js (loadAlerts + badge topbar), dashboard.css (stili alert).
-
-## [2026-05-01 11:40] RESOLVED — Dashboard funzionante
-
-Verificato via browser: pagina Alerts mostra 1 MEDIUM (ARIA down), 5 healthy, badge arancione
-nella sidebar. Probe Now funziona. Timestamp aggiornato.
-
-## [2026-05-01 11:51] RESOLVED — ARIA false positive
-
-Problema: `heartbeat.py` segnalava ARIA_NODE come DOWN (MEDIUM alert) nonostante il PC Windows 11 fosse acceso e ARIA stesse elaborando i task per DIAS.
-Causa: Il TCP probe nel `service_catalog.py` per `aria_node` puntava alla porta `8080` (Fish TTS backend). Questa porta su Windows 11 è bloccata dal firewall o bindata su localhost. Tuttavia, l'Asset Server (porta `8082`) è esposto e raggiungibile.
-Fix: Modificata la `port` di `aria_node` in `service_catalog.py` da `8080` a `8082`.
-L'alert si è autorisolto al probe successivo.
-
-## [2026-05-01 12:30] DECISION — Filosofia del Journal e Crash Recovery
-
-Su intuizione dell'utente, abbiamo formalizzato che il Journal è un registro storico immutabile. Le vecchie entry (errori, mine) non vanno mai cancellate ma solo barrate se superate.
-Abbiamo aggiornato `.cursorrules` (v7) aggiungendo:
-1. **Cold Start Protocol:** Se l'agente entrante non trova un END recente (crash), deve prima leggere la fine del journal e comporre lui l'END mancante.
-2. **Obbligo di Net Sum:** L'END non deve contenere Mine già risolte, ma deve distillare la verità finale della sessione.
-L'aggiornamento è stato committato in `development-history.mdc`.
-
-## [2026-05-01 12:42] TASK — Implementazione Hard Triggers Protocol
-
-Creato il file `knowledge/agent/hard-triggers.mdc` che mappa e documenta i 5 protocolli procedurali (`/finalize`, `/lint`, `/troubleshoot`, `/reuse`, `/handover`).
-Aggiornato `.cursorrules` (v8) aggiungendo la sezione `HARD TRIGGERS`: impone all'agente di fermare le risposte discorsive e seguire i passi esatti descritti nell'indice quando viene invocato un trigger. Aggiunto anche il promemoria proattivo per suggerire l'uso di `/finalize` a fine sessione. Committato in `development-history.mdc`.
-
-## [2026-05-01 12:49] TASK — Aggiunta Trigger /doc e Sicurezza su /lint
-
-Modificato `knowledge/agent/hard-triggers.mdc`:
-1. Aggiunto il trigger `/doc` (Protocollo di Sincronizzazione Documentale): istruisce l'agente a scansionare il journal e aggiornare architettura, profilo, wiki e history senza chiudere la sessione.
-2. Modificato il trigger `/lint`: inserita la direttiva esplicita di fermarsi dopo aver mostrato i risultati, richiedendo le direttive dell'utente prima di applicare qualsiasi fix in autonomia.
-
 ## [2026-05-01 13:01] END
 
 **Completato:**
@@ -1624,6 +2171,32 @@ Modificato `knowledge/agent/hard-triggers.mdc`:
 Corretti due bug minori in `scripts/nh-lint.py`:
 1. Rimosso il loop di stampa ridondante (i titoli venivano stampati due volte).
 2. Modificato il parsing del journal (`check_session_journal`): ora ordina le entry END per data (stessa logica di `nh-session-end.py`) e prende l'ultima cronologicamente, anziché prendere l'ultima riga del file (che a causa del prepend era la entry più vecchia).
+
+## [2026-05-01 12:49] TASK — Aggiunta Trigger /doc e Sicurezza su /lint
+
+Modificato `knowledge/agent/hard-triggers.mdc`:
+1. Aggiunto il trigger `/doc` (Protocollo di Sincronizzazione Documentale): istruisce l'agente a scansionare il journal e aggiornare architettura, profilo, wiki e history senza chiudere la sessione.
+2. Modificato il trigger `/lint`: inserita la direttiva esplicita di fermarsi dopo aver mostrato i risultati, richiedendo le direttive dell'utente prima di applicare qualsiasi fix in autonomia.
+
+## [2026-05-01 12:42] TASK — Implementazione Hard Triggers Protocol
+
+Creato il file `knowledge/agent/hard-triggers.mdc` che mappa e documenta i 5 protocolli procedurali (`/finalize`, `/lint`, `/troubleshoot`, `/reuse`, `/handover`).
+Aggiornato `.cursorrules` (v8) aggiungendo la sezione `HARD TRIGGERS`: impone all'agente di fermare le risposte discorsive e seguire i passi esatti descritti nell'indice quando viene invocato un trigger. Aggiunto anche il promemoria proattivo per suggerire l'uso di `/finalize` a fine sessione. Committato in `development-history.mdc`.
+
+## [2026-05-01 12:30] DECISION — Filosofia del Journal e Crash Recovery
+
+Su intuizione dell'utente, abbiamo formalizzato che il Journal è un registro storico immutabile. Le vecchie entry (errori, mine) non vanno mai cancellate ma solo barrate se superate.
+Abbiamo aggiornato `.cursorrules` (v7) aggiungendo:
+1. **Cold Start Protocol:** Se l'agente entrante non trova un END recente (crash), deve prima leggere la fine del journal e comporre lui l'END mancante.
+2. **Obbligo di Net Sum:** L'END non deve contenere Mine già risolte, ma deve distillare la verità finale della sessione.
+L'aggiornamento è stato committato in `development-history.mdc`.
+
+## [2026-05-01 11:51] RESOLVED — ARIA false positive
+
+Problema: `heartbeat.py` segnalava ARIA_NODE come DOWN (MEDIUM alert) nonostante il PC Windows 11 fosse acceso e ARIA stesse elaborando i task per DIAS.
+Causa: Il TCP probe nel `service_catalog.py` per `aria_node` puntava alla porta `8080` (Fish TTS backend). Questa porta su Windows 11 è bloccata dal firewall o bindata su localhost. Tuttavia, l'Asset Server (porta `8082`) è esposto e raggiungibile.
+Fix: Modificata la `port` di `aria_node` in `service_catalog.py` da `8080` a `8082`.
+L'alert si è autorisolto al probe successivo.
 
 ## [2026-05-01 11:46] END
 
@@ -1655,56 +2228,10 @@ Corretti due bug minori in `scripts/nh-lint.py`:
 ---
 
 
-## [2026-05-01 11:17] START
+## [2026-05-01 11:40] RESOLVED — Dashboard funzionante
 
-**Obiettivo sessione**: Implementazione Fase 1 piano evolutivo NH-Mini
-- Session Journal (questo file)
-- User Profile (`NH-Mini/user-profile.md`)
-- REUSE CHECK corretto in `.cursorrules` (→ `service_catalog.py`, non lista hardcoded)
-- META sezione in `.cursorrules` per evoluzione sicura delle regole
-- TROUBLESHOOTING PROTOCOL in `.cursorrules`
-- Aggiornamento `NH-Mini/log.md`
-
-**Contesto**: Approvato da Roberto dopo sessione di brainstorming architetturale (2026-05-01 mattina).
-Piano completo in artifact `implementation_plan.md`.
-
-**Grounding verificato:**
-- `state/` esiste: inventory.json, system-context.md ✅
-- `NH-Mini/log.md` esiste e legge fino al 2026-04-30 ✅
-- `.cursorrules` versione 5 ✅
-- `core/service_catalog.py` contiene: redis, gateway, aria_node, nh_mini_api, dias_api, sops_age ✅
-
----
-
-## [2026-05-01 11:18] TASK
-
-Creazione `state/session-journal.md` (questo file). Struttura definita.
-
----
-
-## [2026-05-01 11:20] TASK
-
-Creazione `NH-Mini/user-profile.md` — profilo utente.
-
----
-
-## [2026-05-01 11:25] TASK
-
-Aggiornamento `.cursorrules` → v6:
-- Sezione SESSION JOURNAL
-- Sezione REUSE CHECK (→ service_catalog.py, non lista hardcoded)
-- Sezione TROUBLESHOOTING PROTOCOL
-- Sezione META (evoluzione sicura regole)
-- Aggiornamento INITIALIZATION sequence
-- Aggiornamento SCRIPTS REFERENCE
-
----
-
-## [2026-05-01 11:35] TASK
-
-Aggiornamento `NH-Mini/log.md` con entry sessione odierna.
-
----
+Verificato via browser: pagina Alerts mostra 1 MEDIUM (ARIA down), 5 healthy, badge arancione
+nella sidebar. Probe Now funziona. Timestamp aggiornato.
 
 ## [2026-05-01 11:37] END
 
@@ -1734,157 +2261,127 @@ Aggiornamento `NH-Mini/log.md` con entry sessione odierna.
 
 ---
 
-## [2026-05-02] START — Diagnosi Qwen3 + DIAS Stage C refactor
+## [2026-05-01 11:35] TASK — Dashboard Alerts
 
-**Contesto:** Continuazione sessione precedente. Pipeline DIAS Hyperion bloccata — Qwen3-TTS backend crashava silenziosamente all'avvio. DIAS Stage C refactor P3/P4/P5 già implementato nella sessione precedente.
+Aggiornati: web/app.py (API /alerts, /heartbeat/run, /handover), index.html (nav + pagina),
+dashboard.js (loadAlerts + badge topbar), dashboard.css (stili alert).
 
----
+## [2026-05-01 11:35] TASK
 
-## [2026-05-02] TASK — Diagnosi e risoluzione crash Qwen3-TTS su PC 139
-
-**Problema:** Terminale Qwen3 si apriva e chiudeva immediatamente. Server non ascoltava su porta 8083. Log server.log fermo al 24 aprile.
-
-**Diagnosi:**
-- Avviato server manualmente via SSH: `envs/qwen3tts/python.exe backends/qwen3tts/server.py`
-- Avvio riuscito — modello caricato in 29.5s, VRAM 4.20GB, porta 8083 attiva
-- Causa root: ARIA orchestrator non era in esecuzione (sessione desktop Windows non raggiungibile via SSH)
-- Il manifest `backends_manifest.json` è corretto — ARIA avvia Qwen3 automaticamente quando necessario
-- Stage C ancora in corso (non serve Qwen3 per Stage C)
-
-**Risoluzione:** Nessuna modifica al codice necessaria. Problema di sessione Windows, non di crash.
+Aggiornamento `NH-Mini/log.md` con entry sessione odierna.
 
 ---
 
-## [2026-05-02] TASK — Reset quota Gemini RPD su Redis
+## [2026-05-01 11:34] TASK — systemd/nh-heartbeat.service + .timer
 
-**Problema:** `PREVENTIVE QUOTA PROTECTION: Daily limit reached (500)` — pipeline bloccata.
+Creati file systemd. Timer installato e attivato su CT190.
 
-**Azione:** `redis-cli DEL aria:rate_limit:google:daily_count:2026-05-02` + `DEL aria:rate_limit:google:lockout_until` su LXC 120.
+## [2026-05-01 11:33] TASK — core/heartbeat.py
 
-**Risultato:** Pipeline ripresa. Poi quota reale Google esaurita (500/500 free tier) alle 19:50 IT. Reset a mezzanotte PDT (09:00 IT del giorno dopo).
+Creato con schema alerts.json. Dry-run verificato: rileva ARIA down (MEDIUM, PC spento — OK).
+Comportamento corretto: ARIA è on-demand, non HIGH.
+
+## [2026-05-01 11:30] TASK — nh-session-end.py
+
+Creato e testato. Output corretto: estrae END, obiettivo, completato, incompleto, mine.
+
+## [2026-05-01 11:27] TASK — nh-lint.py
+
+Creato e testato. Risultato: 35 check passati, 2 warning (se stessi non documentati).
+Il lint si è auto-diagnosticato correttamente. Warning chiusi aggiornando core-modules.mdc.
+
+## [2026-05-01 11:25] TASK
+
+Aggiornamento `.cursorrules` → v6:
+- Sezione SESSION JOURNAL
+- Sezione REUSE CHECK (→ service_catalog.py, non lista hardcoded)
+- Sezione TROUBLESHOOTING PROTOCOL
+- Sezione META (evoluzione sicura regole)
+- Aggiornamento INITIALIZATION sequence
+- Aggiornamento SCRIPTS REFERENCE
 
 ---
 
-## [2026-05-03] TASK — ARIA Rate Limiter intelligente (RPM/TPM/RPD + PDT-aware lockout)
+## [2026-05-01 11:20] TASK
 
-**Modifiche su PC 139** (`C:\Users\roberto\aria\`):
-
-- `aria_node_controller/core/rate_limiter.py` — riscritta interamente:
-  - Aggiunto tracking RPM (sliding window 60s su Redis sorted set)
-  - Aggiunto tracking TPM (sliding window 60s su Redis sorted set con token count)
-  - Aggiunto `report_daily_quota_exhausted()` — lockout fino al prossimo reset PDT (mezzanotte America/Los_Angeles ≈ 09:00 IT)
-  - `wait_for_slot()` ora logga "Ripresa fra Xh Ym (HH:MM IT)" invece di attendere ciecamente
-  - Sleep max 60s per iterazione nel lockout (permette stop esterno e log periodici)
-
-- `aria_node_controller/core/cloud_manager.py` — patchato:
-  - Distinzione 429 RPD vs RPM via `_is_daily_quota_error()` (cerca `PerDay`, `GenerateRequestsPerDayPerProjectPerModel`)
-  - Chiama `report_daily_quota_exhausted()` per RPD, `report_429()` per RPM
-  - `record_usage(tokens)` dopo ogni task riuscito per aggiornare sliding window RPM/TPM
-
-**Entrano in effetto al prossimo riavvio di ARIA.**
+Creazione `NH-Mini/user-profile.md` — profilo utente.
 
 ---
 
-## [2026-05-03] TASK — ARIA Dashboard web su porta 8089
+## [2026-05-01 11:18] TASK
 
-**Creato** `aria_node_controller/dashboard/server.py` — FastAPI + HTML inline, auto-refresh 5s:
-- Gauge RPD/RPM/TPM con barre colorate (verde/giallo/rosso)
-- Badge semaforo GPU (letto da Redis `aria:gpu:semaphore`) prominente in header
-- Stato backend cloud Gemini derivato da lockout + RPD corrente
-- Backend locali con health check HTTP (Qwen3/Fish/ACE-Step/asset-server)
-- Code Redis live (tutte le `aria:q:*`)
-- Ultimi 30 task da SQLite telemetry (ts, model, status, tokens, durata)
-- Statistiche giornaliere (totali, ok, errori, tempo medio)
-- ETA reset quota Google PDT
+Creazione `state/session-journal.md` (questo file). Struttura definita.
 
-**Avvio:** `C:\Users\roberto\miniconda3\python.exe aria_node_controller\dashboard\server.py`
-**URL:** `http://192.168.1.139:8089`
-**Task Scheduler:** task `ARIADashboard` registrato per avvio su richiesta.
+---
 
-**Modifiche contestuali:**
-- `aria.bat` — aggiunta riga avvio dashboard hidden (PowerShell `WindowStyle Hidden`) dopo orchestratore
-- `aria_node_controller/main_tray.py` — aggiunta voce menu `🖥️ Apri Dashboard (8089)` con `webbrowser.open`
+## [2026-05-01 11:17] START
 
+**Obiettivo sessione**: Implementazione Fase 1 piano evolutivo NH-Mini
+- Session Journal (questo file)
+- User Profile (`NH-Mini/user-profile.md`)
+- REUSE CHECK corretto in `.cursorrules` (→ `service_catalog.py`, non lista hardcoded)
+- META sezione in `.cursorrules` per evoluzione sicura delle regole
+- TROUBLESHOOTING PROTOCOL in `.cursorrules`
+- Aggiornamento `NH-Mini/log.md`
 
-## [2026-05-06 13:05] START — Lifelog2 Project Initialization
+**Contesto**: Approvato da Roberto dopo sessione di brainstorming architetturale (2026-05-01 mattina).
+Piano completo in artifact `implementation_plan.md`.
 
-**Obiettivo**: Setup dell'ambiente di sviluppo e dello skeleton backend.
-- Creato pacchetto backend .
-- Definiti  e documentazione locale ().
-- Inizializzato  con endpoint .
-- Installazione dipendenze in corso.
+**Grounding verificato:**
+- `state/` esiste: inventory.json, system-context.md ✅
+- `NH-Mini/log.md` esiste e legge fino al 2026-04-30 ✅
+- `.cursorrules` versione 5 ✅
+- `core/service_catalog.py` contiene: redis, gateway, aria_node, nh_mini_api, dias_api, sops_age ✅
 
-## [2026-05-06 13:10] DECISION — Progetto rinominato lifelog2
-- Corretto naming del package da `lifelog` a `lifelog2`.
-- Allineata documentazione e logger.
-- API operativa su porta 8002.
+---
 
-## [2026-05-06 13:28] FIX — ARIA PC 139 Shutdown
-- Eseguito kill forzato di python.exe su PC 139.
-- Modificato `orchestrator.py` e `main_tray.py` per garantire la chiusura di dashboard e backend all'exit.
-- Sincronizzati file su PC 139.
+## [2026-05-01] END — Sessione ARIA Telemetria (Claude)
 
-## [2026-05-06 14:05] FINAL FIX — ARIA GPU Orchestration
-- Applicata logica di esclusività totale GPU.
-- Risolto race condition su JIT startup.
-- Sistema pronto per il riavvio su PC 139.
+**Obiettivo**: Implementare telemetria globale task in ARIA (SQLite) + documentare pattern 503 Gemini.
 
-## [2026-05-11 14:15] END | Lifelog2 Architecture Evolution & App Audit
-**Obiettivo sessione**: Definizione architettura Liquid Brain e audit app Android.
-- **Completato**: 
-  - Architettura Liquid Brain (Swap-In/Out) definita e documentata.
-  - Global Registry (LXC 203) progettato.
-  - Audit completo App Android v1 e individuazione gap (GPS/Metadata).
-  - Creato Handoff Document per upgrade App v2.0 (copiato su LXC 190 e PC 139).
-  - Wiki e MDC aggiornati secondo protocollo NH-Mini.
-- **Incompleto**: 
-  - Implementazione fisica del registry.db e dei relativi endpoint.
-  - Script di Session Management per mount/unmount.
-- **Mine**:
-  - Attenzione alla discrepanza tra il codice del repo App (TODO GPS) e la realtà dei file .m4a (GPS presente). Usare i file reali come ground truth.
+**Completato**:
+- `core/telemetry.py` creato: TelemetryDB SQLite WAL, thread-safe, schema 17 colonne
+- `core/models.py`, `queue_manager.py`, `orchestrator.py`, `gemini_worker.py` aggiornati
+- `docs/aria-telemetry.md` e `docs/gemini-free-tier-503-behavior.md` creati
+- `docs/ARIA-blueprint.md` aggiornato (principio #6 + sezione 16)
+- Push GitHub (commit 6feb7e2 + 4c07fa8), LXC 190 allineato via git pull
+- `/lint` 39/39 ✅ — `/doc` completato ✅ — journal allineato retroattivamente
 
-## [2026-05-28] START — Lifelog2 Checklist: Worker Flow + Stage G + Profile Validator + AriaLLMClient
+**Incompleto**:
+- ARIA RT su PC 139 non riavviato — in attesa svuotamento coda DIAS Stage B
 
-Continua sessione precedente. Checklist 8 punti pipeline Lifelog2.
+**Mine per il prossimo agent**:
+- ⚠️ Riavviare ARIA su PC 139 (dal bat/tray) quando la coda cloud è vuota → `logs/aria-telemetry.db` si crea automaticamente al primo `post_result()`
 
-## [2026-05-28 TASK] — Orchestrator parallel B+E architecture
+---
 
-Ridisegno orchestratore: `_stage_b_loop` e `_stage_e_loop` autonomi e indipendenti da ARIA. `ARIA_PIPELINE=[C,D]` seriale. `_reconciliation_loop` aggiunto. Commit `6a2b77d`. Deploy su CT203.
+## [2026-05-01] TASK — Riavvio ARIA RT differito: coda DIAS Stage B attiva
 
-## [2026-05-28 TASK] — Stage G COVERS_MIN_TOTAL=10
+ARIA su PC 139 NON riavviato dopo deploy telemetria. Log mostrano task Gemini ogni ~90s
+(2 errori 503 auto-recuperati). Decisione: aspettare svuotamento coda cloud.
+Mine: riavviare ARIA per attivare aria-telemetry.db (si crea al primo post_result).
 
-`COVERS_MIN_TOTAL=10`: guard in `_covers_loop` che accumula almeno 10 cover pending prima di avviare Stage G FLUX. Commit `7295bc9`. Deploy su CT203.
+---
 
-## [2026-05-28 TASK] — AriaLLMClient infinite-wait polling
+## [2026-05-01] TASK — ARIA Telemetria + allineamento LXC 190
 
-`generate_json()` ora aspetta indefinitamente con polling 30s invece di BRPOP hard timeout 600s. Re-push automatico se job consumato senza risposta (ARIA crash durante elaborazione). Commit `7e58e75`. Deploy su CT203.
+Implementato TelemetryDB in ARIA (PC 139 + GitHub + LXC 190 allineato via git pull):
+- Creato `core/telemetry.py`: SQLite WAL, thread-safe, schema task_log (17 colonne)
+- `core/models.py`: campo `usage` in AriaTaskResult (token cloud)
+- `core/queue_manager.py`: hook `if self.telemetry: self.telemetry.log()` in post_result()
+- `core/orchestrator.py`: init TelemetryDB + inject in qm, fix output Qwen3 metrics
+- `backends/cloud/gemini_worker.py`: cattura usage_metadata (prompt/candidates token count)
+- Creato `docs/aria-telemetry.md`, aggiornato `docs/ARIA-blueprint.md` (§6 + §16)
+- Push GitHub: commit 6feb7e2 + 4c07fa8
+- LXC 190: git pull fast-forward, 9 file, nessun conflitto
 
-## [2026-05-28 TASK] — Profile Validator systemd timer
+---
 
-`lifelog2-profile-validator.timer` abilitato su CT203, giornaliero 03:00. Prima run manuale: 339 fatti in 43 batch Qwen3, 0 errori.
+## [2026-05-01] START — Continuazione sessione ARIA (da compattazione contesto)
 
-## [2026-05-28] END | Lifelog2 Checklist: Orchestrator Parallel Architecture + ARIA Infinite-Wait + Stage G Threshold + Profile Validator
+Obiettivo: implementare telemetria globale task in ARIA (SQLite) + documentare pattern 503 Gemini.
+Grounding: ARIA RT attivo PC 139, LXC 190 dev 3 commit indietro, nessun progetto NH-Mini attivo.
+Nota: sessione iniziata prima dell'introduzione delle nuove regole — ritual eseguito a posteriori.
 
-- **Completato**:
-  - Point 2: Orchestratore redesign parallel B+E loops (commit `6a2b77d`)
-  - Point 3: Stage G COVERS_MIN_TOTAL=10 threshold guard (commit `7295bc9`)
-  - Point 6: Profile Validator timer giornaliero 03:00 su CT203
-  - AriaLLMClient: infinite-wait polling con re-push automatico (commit `7e58e75`)
-  - /doc lifelog2: architecture.md + development-log.md + history_manager + wiki
-  - /lint lifelog2: 0 errori, 7 warnings scripts_ref (pre-esistenti)
-- **Incompleto / Deferred**:
-  - Stage D cold start: investigato (0.07% timeout rate, non urgente), no code fix
-  - ARIA FLUX health check 320s: approvato da utente, in attesa OK esplicito per toccare PC 139
-- **Mine (priorità prossima sessione)**:
-  - **P0 — Speaker enrollment rotto**: `best_score < 0.2` su tutti i segmenti, tutti classificati `ambient`. Nessun speaker Roberto riconosciuto. Diagnosi completa prima di qualsiasi fix.
-  - 7 `scripts_ref` warnings in lint: check_aria_log.py, check_redis.py, clean_redis_queues.py, find_pm2.py, inspect_redis_queues.py, list_aria_dirs.py, restart_aria.py — non documentati in core-modules.mdc
+---
 
-## [2026-07-16 NOTA-ARIA] — Miglioramento futuro: health-check e recycle backend WhisperX lato ARIA
-
-Decisione architetturale del 2026-07-15 (con Roberto): la salute dei backend di inferenza è responsabilità di ARIA, non dei client — Lifelog2 (e qualsiasi altra app) invia task alle code Redis CT120 e basta. Da implementare nel progetto ARIA (`sviluppi/ARIA`, PC Win11 192.168.1.139):
-
-- **Degrado osservato su WhisperX** (15/07, sotto backlog continuo): latenza a gradini dopo ore di residenza VRAM → corruzione tokenizer (`'NoneType' object has no attribute 'sot_sequence'`). Un riavvio del backend risolve.
-- **Trigger reattivo proposto**: streak di N errori/timeout consecutivi sul backend → recycle automatico del processo (le code su Redis CT120 sono persistenti, zero perdite by design).
-- **Segnali da aggiungere alla telemetria** (:8089): RTF per task (serve passthrough `audio_duration_s` nel payload — oggi rtf/vram_peak_gb sono NULL per whisperx), polling VRAM via nvidia-smi.
-- **In riserva**: canary task di benchmark iniettato periodicamente per misurare il degrado in assenza di traffico.
-- Attenzione al vincolo esistente: mai avviare/stoppare ARIA su PC 139 autonomamente — implementazione da fare su LXC 190 (clone git) + pull su PC 139, con ok esplicito di Roberto per i test.

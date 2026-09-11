@@ -1,0 +1,575 @@
+<title>Atlante della Pipeline</title>
+<meta name="description" content="Scheda worker per worker della pipeline audio Lifelog2: obiettivo, input e output di ogni stage, i contratti dati tra loro e i sette punti in cui i segnali non concordano.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560;9..144,640&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#f4f4f0; --surface:#ffffff; --surface-2:#faf9f5;
+    --ink:#17191d; --ink-soft:#565a62; --ink-faint:#8a8e96;
+    --rule:#dedecf; --rule-soft:#e9e9de;
+    --accent:#0e6a6d; --accent-ink:#0a5052; --accent-soft:#e2efee;
+    --ok:#3f7d3a; --ok-soft:#e6efe2;
+    --warn:#96610f; --warn-soft:#f4ecdc;
+    --bug:#a63a29; --bug-soft:#f4e3df;
+    --tier1:#edf2ef; --tier2:#eef0f4;
+    --shadow:0 1px 2px rgba(20,22,26,.05), 0 8px 24px -16px rgba(20,22,26,.22);
+    --maxw:74ch;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#131519; --surface:#1b1e23; --surface-2:#20242a;
+      --ink:#e8e9e3; --ink-soft:#a4a8b0; --ink-faint:#767b84;
+      --rule:#2d3037; --rule-soft:#262930;
+      --accent:#4fb8b4; --accent-ink:#8fd6d2; --accent-soft:#15302f;
+      --ok:#74b96b; --ok-soft:#1c2c1b;
+      --warn:#d69a4a; --warn-soft:#332a19;
+      --bug:#e1785f; --bug-soft:#33211d;
+      --tier1:#182420; --tier2:#1a1c24;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -18px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#131519; --surface:#1b1e23; --surface-2:#20242a;
+    --ink:#e8e9e3; --ink-soft:#a4a8b0; --ink-faint:#767b84;
+    --rule:#2d3037; --rule-soft:#262930;
+    --accent:#4fb8b4; --accent-ink:#8fd6d2; --accent-soft:#15302f;
+    --ok:#74b96b; --ok-soft:#1c2c1b;
+    --warn:#d69a4a; --warn-soft:#332a19;
+    --bug:#e1785f; --bug-soft:#33211d;
+    --tier1:#182420; --tier2:#1a1c24;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -18px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+  }
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace}
+
+  .wrap{max-width:1120px; margin:0 auto; padding:0 clamp(1rem,4vw,3rem)}
+  .layout{display:grid; grid-template-columns:1fr; gap:0}
+  @media (min-width:1000px){
+    .layout{grid-template-columns:232px minmax(0,1fr); gap:clamp(2rem,5vw,4.5rem); align-items:start}
+  }
+
+  header.mast{padding:clamp(2.6rem,7vw,5rem) 0 clamp(1.6rem,4vw,2.6rem); border-bottom:1px solid var(--rule)}
+  .kicker{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.22em; text-transform:uppercase; color:var(--accent-ink); margin:0 0 1rem}
+  h1{
+    font-family:"Fraunces",Georgia,serif; font-weight:640; font-optical-sizing:auto;
+    font-size:clamp(2.4rem,6.4vw,4rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 1rem; text-wrap:balance;
+  }
+  .standfirst{max-width:62ch; color:var(--ink-soft); font-size:1.06rem; margin:0}
+  .meta{margin-top:1.6rem; display:flex; flex-wrap:wrap; gap:.5rem .9rem; font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--ink-faint)}
+  .meta span{white-space:nowrap}
+  .meta b{color:var(--ink-soft); font-weight:500}
+
+  nav.toc{position:sticky; top:0; padding:1.4rem 0; font-size:.85rem}
+  @media (min-width:1000px){nav.toc{top:1.5rem; max-height:calc(100vh - 3rem); overflow-y:auto}}
+  nav.toc ol{list-style:none; margin:0; padding:0}
+  nav.toc a{display:block; padding:.32rem 0 .32rem .7rem; color:var(--ink-soft); text-decoration:none; border-left:2px solid var(--rule-soft)}
+  nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent-ink); border-left-color:var(--accent)}
+  nav.toc .grp{font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint); padding:.9rem 0 .3rem}
+  nav.toc .grp:first-child{padding-top:0}
+
+  main{padding:clamp(1.8rem,4vw,3rem) 0 6rem; min-width:0}
+  section{padding:clamp(2rem,5vw,3.4rem) 0; border-bottom:1px solid var(--rule-soft)}
+  section:last-child{border-bottom:0}
+  .sec-head{display:flex; align-items:baseline; gap:.8rem; margin:0 0 1.4rem}
+  .sec-num{font-family:"IBM Plex Mono",monospace; font-size:.9rem; font-weight:600; color:var(--accent); flex:none}
+  h2{font-family:"Fraunces",Georgia,serif; font-weight:560; font-size:clamp(1.5rem,3.6vw,2.05rem); line-height:1.12; letter-spacing:-.01em; margin:0; text-wrap:balance}
+  h3{font-size:1rem; margin:2rem 0 .6rem; letter-spacing:-.005em}
+  p{max-width:var(--maxw)}
+  p,li{color:var(--ink)}
+  .lede{color:var(--ink-soft)}
+  a{color:var(--accent-ink); text-underline-offset:2px}
+  strong{font-weight:600}
+  section > ul,section > ol{max-width:var(--maxw); padding-left:1.2rem}
+  section > ul li,section > ol li{margin:.3rem 0}
+
+  .flow{margin:1rem 0 0; display:flex; flex-direction:column; gap:.7rem}
+  .band{border:1px solid var(--rule); border-radius:12px; padding:.85rem .9rem; background:var(--surface)}
+  .band.t1{background:var(--tier1)}
+  .band.t2{background:var(--tier2)}
+  .band-label{font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 .55rem}
+  .chips{display:flex; flex-wrap:wrap; align-items:center; gap:.4rem}
+  .chip-stage{
+    font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:.82rem;
+    background:var(--surface); border:1px solid var(--rule); border-radius:7px;
+    padding:.3rem .55rem; color:var(--ink); white-space:nowrap;
+  }
+  .chip-stage b{color:var(--accent-ink); font-weight:600}
+  .chip-stage.llm{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent-soft)}
+  .arrow{color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; flex:none}
+  .flow-note{font-size:.86rem; color:var(--ink-soft); margin:.3rem 0 0; max-width:var(--maxw)}
+  .flow-note code{font-size:.82em}
+  .morph{display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; margin-top:.9rem; font-family:"IBM Plex Mono",monospace; font-size:.8rem; color:var(--ink-soft)}
+  .morph .u{background:var(--accent-soft); color:var(--accent-ink); border-radius:5px; padding:.15rem .45rem}
+
+  .cards{display:grid; grid-template-columns:1fr; gap:1rem; margin-top:.5rem}
+  .worker{background:var(--surface); border:1px solid var(--rule); border-radius:13px; padding:1.15rem 1.2rem 1.25rem; box-shadow:var(--shadow)}
+  .worker > .whead{display:flex; flex-wrap:wrap; align-items:baseline; gap:.55rem; margin-bottom:.85rem; padding-bottom:.7rem; border-bottom:1px solid var(--rule-soft)}
+  .stag{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:.9rem; color:#fff; background:var(--accent); border-radius:6px; padding:.16rem .5rem; flex:none}
+  .worker h4{font-size:1.06rem; margin:0; font-weight:600; letter-spacing:-.01em}
+  .modfile{font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--ink-faint)}
+  .tags{display:flex; gap:.35rem; margin-left:auto}
+  .t{font-family:"IBM Plex Mono",monospace; font-size:.68rem; padding:.14rem .42rem; border-radius:5px; white-space:nowrap; border:1px solid transparent}
+  .t.llm{background:var(--accent-soft); color:var(--accent-ink); border-color:var(--accent)}
+  .t.nollm{background:var(--surface-2); color:var(--ink-soft); border-color:var(--rule)}
+  .t.cpu{background:var(--surface-2); color:var(--ink-soft); border-color:var(--rule)}
+  .worker dl{margin:0; display:flex; flex-direction:column}
+  .worker .row{display:grid; grid-template-columns:1fr; gap:.15rem; padding:.55rem 0}
+  @media (min-width:560px){.worker .row{grid-template-columns:7.5rem 1fr; column-gap:1rem; gap:.5rem 1rem}}
+  .worker .row + .row{border-top:1px solid var(--rule-soft)}
+  .worker dt{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); padding-top:.15rem}
+  .worker dd{margin:0; font-size:.92rem; line-height:1.55}
+  .worker .notdo dd{color:var(--ink-soft)}
+  .worker .notdo dt{color:var(--bug)}
+  code{background:var(--surface-2); border:1px solid var(--rule-soft); border-radius:4px; padding:.05rem .3rem; font-size:.86em}
+  .worker dd code{font-size:.82em}
+  .limit{margin-top:.7rem; font-size:.86rem; color:var(--ink-soft); background:var(--warn-soft); border-left:2px solid var(--warn); border-radius:0 6px 6px 0; padding:.5rem .7rem}
+  .limit b{color:var(--warn); font-weight:600}
+
+  .tscroll{overflow-x:auto; margin:1rem 0; border:1px solid var(--rule); border-radius:11px; background:var(--surface)}
+  table{border-collapse:collapse; width:100%; font-size:.87rem; min-width:640px}
+  th,td{text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+  thead th{position:sticky; top:0; background:var(--surface-2); font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); z-index:1}
+  tbody tr:last-child td{border-bottom:0}
+  td .mono,td code{font-size:.82em}
+  td:first-child{font-family:"IBM Plex Mono",monospace; font-size:.82rem}
+
+  .issue{background:var(--surface); border:1px solid var(--rule); border-radius:12px; padding:1.05rem 1.15rem; margin:0 0 .9rem; box-shadow:var(--shadow)}
+  .issue > .ihead{display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; margin-bottom:.55rem}
+  .issue h4{margin:0; font-size:1rem; font-weight:600; letter-spacing:-.005em}
+  .sev{font-family:"IBM Plex Mono",monospace; font-size:.68rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:.16rem .5rem; border-radius:5px; flex:none}
+  .sev.bug{background:var(--bug-soft); color:var(--bug)}
+  .sev.warn{background:var(--warn-soft); color:var(--warn)}
+  .sev.ok{background:var(--ok-soft); color:var(--ok)}
+  .issue p{font-size:.9rem; margin:.5rem 0; max-width:none}
+  .issue p:first-of-type{margin-top:0}
+  .issue .lbl{font-weight:600; color:var(--ink)}
+
+  .callout{background:var(--accent-soft); border:1px solid var(--accent); border-radius:12px; padding:1.1rem 1.2rem; margin:1.4rem 0 0}
+  .callout p{margin:.4rem 0; max-width:none; font-size:.94rem}
+  .callout p:first-child{margin-top:0} .callout p:last-child{margin-bottom:0}
+
+  .qs{counter-reset:q; list-style:none; padding:0; max-width:var(--maxw)}
+  .qs li{counter-increment:q; position:relative; padding:.55rem 0 .55rem 2.4rem; border-top:1px solid var(--rule-soft)}
+  .qs li:first-child{border-top:0}
+  .qs li::before{content:counter(q); position:absolute; left:0; top:.5rem; font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--accent); background:var(--accent-soft); width:1.7rem; height:1.7rem; display:grid; place-items:center; border-radius:6px; font-size:.8rem}
+
+  footer{padding:2.4rem 0 4rem; color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; font-size:.76rem}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+  ::selection{background:var(--accent); color:#fff}
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <p class="kicker">Lifelog2 · interni della pipeline</p>
+  <h1>Atlante della Pipeline</h1>
+  <p class="standfirst lede">Una card per ogni stage e worker — cosa vuole, cosa legge, cosa scrive — poi i contratti dati tra loro, e i sette punti in cui un segnale prodotto da un worker non concorda con quello che serve al successivo.</p>
+  <p class="meta">
+    <span><b>aggiornato</b> 2026-09-11</span>
+    <span><b>fonte</b> services/pipeline/ + orchestrator.py</span>
+    <span><b>unità</b> segmento → turni → thread → aggregati</span>
+  </p>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Indice">
+    <ol>
+      <li class="grp">Forma</li>
+      <li><a href="#shape">0 · Forma della pipeline</a></li>
+      <li class="grp">Tier 1 — audio → turni</li>
+      <li><a href="#t1">1 · Ingest, preprocess, ASR, gate</a></li>
+      <li class="grp">Tier 2 — turni → thread</li>
+      <li><a href="#t2">2 · Builder, identità, arricchimento, aggregati</a></li>
+      <li class="grp">Cablaggio</li>
+      <li><a href="#contracts">3 · Contratti dati</a></li>
+      <li><a href="#incoherence">4 · Dove i worker non concordano</a></li>
+      <li><a href="#howto">5 · Come leggere prima di un fix</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section id="shape">
+      <div class="sec-head"><span class="sec-num">0</span><h2>Forma della pipeline</h2></div>
+      <p class="lede">Il Tier&nbsp;1 gira solo quando arriva audio nuovo; un solo stage ARIA attivo alla volta (lease GPU), con <b>B</b> su CPU in parallelo. Il Tier&nbsp;2 parte quando il Tier&nbsp;1 è completamente idle e fa girare i suoi worker <b>in sequenza</b>, ognuno drena il suo backlog ed esce. Le cover (Flux&nbsp;2) per ultime, quando Qwen3 è idle.</p>
+
+      <div class="flow">
+        <div class="band">
+          <p class="band-label">Ingresso — CPU</p>
+          <div class="chips">
+            <span class="chip-stage"><b>A</b> ingest</span><span class="arrow">→</span>
+            <span class="chip-stage"><b>B</b> preprocess</span><span class="arrow">→</span>
+            <span class="chip-stage">stream:asr</span>
+          </div>
+        </div>
+        <div class="band t1">
+          <p class="band-label">Tier 1 — ARIA GPU, seriale</p>
+          <div class="chips">
+            <span class="chip-stage"><b>C</b> ASR WhisperX</span><span class="arrow">→</span>
+            <span class="chip-stage"><b>C1</b> gate meccanico</span><span class="arrow">→</span>
+            <span class="chip-stage">stream:c1_done</span>
+          </div>
+        </div>
+        <div class="band t2">
+          <p class="band-label">Tier 2 — post-drain, sequenziale</p>
+          <div class="chips">
+            <span class="chip-stage llm"><b>D</b> Thread Builder</span><span class="arrow">→</span>
+            <span class="chip-stage"><b>D1</b> Identità</span><span class="arrow">→</span>
+            <span class="chip-stage llm"><b>E</b> Arricchimento</span><span class="arrow">→</span>
+            <span class="chip-stage"><b>F</b> Embedding</span>
+          </div>
+          <div class="chips" style="margin-top:.45rem">
+            <span class="arrow">↳</span>
+            <span class="chip-stage llm">detective</span><span class="arrow">→</span>
+            <span class="chip-stage">Z7 profile_builder</span><span class="arrow">→</span>
+            <span class="chip-stage llm">day_digest</span><span class="arrow">→</span>
+            <span class="chip-stage">place_detective</span><span class="arrow">→</span>
+            <span class="chip-stage">place_google_refresh</span><span class="arrow">→</span>
+            <span class="chip-stage">weekly_metrics</span>
+          </div>
+        </div>
+        <div class="band">
+          <p class="band-label">Ultimo — ARIA GPU</p>
+          <div class="chips"><span class="chip-stage llm"><b>G</b> cover · Flux 2</span></div>
+        </div>
+      </div>
+
+      <p class="flow-note"><span class="chip-stage llm" style="padding:.1rem .35rem">■</span> bordo teal = chiamata Qwen3-14B. La <b>reconciliation</b> ogni 10&nbsp;min è la rete di sicurezza: ri-arma i trigger del Tier&nbsp;2 quando trova lavoro non fatto (un thread chiuso senza identità, turni HIGH non assegnati ad alcun thread…).</p>
+
+      <p class="flow-note">L'unità che scorre cambia forma ad ogni passaggio di mano:</p>
+      <div class="morph">
+        <span class="u">segmento</span> ≈ 5 min di audio <span class="arrow">→</span>
+        <span class="u">speaker_turns</span> testo + voce per turno <span class="arrow">→</span>
+        <span class="u">conversation_threads</span> thread semantici <span class="arrow">→</span>
+        <span class="u">days / sagas / persons / places</span>
+      </div>
+    </section>
+
+    <section id="t1">
+      <div class="sec-head"><span class="sec-num">1</span><h2>Tier 1 — dall'audio ai turni</h2></div>
+
+      <div class="cards">
+
+        <article class="worker">
+          <div class="whead"><span class="stag">A</span><h4>Ingest</h4><span class="modfile">api/routers/uploads.py</span><span class="tags"><span class="t cpu">API</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Ricevere un file audio dal telefono, cifrarlo su MinIO, registrarlo a DB, metterlo in coda.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd><code>POST /api/v1/uploads</code> dall'app Android.</dd></div>
+            <div class="row"><dt>Input</dt><dd><code>.m4a</code> cifrato + metadati: device, timestamp, GPS lat/lon, sessione.</dd></div>
+            <div class="row"><dt>Output</dt><dd>Riga <code>raw_captures</code> (audio + GPS + <code>session_id</code>), riga <code>segments</code> (<code>pipeline_status = queued</code> / <code>staged</code>), evento su <code>lifelog:stream:ingest</code>.</dd></div>
+            <div class="row"><dt>Stato chiave</dt><dd><code>segments.pipeline_status</code>: <span class="mono">staged → queued → asr → classified | discarded</span></dd></div>
+          </dl>
+          <p class="limit">Idempotente su <code>idempotency_key</code>. Il <b>session_id</b> su <code>raw_captures</code> è quello che D1 usa poi per delimitare una sessione di registrazione continua.</p>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">B</span><h4>Preprocess</h4><span class="modfile">stage_b_preprocess.py</span><span class="tags"><span class="t cpu">CPU · parallelo</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>M4A → WAV 16&nbsp;kHz mono, più un gate di qualità audio.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Consuma <code>lifelog:stream:ingest</code> (gruppo <code>lifelog:cg:preprocess</code>).</dd></div>
+            <div class="row"><dt>Input</dt><dd><code>.m4a.enc</code> da MinIO.</dd></div>
+            <div class="row"><dt>Output</dt><dd>WAV in <code>normalized-audio/</code>, evento su <code>lifelog:stream:asr</code>. Audio scartato (troppo corto / silenzio / corrotto) → <code>quality-rejected/</code> + <code>pipeline_status = discarded</code>.</dd></div>
+            <div class="row notdo"><dt>Non fa</dt><dd>Trascrizione, LLM, decisioni semantiche.</dd></div>
+          </dl>
+          <p class="limit"><b>Backpressure:</b> smette di produrre quando il backlog WhisperX è grande, per evitare un pile-up di WAV su MinIO.</p>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">B′</span><h4>Voiceprint enrollment</h4><span class="modfile">voiceprint_worker.py</span><span class="tags"><span class="t nollm">onboarding</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Estrarre l'embedding vocale 256-d dell'utente dai campioni di enrollment.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd><code>lifelog:stream:voiceprint</code> — registrazione <b>intenzionale</b> di onboarding, non una cattura ambientale.</dd></div>
+            <div class="row"><dt>Output</dt><dd><code>persons.voiceprint_embedding</code> (media pesata su tutti i campioni), <code>relationship_type = self</code>.</dd></div>
+            <div class="row"><dt>Nota</dt><dd>È nel gruppo ARIA solo per tenere caldo il modello WhisperX — non processa audio della pipeline.</dd></div>
+          </dl>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">C</span><h4>ASR</h4><span class="modfile">stage_c_asr.py</span><span class="tags"><span class="t cpu">ARIA · WhisperX</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Trascrizione + diarizzazione dell'audio.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Consuma <code>lifelog:stream:asr</code>.</dd></div>
+            <div class="row"><dt>Input</dt><dd>WAV da MinIO.</dd></div>
+            <div class="row"><dt>Output</dt><dd>JSON trascritto (turni + <b>embedding per turno</b> + word timestamp) su MinIO, <code>segments</code> aggiornato coi metadati ASR base, evento su <code>lifelog:stream:c_done</code>.</dd></div>
+            <div class="row notdo"><dt>Non fa</dt><dd>Risoluzione identità, insert <code>speaker_turns</code> (quello è C1), LLM.</dd></div>
+          </dl>
+          <p class="limit">Un guasto ARIA <b>non</b> è uno scarto di qualità: il messaggio resta nella pending list e viene ritentato, mai marcato <code>discarded</code>.</p>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">C1</span><h4>Gate meccanico</h4><span class="modfile">stage_c1_gate.py</span><span class="tags"><span class="t nollm">no LLM</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Tutto il lavoro <b>deterministico</b> per turno: affidabilità, identità certa, tipo turno, insert <code>speaker_turns</code>.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Consuma <code>lifelog:stream:c_done</code>.</dd></div>
+            <div class="row"><dt>Input</dt><dd>JSON trascritto da MinIO (turni + embedding).</dd></div>
+            <div class="row"><dt>Out · per turno</dt><dd><code>speaker_turns</code>: <code>turn_reliability</code> (HIGH / LOW / JUNK, da logprob), <code>vp_stable_id</code> <b>solo se identità certa</b> (coseno vs centroide di persone <i>confermate</i>, o conferma vs voce già vista in sessione), <code>person_id</code>, <code>person_confidence</code>, <code>speaker_quality</code>, <code>intra_sim_flag</code>, <code>turn_type</code>, <code>word_count</code>, <code>voiceprint_embedding</code> (<b>sempre salvato</b>).</dd></div>
+            <div class="row"><dt>Out · per segmento</dt><dd><code>segments</code>: <code>capture_class</code>, <code>conversation_type</code> (approssimato), <code>analysis_tier</code>, <code>pipeline_status = classified | discarded</code>.</dd></div>
+            <div class="row"><dt>Emit</dt><dd><code>lifelog:stream:c1_done</code> → il contatore di volume che arma Thread Builder.</dd></div>
+            <div class="row notdo"><dt>Non fa</dt><dd>Fondare identità nuove — <b>mai</b>. Un turno con embedding buono che non matcha nulla resta <code>vp_stable_id = NULL</code> ("in attesa"); lo riprende D1 alla chiusura del thread.</dd></div>
+          </dl>
+          <p class="limit">Scarta solo se strutturalmente vuoto (0 turni, o 1 turno con speech-ratio &lt; 0.15). <b>Mai</b> sul logprob medio del segmento — butterebbe turni HIGH insieme ai JUNK.</p>
+        </article>
+
+      </div>
+
+      <h3>C1-glue — <span class="modfile">stage_c1_turn_glue.py</span></h3>
+      <p>Correzione mirata dei turni "incollati" da <code>_split_fused_turns</code> di WhisperX: una breve interruzione rumorosa ruba all'utente le prime parole di una frase del podcaster. Segnale usato: l'asimmetria del silenzio prima vs dopo la sequenza sospetta. Opera solo sui turni già marcati <code>split_from_fused = true</code>. Sub-componente di C1, non uno stage.</p>
+    </section>
+
+    <section id="t2">
+      <div class="sec-head"><span class="sec-num">2</span><h2>Tier 2 — dai turni ai thread e agli aggregati</h2></div>
+
+      <div class="cards">
+
+        <article class="worker">
+          <div class="whead"><span class="stag">D</span><h4>Thread Builder</h4><span class="modfile">stage_d_thread_builder.py</span><span class="tags"><span class="t llm">Qwen3-14B</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Raggruppare i turni in <b>thread conversazionali</b> con confini semantici; classificare la <b>natura</b> di ogni blocco.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Volume: <code>_tb_pending_chars ≥ TB_TRIGGER_VOLUME_CHARS</code> (accumulato dagli eventi <code>c1_done</code>). Anche forzato dalla reconciliation se restano turni HIGH non assegnati.</dd></div>
+            <div class="row"><dt>Input</dt><dd><code>speaker_turns</code> non ancora in <code>thread_turns</code> (il "Turn Log") + thread aperti + il loro <code>rolling_summary</code>. Pre-filtri deterministici: gap &gt; 10&nbsp;min, confine media.</dd></div>
+            <div class="row"><dt>Chiamata LLM</dt><dd>Schema v28+ (<code>v34b</code> in prod): tabella di segnali grezzi → il modello restituisce gruppi di turni come <code>intervalli:[{da,a}]</code> con <code>motivo</code>, <code>natura</code>, <code>natura_confidenza</code>, <code>ragionamento</code>.</dd></div>
+            <div class="row"><dt>Out · thread</dt><dd><code>conversation_threads</code>: <code>thread_type</code>, <code>thread_status</code> (open → pending_finalization → closed), <code>natura</code> + <code>natura_confidenza</code>, <code>boundary_reason</code>, <code>rolling_summary</code>, <code>is_ambiguous</code> (sotto <code>THREAD_MIN_NARRATIVE_CHARS</code> → salta Stage E), <code>filtered_reason</code> (<code>spot_pubblicitario</code> → salta Stage E).</dd></div>
+            <div class="row"><dt>Out · turni</dt><dd><code>thread_turns</code>: <code>sequence_pos</code>, <code>thread_role</code> provvisorio (self / interlocutor / ambient — <b>non</b> media).</dd></div>
+            <div class="row"><dt>Out · ledger</dt><dd><code>natura_signals</code> / <code>natura_signal_turns</code> — record append-only della natura per gruppo di turni.</dd></div>
+            <div class="row"><dt>Emit</dt><dd><code>lifelog:stream:thread_closed</code>. Un thread chiuso non si riapre <b>mai</b>.</dd></div>
+          </dl>
+          <p class="limit"><b>Limite noto:</b> l'unico splitter forte è il gap di silenzio più il giudizio LLM. Una conversazione lunga continua senza silenzi resta un thread solo — caso <code>0a9250ee</code>: 1966 turni, 3&nbsp;h&nbsp;30&nbsp;m, gap massimo tra turni 5&nbsp;m&nbsp;31&nbsp;s.</p>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">D1</span><h4>Identity Attribution</h4><span class="modfile">stage_d1_identity.py</span><span class="tags"><span class="t nollm">no LLM</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Risolvere le identità rimaste "in attesa" da C1, ora che il thread ha confini definiti (più materiale dello scope-segmento).</dd></div>
+            <div class="row"><dt>Trigger</dt><dd><code>thread_status = closed AND identity_resolved_at IS NULL</code>. Gira dopo Thread Builder.</dd></div>
+            <div class="row"><dt>Input</dt><dd>I turni <code>vp_stable_id IS NULL</code> del thread + <code>session_registry</code> scoped a <code>raw_captures.session_id</code>.</dd></div>
+            <div class="row"><dt>Cosa fa</dt><dd>1 · <b>Fase 2</b> (ora thread-scoped): pooling dei turni in attesa, <b>fonda o conferma</b> voci contro il registro di sessione → <code>vp_unk_XXXXXX</code>. 2 · Aggiorna <code>speaker_turns</code> (<code>vp_stable_id</code> / <code>person_id</code> / <code>person_confidence</code> / <code>speaker_quality</code>) e <code>thread_turns</code> (<code>vp_hash</code> / <code>person_id</code> / <code>canonical_label</code> / <code>thread_role</code>). 3 · Ricostruisce <code>voiceprint_roster</code> per intero, corregge <code>thread_type</code> / <code>has_self_turn</code> col roster ora completo. 4 · Marca <code>identity_resolved_at</code>.</dd></div>
+            <div class="row"><dt>Regola</dt><dd>È l'<b>unico</b> posto che fonda identità nuove (<code>vp_unk_</code>). Scoped alla sessione, non al singolo segmento da 5 min.</dd></div>
+          </dl>
+          <p class="limit"><b>Limite noto:</b> una voce fondata qui (<code>identity_level 0</code>) può poi comparire in thread di natura molto diversa — un caso reale mescola un podcast, uno spot e commenti politici sotto lo stesso <code>vp_stable_id</code>. Nessuno a valle verifica la coerenza di natura di una voce ricorrente.</p>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">E</span><h4>Thread Enrichment</h4><span class="modfile">stage_e_thread_enrichment.py</span><span class="tags"><span class="t llm">Qwen3-14B</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Dare al thread un contenuto narrativo: titolo, riassunto, topic, entità, segnali.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd><code>closed AND title IS NULL AND NOT is_ambiguous AND filtered_reason IS NULL AND identity_resolved_at IS NOT NULL</code> e oltre il retention gap. Gira dopo D1.</dd></div>
+            <div class="row"><dt>Input</dt><dd><b>Solo i turni HIGH</b> (<code>text_raw</code>, <code>vp_stable_id</code>, reliability) — mai LOW/JUNK, mai il <code>rolling_summary</code>. Identità reale dell'utente da <code>persons</code>, usata solo per riconoscere auto-presentazioni nel parlato, mai scritta nell'output.</dd></div>
+            <div class="row"><dt>Instradamento</dt><dd>Sotto budget char → <b>via semplice</b> (una chiamata). Sopra → <b>multiparte</b>: N chiamate per parte (<code>thread_part_summaries</code>) + 1 chiamata di <b>fusione</b> ("summary of summaries" + entità/topic aggregati) che produce l'unico title/summary.</dd></div>
+            <div class="row"><dt>Out · thread</dt><dd><code>title</code>, <code>summary</code>, <code>topics</code>, <code>entities_json</code>, <code>open_loops</code> (solo se <code>self_present</code>), <code>sentiment</code>, <code>coherence_score</code>, <code>visual_prompt</code>, <code>media_fingerprint</code>, <code>media_type</code> (solo se <code>media_source.detected = true</code> + <code>confidence = alta</code> + cancello di volume), <code>signal_class</code> + motivo, <code>retention_class</code>, <code>thread_status = enriched</code>.</dd></div>
+            <div class="row"><dt>Out · turni</dt><dd><code>thread_role = media</code> sulle voci che il modello indica come fonte riprodotta — l'<b>unico</b> punto autorizzato a scriverlo.</dd></div>
+            <div class="row"><dt>Emit</dt><dd><code>lifelog:stream:embed-thread</code>. Anche <code>_geo_attach</code>: primo arricchimento del <code>place</code> via Google Places.</dd></div>
+            <div class="row notdo"><dt>Non fa</dt><dd>Frammentare il thread (resta una riga), toccare le identità.</dd></div>
+          </dl>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">F</span><h4>Thread Embedding</h4><span class="modfile">stage_f_embedding.py</span><span class="tags"><span class="t cpu">Ollama · CT107</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Vettore semantico del thread per ricerca / similarità.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd><code>enriched AND embedding IS NULL</code>. Gira dopo E.</dd></div>
+            <div class="row"><dt>Input</dt><dd>Dal DB: <code>title + summary + topics + persons_mentioned</code>.</dd></div>
+            <div class="row"><dt>Output</dt><dd><code>conversation_threads.embedding</code> (vector 1024-d, mxbai-embed-large). <code>thread_status</code> resta <code>enriched</code>.</dd></div>
+          </dl>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">◇</span><h4>Identity Detective</h4><span class="modfile">worker_identity_detective.py</span><span class="tags"><span class="t llm">Qwen3-14B</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Inferire <b>chi è</b> una voce ricorrente dal discorso (auto-identificazioni, essere chiamati per nome) e accumulare <code>identity_candidates</code>.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Thread finalizzati con <code>vp_R</code> nel roster, <code>detective_analyzed_at IS NULL</code>.</dd></div>
+            <div class="row"><dt>Input</dt><dd>Turni del thread con le label voiceprint stabili. <b>Esclusi:</b> <code>thread_role = media</code>, <code>reliability = JUNK</code>, <code>vp_unk_noemb</code>.</dd></div>
+            <div class="row"><dt>Output</dt><dd><code>persons.identity_candidates</code> (consolidati per nome normalizzato, evidenza + confidenza si accumulano), <code>persons.confidence</code> = max. <b>Mai</b> <code>first_name</code>/<code>last_name</code> (serve conferma utente → <code>identity_level 2</code>).</dd></div>
+            <div class="row"><dt>Consuma da Z7</dt><dd><code>vp_cluster_xxxxxx</code> e <code>relationship_type = media</code> — <b>non</b> esclude le persone media; media è un'etichetta, non un motivo per non profilare.</dd></div>
+          </dl>
+          <p class="limit">I thread oltre <code>MAX_PARTS_PER_THREAD</code> (12) vengono saltati e marcati analizzati con un evento <code>thread_abnorme_skip</code> (fix 2026-09-10, dopo il loop infinito su <code>0a9250ee</code>).</p>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">Z7</span><h4>Profile Builder</h4><span class="modfile">worker_profile_builder.py</span><span class="tags"><span class="t nollm">no LLM</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Costruire il profilo dell'utente + delle persone della sua cerchia.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Settimanale (domenica) + one-shot <code>--full-scan</code>. Traccia <code>lifelog:profile_builder:last_run</code>.</dd></div>
+            <div class="row"><dt>Strato 1</dt><dd>Fatti dichiarati: <code>decisions</code>/<code>action_items</code> dagli <code>open_loops</code> tipizzati dei thread personali trusted (<code>importance ≥ 0.40</code>) + summary in prima persona. No LLM.</dd></div>
+            <div class="row"><dt>Z7 clustering</dt><dd>I turni orfani sono già raggruppati per <code>vp_stable_id</code>. Qui: fusione <b>cross-sessione</b> via centroide d'embedding (≥ 2 giorni distinti, ≥ 3 thread, soglia coseno). Crea <code>persons</code> provvisorie: un cluster la cui <b>natura dominante è media</b> → <code>relationship_type = media</code>; altrimenti <code>unknown</code> (candidato interlocutore reale). <b>Tag diverso, stesso DB.</b></dd></div>
+            <div class="row"><dt>Strato 2</dt><dd>Pattern comportamentali: topic, abitudini media, ritmo peak-hour, cerchia sociale — aggregazioni SQL su finestra mobile.</dd></div>
+          </dl>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">◇</span><h4>Day Digest</h4><span class="modfile">worker_day_digest.py</span><span class="tags"><span class="t llm">Qwen3-14B</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Diario strutturato della giornata (Europe/Rome).</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Ogni 24&nbsp;h; <b>salta</b> giorni vuoti e giorni invariati dall'ultimo digest riuscito (idempotente).</dd></div>
+            <div class="row"><dt>Input</dt><dd><code>conversation_threads</code> trusted del giorno (flagged esclusi), separati personal/ambient per <code>thread_type</code>; gli <code>open_loops</code> strutturati entrano come grounding; persone/luoghi/topic aggregati.</dd></div>
+            <div class="row"><dt>Output</dt><dd>Upsert su <code>days</code> (personal/ambient digest, key events, open loop, mood arc).</dd></div>
+          </dl>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">◇</span><h4>Place Detective</h4><span class="modfile">worker_place_detective.py</span><span class="tags"><span class="t nollm">no LLM</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Dedurre il tipo di un luogo (casa / lavoro / social / transit / hobby, e "di chi è").</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Domenica 03:30 (dopo Day Digest).</dd></div>
+            <div class="row"><dt>Input</dt><dd>Segnali multi-dimensionali per luogo: frequenza, durata, orari, <code>relationship_type</code> dei parlanti ricorrenti lì, categoria Google (<code>places.nearby_pois</code>).</dd></div>
+            <div class="row"><dt>Output</dt><dd><code>place_hypotheses</code> (<code>status = pending</code>) — <b>mai</b> <code>confirmed_*</code> (serve conferma utente via <code>/places</code>).</dd></div>
+          </dl>
+          <p class="limit">Non è mai girato in produzione con dati reali.</p>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">◇</span><h4>Place Google Refresh</h4><span class="modfile">worker_place_google_refresh.py</span><span class="tags"><span class="t nollm">solo HTTP</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Refresh settimanale dei dati Google che invecchiano (POI vicini, <code>business_status</code>) per i luoghi già noti.</dd></div>
+            <div class="row"><dt>Output</dt><dd>Solo <code>google_place_id</code> / <code>nearby_pois</code> / <code>google_enriched_at</code>. Skip silenzioso se manca <code>GOOGLE_PLACES_API_KEY</code>.</dd></div>
+          </dl>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">◇</span><h4>Weekly Metrics</h4><span class="modfile">worker_weekly_metrics.py</span><span class="tags"><span class="t nollm">no LLM</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Baseline settimanale (Roadmap Segnali fase 0): tempo/presenza, sociale, contenuto, produttività + qualità pipeline.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>24&nbsp;h, <code>--since-weeks 4</code> (assorbe correzioni tardive).</dd></div>
+            <div class="row"><dt>Input</dt><dd>SQL puro su <code>thread_turns.absolute_ts</code> / <code>raw_captures.started_at</code> (tempo di <b>registrazione</b>, mai di processing). Cerchia ricorrente = <code>person_id</code> già confermati da Z7.</dd></div>
+            <div class="row"><dt>Output</dt><dd><code>weekly_metrics</code> (bucket per settimana ISO, lunedì, Europe/Rome).</dd></div>
+          </dl>
+        </article>
+
+        <article class="worker">
+          <div class="whead"><span class="stag">G</span><h4>Cover</h4><span class="modfile">stage_g_covers.py</span><span class="tags"><span class="t llm">ARIA · FLUX.2</span></span></div>
+          <dl>
+            <div class="row"><dt>Obiettivo</dt><dd>Immagine di copertina per thread e luoghi.</dd></div>
+            <div class="row"><dt>Trigger</dt><dd>Dopo il drain completo di Stage F, quando Qwen3 è idle.</dd></div>
+            <div class="row"><dt>Input</dt><dd><code>conversation_threads</code> con un <code>visual_prompt</code> e senza <code>cover_image_key</code>.</dd></div>
+            <div class="row"><dt>Output</dt><dd>JPEG su MinIO (<code>covers/threads/{ymd}/{id}.jpeg</code>), <code>cover_image_key</code>.</dd></div>
+          </dl>
+        </article>
+
+      </div>
+
+      <h3>Dormienti — nel registro ma commentati</h3>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>Worker</th><th>Cosa farebbe</th><th>Perché è spento</th></tr></thead>
+          <tbody>
+            <tr><td>worker_profile_validator.py</td><td>Pass LLM di validazione sui fatti di profilo in fascia grigia (confidenza 0.40–0.75): valid / invalid / third_party / context_limited / partial.</td><td>non riattivato dopo il redesign profilo</td></tr>
+            <tr><td>worker_thread_consolidation.py (Z6)</td><td>Consolida i thread personali in "Saghe" a lungo termine (Gemini per le associazioni + Qwen3 per la sintesi + embedding).</td><td>rimandato</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="contracts">
+      <div class="sec-head"><span class="sec-num">3</span><h2>Contratti dati — chi produce, chi consuma</h2></div>
+      <p class="lede">Quasi tutte le "cose che cambiano a valle" ruotano su tre campi — <code>vp_stable_id</code>, <code>natura</code>, <code>thread_role</code> — e su due momenti in cui un valore passa da provvisorio ad autorevole: C1&nbsp;→&nbsp;D1 per l'identità, D&nbsp;→&nbsp;D1 per <code>thread_type</code>.</p>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>Campo</th><th>Prodotto da</th><th>Consumato da</th><th>Nota di coerenza</th></tr></thead>
+          <tbody>
+            <tr><td>speaker_turns.turn_reliability</td><td>C1</td><td>D (tabella grezza), E (filtro HIGH-only)</td><td>E ignora del tutto LOW/JUNK; D li vede tutti</td></tr>
+            <tr><td>speaker_turns.vp_stable_id <span class="mono">(certo)</span></td><td>C1 fase 1/1.5</td><td>D, D1, detective</td><td>C1 non fonda mai; NULL = "in attesa" per D1</td></tr>
+            <tr><td>speaker_turns.vp_stable_id <span class="mono">(vp_unk_)</span></td><td>D1 fase 2</td><td>detective, Z7, weekly_metrics</td><td>fondata a livello sessione; instabile tra reset <code>--from-c1</code></td></tr>
+            <tr><td>speaker_turns.word_count</td><td>C1</td><td><i>(dovrebbe)</i> E <code>_non_self_volume_ratio</code></td><td><span class="lbl" style="color:var(--bug)">bug</span> E leggeva <code>word_count</code> da un dict senza quella chiave → cancello media_type sempre chiuso. Corretto 2026-09-10 (usa <code>text_raw</code>)</td></tr>
+            <tr><td>speaker_turns.voiceprint_embedding</td><td>C1 (sempre)</td><td>D1, Z7 (centroidi)</td><td>mai azzerato</td></tr>
+            <tr><td>conversation_threads.thread_type</td><td>D (provvisorio) → D1 (corretto)</td><td>E, day_digest, detective, weekly_metrics</td><td>il valore autorevole è quello <b>dopo</b> D1</td></tr>
+            <tr><td>conversation_threads.natura</td><td>D (winning da <code>natura_signals</code>)</td><td>Z7 (classificazione media di un cluster), day_digest, dashboard</td><td><b>il segnale media più affidabile oggi</b> (vedi §4)</td></tr>
+            <tr><td>conversation_threads.voiceprint_roster</td><td>D1 (ricostruito intero)</td><td>detective (filtro <code>vp_R</code> presente), Z7</td><td>parziale prima di D1</td></tr>
+            <tr><td>conversation_threads.identity_resolved_at</td><td>D1</td><td>E (gate: non arricchire senza)</td><td>senza, E leggerebbe un roster incompleto</td></tr>
+            <tr><td>conversation_threads.is_ambiguous / filtered_reason</td><td>D</td><td>E (gate: skip), detective, day_digest</td><td>sotto soglia narrabilità / spot → non arricchiti <i>by design</i></td></tr>
+            <tr><td>conversation_threads.media_fingerprint</td><td>E (campo top-level)</td><td><i>(poco)</i> — display, potenziale segnale media</td><td>scritto anche quando <code>media_source.detected = false</code></td></tr>
+            <tr><td>conversation_threads.media_type</td><td>E (<code>media_source</code> + cancello volume)</td><td><b>nessuno</b> (verificato: 0 consumatori nel codice, non nel frontend)</td><td>cosmetico; NULL su tutti i thread prima del fix 2026-09-10</td></tr>
+            <tr><td>conversation_threads.open_loops</td><td>E (solo se <code>self_present</code>)</td><td>Z7 strato 1, day_digest</td><td>grounding per gli aggregati</td></tr>
+            <tr><td>conversation_threads.embedding</td><td>F</td><td>ricerca / similarità (dashboard), Z6</td><td>—</td></tr>
+            <tr><td>thread_turns.thread_role</td><td>D (self/interlocutor/ambient) → E (aggiunge <code>media</code>)</td><td>detective (esclude <code>media</code>), Z7, D</td><td>E è l'unico a scrivere <code>media</code>; il multiparte non lo scrive (§4)</td></tr>
+            <tr><td>persons.relationship_type</td><td>Z7 (<code>self</code> / <code>unknown</code> / <code>media</code>)</td><td>detective, weekly_metrics, place_detective, profile_validator</td><td><code>media</code> = etichetta, non esclusione</td></tr>
+            <tr><td>persons.identity_candidates</td><td>detective</td><td>dashboard, conferma utente</td><td>sopravvive al reset (<code>persons</code> non azzerata) → può restare stale</td></tr>
+            <tr><td>conversation_threads.signal_class</td><td>E (<code>_compute_signal_class</code> + promozione LLM)</td><td>dashboard (Journal), roadmap segnali</td><td>—</td></tr>
+            <tr><td>days</td><td>day_digest</td><td>dashboard Day</td><td>—</td></tr>
+            <tr><td>places / place_hypotheses</td><td>E <code>_geo_attach</code> / place_detective</td><td>dashboard <code>/places</code>, place_google_refresh</td><td>le hypotheses non si auto-confermano mai</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="incoherence">
+      <div class="sec-head"><span class="sec-num">4</span><h2>Dove i worker non concordano</h2></div>
+      <p class="lede">Sette punti noti in cui un segnale prodotto da un worker non è allineato con quello che serve al successivo. Stato al 2026-09-11.</p>
+
+      <div class="issue">
+        <div class="ihead"><span class="sev bug">bug + design</span><h4>4.1 — "è un media?" ha cinque segnali che non concordano</h4></div>
+        <div class="tscroll">
+          <table>
+            <thead><tr><th>Segnale</th><th>Livello</th><th>Chi scrive</th><th>Affidabilità osservata</th></tr></thead>
+            <tbody>
+              <tr><td>natura</td><td>thread</td><td>D</td><td><b>alta</b> — 106/371 thread media-like, coerenti</td></tr>
+              <tr><td>media_fingerprint</td><td>thread</td><td>E</td><td>media — 94 thread, scritto anche con <code>detected = false</code></td></tr>
+              <tr><td>media_source <span class="mono">(JSON)</span></td><td>risposta E</td><td>Qwen3</td><td><b>bassa / prudente</b> — 458 dump <code>detected = true</code>, ma spesso <code>false</code> anche mentre nomina il programma</td></tr>
+              <tr><td>media_type</td><td>thread</td><td>E</td><td><b>rotto fino al 2026-09-10</b> (cancello <code>word_count</code>); nessun consumatore comunque</td></tr>
+              <tr><td>thread_role = media</td><td>turno</td><td>E</td><td><b>basso volume</b> — 56 turni in tutto il corpus; il multiparte non ne scrive nessuno</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><span class="lbl">Perché il disallineamento:</span> <code>natura</code> (D) e <code>media_source</code> (E) rispondono a domande diverse — D classifica il <i>blocco</i> di turni; E chiede al modello se una <i>voce</i> è riprodotta, e il prompt gli impone prudenza ("nel dubbio, false"). Su un TG con voci tutte <code>vp_unk_</code>, il modello E si tira indietro (<code>detected = false</code>) mentre D dice <code>telegiornale</code> con sicurezza.</p>
+        <p><span class="lbl">Impatto reale:</span> contaminazione identità (una voce media che diventa una "persona"). Verificato post-reprocess: <b>oggi non attiva</b> — Z7 usa <code>natura</code> per taggare i cluster <code>relationship_type = media</code> (7 persone media corrette), il detective non ha creato candidati nuovi, e le 17 persone con <code>identity_candidates</code> (incl. "Andreas Chiamini") sono <b>tutte stale</b> (0 turni attuali, residui pre-redesign Z7).</p>
+        <p><span class="lbl">Gap architetturale residuo:</span> la fusione multiparte di E non porta <code>media_source</code> dalle parti (le parti lo rilevano — 171 dump — ma <code>_write_part_summary</code> lo scarta). Un TG lungo → multiparte → nessun <code>media_type</code>, nessun <code>thread_role = media</code>.</p>
+      </div>
+
+      <div class="issue">
+        <div class="ihead"><span class="sev warn">warn</span><h4>4.2 — thread_role scritto due volte con semantiche diverse</h4></div>
+        <p>D scrive <code>self</code>/<code>interlocutor</code>/<code>ambient</code> (provvisorio, da roster parziale). E aggiunge <code>media</code> (solo su <code>media_source.detected = true</code> + <code>confidence = alta</code>). <code>_resolve_media_voices</code> <b>scarta le label <code>VP_incerto</code></b> — proprio quelle delle voci media isolate — quindi il write path perde la maggior parte dei casi anche quando <code>detected = true</code>.</p>
+      </div>
+
+      <div class="issue">
+        <div class="ihead"><span class="sev warn">warn</span><h4>4.3 — la natura di una voce ricorrente non è mai verificata</h4></div>
+        <p>D1 fonda <code>vp_unk_XXXXXX</code> a livello sessione. La stessa voce può poi comparire in thread di <code>natura</code> molto diversa (podcast + spot + politica). Nessun worker a valle (weekly_metrics, Z7, day_digest, place_detective) controlla la coerenza — una "persona" può essere un collage di voci mal-clusterate.</p>
+      </div>
+
+      <div class="issue">
+        <div class="ihead"><span class="sev warn">warn</span><h4>4.4 — thread_type autorevole solo dopo D1</h4></div>
+        <p>D lo scrive dal roster parziale, D1 lo corregge. Chiunque legga <code>conversation_threads</code> tra D e D1 (finestra stretta, ma la reconciliation può allargarla) vede un valore provvisorio.</p>
+      </div>
+
+      <div class="issue">
+        <div class="ihead"><span class="sev bug">bug</span><h4>4.5 — persons sopravvive al reset, i turni no</h4></div>
+        <p><code>reset_pipeline --from-c1</code> azzera <code>speaker_turns</code> / <code>thread_turns</code> / <code>conversation_threads</code> ma <b>non</b> <code>persons</code>. <code>identity_candidates</code> e <code>relationship_type</code> restano dai run precedenti → serve una pulizia esplicita degli orfani (persone con 0 turni attuali) dopo ogni reprocess.</p>
+      </div>
+
+      <div class="issue">
+        <div class="ihead"><span class="sev warn">warn</span><h4>4.6 — Stage D over-merge / over-segmentation (non media)</h4></div>
+        <p><span class="lbl">over-merge:</span> parlato personale continuo lungo senza silenzi &gt; ~5&nbsp;min → un thread unico da migliaia di turni (<code>0a9250ee</code>, <code>b3447d43</code>).</p>
+        <p><span class="lbl">over-segmentation:</span> media / background misto → decine di thread da 1–6 turni (<code>be251122</code>: 8 thread; scheda #6: ~13). Un <code>coherence_score</code> basso li segnala ma non li ricompone.</p>
+      </div>
+
+      <div class="issue">
+        <div class="ihead"><span class="sev warn">warn</span><h4>4.7 — lingua dell'output di Stage E</h4></div>
+        <p>~5.4% dei <code>title</code> esce in inglese (cluster tech / gaming / finanza). Il vincolo "lingua del contenuto" per campo non basta — serve una regola prominente a sé.</p>
+      </div>
+    </section>
+
+    <section id="howto">
+      <div class="sec-head"><span class="sec-num">5</span><h2>Come leggere prima di un fix</h2></div>
+      <p class="lede">Prima di toccare un worker, chiedersi:</p>
+      <ol class="qs">
+        <li>Chi produce l'input di cui ho bisogno? (colonna "Prodotto da" in §3)</li>
+        <li>Quel dato è già autorevole quando il mio worker gira? (<code>thread_type</code> prima di D1 — no; <code>voiceprint_roster</code> prima di D1 — parziale)</li>
+        <li>Chi altro legge l'output che sto per cambiare? (colonna "Consumato da")</li>
+        <li>Sto aggiungendo un 6° segnale a una domanda che ne ha già 5? (§4.1) — se sì, consolidare su quello che già funziona (<code>natura</code>) invece di aggiungerne un altro.</li>
+      </ol>
+      <div class="callout">
+        <p><span class="lbl">La versione breve.</span> La pipeline è una sequenza di stage nominati per lettera in cui l'unità di dato cambia forma — <code>segmento → turni → thread → aggregati</code>. L'identità ha un solo punto di fondazione (D1, scoped alla sessione) e un controllo di certezza a monte (C1). "È un media?" ha troppe risposte; <code>natura</code> è quella di cui fidarsi.</p>
+      </div>
+    </section>
+
+    <footer>
+      Atlante della Pipeline Lifelog2 · rispecchia <span class="mono">docs/lifelog2-pipeline-worker-reference-2026-09-11.md</span> · rigenerare ad ogni modifica del registro Tier 2 o dei contratti dati.
+    </footer>
+  </main>
+</div>
+</div>
