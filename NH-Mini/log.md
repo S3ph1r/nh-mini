@@ -2378,3 +2378,45 @@ Pagine toccate: [[entities/systems/stack-lifelog2]], nuova
 [[sources/lifelog2-thinking-reprocess-audit-2026-09-11]]. Dettaglio completo:
 `sviluppi/Lifelog2/docs/lifelog2-session-log.md`, `lifelog2-post-audit-todo-2026-09-11.md`,
 `lifelog2-status-roadmap.md` (STATO 2026-09-11).
+
+## [2026-09-25] dev | Lifelog2 — registro esperimenti, sandbox di replay, audit confini Stage D
+
+Audit di Stage D dopo il reprocess v45 (carabinieri, Dark Matter, TG/podcast dentro
+conversazioni, guardia di contiguità che fondeva una chiamata di lavoro in un
+programma radio) e costruzione di un sistema per tarare la pipeline con run
+confrontabili: registro `experiment_runs`/`experiment_metrics` (migration 0059),
+timbro del run sui thread, DB `lifelog_sandbox` sul Postgres 192.168.1.105 (uno
+schema per replay), toolkit `scripts/exp/`, casi di riferimento `eval/cases.yaml`.
+Pacchetto Stage D (tabella v46, guardia v2, ricucitura, passato cronologico) dietro
+opzioni spente. Primo risultato: lo stesso sistema sugli stessi turni varia tra 9 e 5
+casi su 13 (temperatura 0.6) — servono ripetizioni prima di decidere.
+
+Dettaglio: `sviluppi/Lifelog2/docs/lifelog2-experiments.md`,
+`sviluppi/Lifelog2/docs/lifelog2-audit-completo.md` (sezioni del 2026-09-25).
+
+## [2026-09-26] dev | Lifelog2 ASR v2: nuovo backend ARIA non batched + Stage C1 v2 in produzione
+
+- Partendo dal caso carabinieri (Stage D fondeva controllo e radio) l'errore è stato ricondotto a monte: WhisperX
+  batched perdeva il 15–18% delle parole e ne spostava il 18–27%; pyannote riusava etichette; C1 produceva vp_mixed
+  con id unici. Verità a orecchio di Roberto su 13 frasi (6/6 contro 1/6).
+- ARIA: nuovo backend `lifelog_whisperx_v2` (faster-whisper non batched beam 5, ctc-forced-aligner, pyannote grezzo,
+  impronte ResNet293 per frase e su finestre, nessuna identità, memoria GPU sotto controllo), env
+  `envs\lifelog-whisperx-v2`; il manifest `whisperx-large-v3` punta al v2 (484071e), il v1 resta come riserva.
+- Lifelog2: `asr_rebuild` + Stage C1 v2 (etichetta per parola, fascia mista, sconosciuti per scena con
+  `voice_clusters`, documento ricostruito immutabile `transcripts/rebuilt/`), migration 0060, deploy su CT203.
+- Pulizia: env di laboratorio con NeMo (9 GB), pesi NeMo, run sandbox di Stage D superati, file temporanei.
+- Prossimo: riprocesso completo da C (Stage C compreso), poi Stage D v47. Doc: Lifelog2
+  `docs/lifelog2-asr-v2-contract.md`, ARIA `docs/backends/lifelog-whisperx-v2.md`.
+
+## [2026-09-30] dev | Lifelog2 ASR v2 raffinato + Stage D v47 in produzione
+
+- ARIA `lifelog_whisperx_v2`: default lingua it/en + allineamento per frase; seconda passata in italiano sui pezzi
+  brevi (<10 s, niente inglese inventato); cifre lette in italiano per il ctc; protezioni contro il crash nativo di
+  ctc-forced-aligner; frase di contesto scritta nel grezzo. Lanci lunghi sul PC 139 solo via attività pianificata
+  con `pythonw` (da SSH il processo muore con la sessione).
+- Lifelog2 `asr_rebuild`: identità sui pezzi di frase, «prima la frase poi la voce» (ascolto Roberto 5→35/43),
+  filtri per frasi inventate (ripetute, outro YouTube, frase di contesto), frasi in ordine di tempo.
+- Stage D: prompt v47 (colonna tempo con pause, proposta Roberto), righe finali provvisorie, guardia v2 —
+  dry run 9/11/11 casi su 12 contro 8/7/7. Orchestratore fermo: riprocesso da Stage C ancora da lanciare.
+- Criterio nuovo: gravità di un problema = impatto sull'audio personale dell'utente.
+- Doc: Lifelog2 `docs/lifelog2-audit-completo.md` (blocchi 27–30/09), ARIA `docs/backends/lifelog-whisperx-v2.md`.
