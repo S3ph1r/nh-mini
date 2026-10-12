@@ -2420,3 +2420,20 @@ Dettaglio: `sviluppi/Lifelog2/docs/lifelog2-experiments.md`,
   dry run 9/11/11 casi su 12 contro 8/7/7. Orchestratore fermo: riprocesso da Stage C ancora da lanciare.
 - Criterio nuovo: gravità di un problema = impatto sull'audio personale dell'utente.
 - Doc: Lifelog2 `docs/lifelog2-audit-completo.md` (blocchi 27–30/09), ARIA `docs/backends/lifelog-whisperx-v2.md`.
+
+## [2026-10-12] dev | Lifelog2 cucitura dei thread, prove di pulizia della voce, 64 segmenti nuovi
+
+- **Stage D: cucitura per voce** (`STAGE_D_VOICE_STITCH=conversazione`), tenuta da Roberto.
+  - Audit su 11 giri: 189 confini cuciti, nessuno fra discorsi diversi.
+  - Cucitura spenta contro accesa sullo stesso ingresso: tagli 17 → 5,7.
+  - Correzione #22: il thread unito prende la natura della parte con più testo HIGH.
+- **Cucitura per pausa breve** (`STAGE_D_PAUSE_STITCH`): accesa in prova, da confermare.
+- **Pulizia della voce prima di Whisper:**
+  - DeepFilterNet3 scartato: toglie un terzo delle parole e inventa voce sul rumore;
+  - `afftdn` classico: bene su 7 clip, ma su 40 segmenti interi peggiora (voce dell'utente −23%, impronte spostate).
+    Resta spento.
+- **C1:** #23 (tempi nulli nei grezzi vecchi) e #24 (chiusure inglesi dei video senza voce) in produzione.
+- **64 segmenti nuovi** (08/10 04:46-10:06: ufficio, auto, casa, sonno): 19 thread, 2 cuciture giuste.
+  - Difetto aperto: saluti dell'utente dentro il GR1, per intervalli sovrapposti del modello.
+- **Doc:** Lifelog2 `docs/lifelog2-audit-tratti-2026-10.md` (blocchi dall'11/10 sera),
+  `docs/lifelog2-coerenza-c-c1-d-2026-10.md` §5.
